@@ -1,0 +1,53 @@
+name: Weekly RAGAS Evaluation
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  evaluate:
+    name: Run RAGAS evaluation
+    runs-on: ubuntu-latest
+    environment: dev
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: "1.8.4"
+
+      - name: Install dependencies
+        run: poetry install --no-interaction
+
+      - name: Run RAGAS evaluation
+        run: |
+          poetry run python -m src.evaluation.ragas_eval \
+            --output ../docs/evaluation_results.md \
+            --fail-below 0.70
+        env:
+          AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+          AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+          AZURE_CHAT_DEPLOYMENT: ${{ secrets.AZURE_CHAT_DEPLOYMENT }}
+          AZURE_EMBEDDING_DEPLOYMENT: ${{ secrets.AZURE_EMBEDDING_DEPLOYMENT }}
+          QDRANT_URL: ${{ secrets.QDRANT_URL }}
+          API_KEY: ${{ secrets.API_KEY }}
+
+      - name: Commit updated results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ../docs/evaluation_results.md
+          git diff --cached --quiet || git commit -m "chore(eval): weekly RAGAS report $(date +%Y-%m-%d)"
+          git push

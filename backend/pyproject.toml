@@ -1,0 +1,55 @@
+[tool.poetry]
+name = "kb-ai-rag-backend"
+version = "0.1.0"
+description = "Enterprise Agentic RAG platform backend"
+authors = ["AI Architect"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115"
+uvicorn = {extras = ["standard"], version = "^0.32"}
+pydantic = "^2.9"
+pydantic-settings = "^2.6"
+structlog = "^24.4"
+langchain = "^0.3"
+langchain-openai = "^0.2"
+langchain-community = "^0.3"
+langgraph = "^0.2"
+qdrant-client = "^1.11"
+rank-bm25 = "^0.2"
+sentence-transformers = "^3.3"
+pypdf = "^5.1"
+azure-identity = "^1.17"
+azure-keyvault-secrets = "^4.8"
+azure-storage-blob = "^12.23"
+tavily-python = "^0.5"
+tenacity = "^9.0"
+ragas = "^0.2"
+httpx = {extras = ["asyncio"], version = "^0.27"}
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+pytest-asyncio = "^0.24"
+pytest-cov = "^6.0"
+pytest-mock = "^3.14"
+mypy = "^1.13"
+ruff = "^0.8"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q --tb=short"
