@@ -18,8 +18,10 @@ from fastapi.responses import JSONResponse
 from qdrant_client import AsyncQdrantClient
 
 from src.api.middleware.auth import api_key_middleware
+from src.api.routes.collections import router as collections_router
 from src.api.routes.health import router as health_router
 from src.api.routes.ingest import router as ingest_router
+from src.api.routes.query import router as query_router
 from src.api.schemas import ErrorResponse
 from src.config import get_settings
 from src.exceptions import (
@@ -88,6 +90,8 @@ app.middleware("http")(api_key_middleware)
 
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(ingest_router, prefix="/api/v1")
+app.include_router(query_router, prefix="/api/v1")
+app.include_router(collections_router, prefix="/api/v1")
 
 # ---------------------------------------------------------------------------
 # Exception handlers
