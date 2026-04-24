@@ -45,7 +45,7 @@ async def api_key_middleware(
 
     settings = get_settings()
     api_key = request.headers.get("X-API-Key", "")
-    if not api_key or api_key != settings.api_key:
+    if not api_key or api_key != settings.api_key.get_secret_value():
         logger.warning("auth_failed", path=request.url.path)
         return JSONResponse(
             status_code=401,
