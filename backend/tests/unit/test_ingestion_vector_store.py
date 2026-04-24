@@ -12,6 +12,8 @@ from src.exceptions import IngestionError
 from src.ingestion.models import ChunkedDocument, ChunkMetadata
 from src.ingestion.vector_store import QdrantVectorStore
 
+pytestmark = pytest.mark.asyncio
+
 
 def _make_settings() -> Settings:
     return Settings(

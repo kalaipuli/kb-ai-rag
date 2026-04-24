@@ -12,11 +12,9 @@ uvicorn = {extras = ["standard"], version = "^0.32"}
 pydantic = "^2.9"
 pydantic-settings = "^2.6"
 structlog = "^24.4"
-langchain = "^0.3"
 langchain-openai = "^0.2"
-langchain-community = "^0.3"
 langgraph = "^0.2"
-qdrant-client = "^1.11"
+qdrant-client = "^1.12"
 rank-bm25 = "^0.2"
 sentence-transformers = "^3.3"
 pypdf = "^5.1"
@@ -25,8 +23,10 @@ azure-keyvault-secrets = "^4.8"
 azure-storage-blob = "^12.23"
 tavily-python = "^0.5"
 tenacity = "^9.0"
-ragas = "^0.2"
 httpx = {extras = ["asyncio"], version = "^0.27"}
+
+[tool.poetry.group.eval.dependencies]
+ragas = "^0.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"
@@ -50,6 +50,7 @@ strict = true
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 addopts = "-q --tb=short"

@@ -7,7 +7,7 @@ thin and schema evolution is centralised in one place.
 canonical types defined in ``src.schemas.generation``.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.schemas.generation import Citation as CitationItem
 from src.schemas.generation import GenerationResult as QueryResponse
@@ -18,6 +18,10 @@ __all__ = [
     "QueryRequest",
     "CitationItem",
     "QueryResponse",
+    "IngestRequest",
+    "IngestAcceptedResponse",
+    "CollectionInfo",
+    "CollectionsResponse",
 ]
 
 
@@ -38,6 +42,33 @@ class ErrorResponse(BaseModel):
 class QueryRequest(BaseModel):
     """Request body for POST /api/v1/query."""
 
-    query: str
+    query: str = Field(..., min_length=1)
     filters: dict[str, str] | None = None
     k: int | None = None
+
+
+class IngestRequest(BaseModel):
+    """Request body for POST /api/v1/ingest. All fields are optional."""
+
+    data_dir: str | None = None
+
+
+class IngestAcceptedResponse(BaseModel):
+    """202 Accepted response for POST /api/v1/ingest."""
+
+    status: str
+    message: str
+
+
+class CollectionInfo(BaseModel):
+    """Info about a single Qdrant collection."""
+
+    name: str
+    document_count: int
+    vector_count: int
+
+
+class CollectionsResponse(BaseModel):
+    """Response body for GET /api/v1/collections."""
+
+    collections: list[CollectionInfo]

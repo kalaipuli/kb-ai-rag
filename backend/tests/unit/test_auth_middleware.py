@@ -5,7 +5,7 @@ the middleware's rejection logic.  The exempt paths (/api/v1/health, /docs,
 /openapi.json, /redoc) bypass auth by design and are tested separately.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
@@ -52,12 +52,15 @@ def test_health_path_exempt_from_auth(mock_settings: Settings, test_client: Test
     """/api/v1/health must be reachable without any API key."""
     from unittest.mock import AsyncMock
 
-    with patch("src.api.routes.health.AsyncQdrantClient") as mock_cls:
-        mock_instance = MagicMock()
-        mock_instance.get_collections = AsyncMock(return_value=MagicMock(collections=[]))
-        mock_instance.close = AsyncMock()
-        mock_cls.return_value = mock_instance
+    from src.api.deps import get_qdrant_client
+
+    mock_instance = MagicMock()
+    mock_instance.get_collections = AsyncMock(return_value=MagicMock(collections=[]))
+    app.dependency_overrides[get_qdrant_client] = lambda: mock_instance
+    try:
         response = test_client.get("/api/v1/health")
+    finally:
+        app.dependency_overrides.pop(get_qdrant_client, None)
     assert response.status_code == 200
 
 

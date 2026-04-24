@@ -8,15 +8,20 @@ individual route modules under ``src/api/routes/``.
 import json
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from qdrant_client import AsyncQdrantClient
 
 from src.api.middleware.auth import api_key_middleware
+from src.api.routes.collections import router as collections_router
 from src.api.routes.health import router as health_router
+from src.api.routes.ingest import router as ingest_router
+from src.api.routes.query import router as query_router
 from src.api.schemas import ErrorResponse
 from src.config import get_settings
 from src.exceptions import (
@@ -26,17 +31,41 @@ from src.exceptions import (
     KBRagError,
     RetrievalError,
 )
+from src.generation.chain import GenerationChain
+from src.ingestion.bm25_store import BM25Store
+from src.ingestion.embedder import Embedder
 from src.logging_config import configure_logging
+from src.retrieval.retriever import HybridRetriever
 
 logger = structlog.get_logger(__name__)
+
+# Single call site — consumed by CORSMiddleware below and reused in lifespan
+# so that env-var overrides applied before import (e.g. in tests) are
+# reflected consistently rather than potentially reading two different states.
+_settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Configure logging and emit a startup event, then run the application."""
+    """Initialize singleton services and expose via app.state."""
     configure_logging()
+    settings = _settings
+
+    bm25_store = BM25Store(index_path=Path(settings.bm25_index_path))
+    if Path(settings.bm25_index_path).exists():
+        bm25_store.load()
+
+    embedder = Embedder(settings=settings)
+    retriever = HybridRetriever(settings=settings, bm25_store=bm25_store, embedder=embedder)
+    app.state.generation_chain = GenerationChain(settings=settings, hybrid_retriever=retriever)
+    app.state.bm25_store = bm25_store
+    app.state.qdrant_client = AsyncQdrantClient(url=settings.qdrant_url)
+
     logger.info("startup", service="kb-ai-rag-backend")
     yield
+
+    await retriever.close()
+    await app.state.qdrant_client.close()
     logger.info("shutdown", service="kb-ai-rag-backend")
 
 
@@ -53,7 +82,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_settings().cors_origins,
+    allow_origins=_settings.cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -65,6 +94,9 @@ app.middleware("http")(api_key_middleware)
 # ---------------------------------------------------------------------------
 
 app.include_router(health_router, prefix="/api/v1")
+app.include_router(ingest_router, prefix="/api/v1")
+app.include_router(query_router, prefix="/api/v1")
+app.include_router(collections_router, prefix="/api/v1")
 
 # ---------------------------------------------------------------------------
 # Exception handlers

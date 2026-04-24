@@ -26,7 +26,7 @@ def _make_scored_point(
     title: str = "Sample title",
     text: str = "Full chunk text content",
 ) -> MagicMock:
-    """Build a mock ScoredPoint as returned by qdrant_client.search."""
+    """Build a mock ScoredPoint as returned by qdrant_client.query_points."""
     payload: dict[str, object] = {
         "doc_id": "doc-1",
         "chunk_id": chunk_id,
@@ -49,6 +49,13 @@ def _make_scored_point(
     return point
 
 
+def _make_query_result(points: list[MagicMock]) -> MagicMock:
+    """Wrap a list of ScoredPoints in a QueryResponse-like mock."""
+    result = MagicMock()
+    result.points = points
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -59,11 +66,11 @@ class TestDenseRetriever:
         settings = _make_test_settings()
         with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
             mock_client = MagicMock()
-            mock_client.search = AsyncMock(
-                return_value=[
+            mock_client.query_points = AsyncMock(
+                return_value=_make_query_result([
                     _make_scored_point("c1", 0.9, "First chunk"),
                     _make_scored_point("c2", 0.7, "Second chunk"),
-                ]
+                ])
             )
             mock_cls.return_value = mock_client
 
@@ -85,7 +92,7 @@ class TestDenseRetriever:
         settings = _make_test_settings()
         with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
             mock_client = MagicMock()
-            mock_client.search = AsyncMock(return_value=[])
+            mock_client.query_points = AsyncMock(return_value=_make_query_result([]))
             mock_cls.return_value = mock_client
 
             retriever = DenseRetriever(settings)
@@ -102,7 +109,7 @@ class TestDenseRetriever:
         settings = _make_test_settings()
         with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
             mock_client = MagicMock()
-            mock_client.search = AsyncMock(side_effect=RuntimeError("connection refused"))
+            mock_client.query_points = AsyncMock(side_effect=RuntimeError("connection refused"))
             mock_cls.return_value = mock_client
 
             retriever = DenseRetriever(settings)
@@ -119,7 +126,7 @@ class TestDenseRetriever:
         settings = _make_test_settings()
         with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
             mock_client = MagicMock()
-            mock_client.search = AsyncMock(side_effect=ConnectionError("timeout"))
+            mock_client.query_points = AsyncMock(side_effect=ConnectionError("timeout"))
             mock_cls.return_value = mock_client
 
             retriever = DenseRetriever(settings)
@@ -137,10 +144,10 @@ class TestDenseRetriever:
         settings = _make_test_settings()
         with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
             mock_client = MagicMock()
-            mock_client.search = AsyncMock(
-                return_value=[
+            mock_client.query_points = AsyncMock(
+                return_value=_make_query_result([
                     _make_scored_point("c1", 0.9, title="Short title", text="Full body text here"),
-                ]
+                ])
             )
             mock_cls.return_value = mock_client
 
@@ -159,7 +166,7 @@ class TestDenseRetriever:
         settings = _make_test_settings()
         with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
             mock_client = MagicMock()
-            mock_client.search = AsyncMock(return_value=[])
+            mock_client.query_points = AsyncMock(return_value=_make_query_result([]))
             mock_cls.return_value = mock_client
 
             retriever = DenseRetriever(settings)
@@ -170,7 +177,7 @@ class TestDenseRetriever:
                 retriever.search([0.0] * 3072, k=5, filters={"file_type": "pdf"})
             )
 
-        call_kwargs = mock_client.search.call_args.kwargs
+        call_kwargs = mock_client.query_points.call_args.kwargs
         assert call_kwargs["query_filter"] is not None
         must_conditions = call_kwargs["query_filter"].must
         assert len(must_conditions) == 1

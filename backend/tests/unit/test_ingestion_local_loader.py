@@ -48,6 +48,8 @@ class TestMakeDocId:
 
 
 class TestLocalFileLoaderPDF:
+    pytestmark = pytest.mark.asyncio
+
     @pytest.fixture
     def data_dir(self, tmp_path: Path) -> Path:
         return tmp_path
@@ -135,6 +137,8 @@ class TestLocalFileLoaderPDF:
 
 
 class TestLocalFileLoaderTXT:
+    pytestmark = pytest.mark.asyncio
+
     @pytest.fixture
     def data_dir(self, tmp_path: Path) -> Path:
         return tmp_path
@@ -181,6 +185,8 @@ class TestLocalFileLoaderTXT:
 
 
 class TestLocalFileLoaderUnsupported:
+    pytestmark = pytest.mark.asyncio
+
     async def test_unsupported_extension_skipped(self, tmp_path: Path) -> None:
         (tmp_path / "image.png").touch()
         loader = LocalFileLoader(data_dir=tmp_path)
