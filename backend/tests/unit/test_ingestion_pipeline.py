@@ -9,12 +9,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.asyncio
-
 from src.config import Settings
 from src.exceptions import EmbeddingError, IngestionError
 from src.ingestion.models import ChunkedDocument, ChunkMetadata, Document
 from src.ingestion.pipeline import PipelineResult, run_pipeline
+
+pytestmark = pytest.mark.asyncio
 
 
 def _make_settings() -> Settings:

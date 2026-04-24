@@ -7,12 +7,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.asyncio
-
 from src.config import Settings
 from src.exceptions import EmbeddingError
 from src.ingestion.embedder import Embedder
 from src.ingestion.models import ChunkedDocument, ChunkMetadata
+
+pytestmark = pytest.mark.asyncio
 
 
 def _make_settings(batch_size: int = 2) -> Settings:

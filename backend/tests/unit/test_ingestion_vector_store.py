@@ -7,12 +7,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.asyncio
-
 from src.config import Settings
 from src.exceptions import IngestionError
 from src.ingestion.models import ChunkedDocument, ChunkMetadata
 from src.ingestion.vector_store import QdrantVectorStore
+
+pytestmark = pytest.mark.asyncio
 
 
 def _make_settings() -> Settings:

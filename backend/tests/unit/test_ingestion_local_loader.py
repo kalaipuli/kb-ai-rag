@@ -9,9 +9,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.asyncio
-
 from src.ingestion.loaders.local_loader import LocalFileLoader, _make_doc_id
+
+pytestmark = pytest.mark.asyncio
 
 
 def _fake_file(name: str, suffix: str, parent: Path) -> MagicMock:
