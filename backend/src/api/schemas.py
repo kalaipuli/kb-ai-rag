@@ -2,9 +2,23 @@
 
 All request and response bodies are defined here so that route handlers stay
 thin and schema evolution is centralised in one place.
+
+``CitationItem`` and ``QueryResponse`` are backward-compatible aliases for the
+canonical types defined in ``src.schemas.generation``.
 """
 
 from pydantic import BaseModel
+
+from src.schemas.generation import Citation as CitationItem
+from src.schemas.generation import GenerationResult as QueryResponse
+
+__all__ = [
+    "HealthResponse",
+    "ErrorResponse",
+    "QueryRequest",
+    "CitationItem",
+    "QueryResponse",
+]
 
 
 class HealthResponse(BaseModel):
@@ -27,21 +41,3 @@ class QueryRequest(BaseModel):
     query: str
     filters: dict[str, str] | None = None
     k: int | None = None
-
-
-class CitationItem(BaseModel):
-    """A single source chunk cited in a query response."""
-
-    chunk_id: str
-    filename: str
-    source_path: str
-    page_number: int
-
-
-class QueryResponse(BaseModel):
-    """Response body for POST /api/v1/query."""
-
-    query: str
-    answer: str
-    citations: list[CitationItem]
-    confidence: float

@@ -11,7 +11,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 | Phase | Name | Registry | Status | Gate |
 |-------|------|----------|--------|------|
 | 0 | Scaffolding + Architect Fixes | [tasks](phase0/tasks.md) · [fixes](phase0/fixes.md) | ✅ Complete | Passed 2026-04-23 |
-| 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) | 🔄 In Progress | — |
+| 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) · [1c](phase1/1c-generation/tasks.md) · [1c fixes](phase1/1c-generation/fixes.md) | 🔄 In Progress | — |
 | 2 | Agentic Pipeline (LangGraph) | — | ⏳ Not Started | — |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
@@ -23,17 +23,17 @@ This is the single cross-phase status view. For task-level detail, open the link
 
 ## Active Phase
 
-**Feature 1b — Hybrid Retrieval** complete + architect fixes resolved 2026-04-24. All 13 issues closed (1 Critical, 4 High, 5 Medium, 3 Low). See [1b fixes](phase1/1b-retrieval/fixes.md).
+**Feature 1c — Generation** complete + architect fixes resolved 2026-04-24. All 13 issues closed (2 Critical, 3 High, 5 Medium, 3 Low). LCEL migration done, shared schema module (`src/schemas/`), ADR-007 + ADR-008 written. See [1c fixes](phase1/1c-generation/fixes.md).
 
-**131 unit tests passing | mypy strict: 0 errors (28 files) | ruff: 0 warnings**
+**142 unit tests passing | mypy strict: 0 errors (33 files) | ruff: 0 warnings**
 
-**Feature 1c — Generation** is next: LangChain `RetrievalQA` chain, system prompt, `{answer, citations, confidence}` response schema (schemas already defined in F05).
+**Feature 1d — API** is next: `POST /api/v1/ingest`, `POST /api/v1/query`, `GET /api/v1/health`, `GET /api/v1/collections`.
 
 ---
 
 ## Currently In Progress
 
-_Nothing — 1b complete + fixes resolved. Feature 1c (Generation) not yet started._
+_Nothing — 1c complete + fixes resolved. Feature 1d (API endpoints) not yet started._
 
 ---
 
@@ -88,9 +88,9 @@ _None._
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| LangChain `RetrievalQA` chain | Azure OpenAI GPT-4o | ⏳ Pending |
-| System prompt | Answer from context only, cite sources, flag uncertainty | ⏳ Pending |
-| Response schema | `{answer, citations, confidence}` | ⏳ Pending |
+| LangChain `RetrievalQA` chain | Azure OpenAI GPT-4o | ✅ Done |
+| System prompt | Answer from context only, cite sources, flag uncertainty | ✅ Done |
+| Response schema | `{answer, citations, confidence}` | ✅ Done |
 
 #### 1d. API
 
