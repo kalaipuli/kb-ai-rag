@@ -93,12 +93,50 @@ def mock_settings() -> Generator[Settings, None, None]:
 def test_client(mock_settings: Settings) -> Generator[TestClient, None, None]:
     """Return a synchronous TestClient backed by the patched FastAPI app.
 
-    ``mock_settings`` is applied first so the lifespan handler, middleware,
-    and route handlers all see test configuration values.
+    Patches CrossEncoderReranker, Embedder, AzureChatOpenAI, and
+    AsyncQdrantClient so the lifespan does not download HuggingFace models
+    or attempt real Azure/Qdrant connections during test setup.
     """
+    from unittest.mock import AsyncMock, patch
+
     from src.api.main import app
 
-    with TestClient(app, raise_server_exceptions=False) as client:
+    mock_qdrant = MagicMock()
+    mock_qdrant.close = AsyncMock()
+
+    with (
+        patch("src.retrieval.reranker.CrossEncoder", return_value=MagicMock()),
+        patch("src.ingestion.embedder.AzureOpenAIEmbeddings", return_value=MagicMock()),
+        patch("src.generation.chain.AzureChatOpenAI", return_value=MagicMock()),
+        patch("src.api.main.AsyncQdrantClient", return_value=mock_qdrant),
+        TestClient(app, raise_server_exceptions=False) as client,
+    ):
+        yield client
+
+
+@pytest.fixture
+def test_client_1d(mock_settings: Settings) -> Generator[TestClient, None, None]:
+    """TestClient with lifespan service constructors patched for Phase 1d endpoint tests.
+
+    Patches CrossEncoder, AzureOpenAIEmbeddings, AzureChatOpenAI, and
+    AsyncQdrantClient to avoid HuggingFace model download and Azure credential
+    checks during test setup. Dependency overrides for get_generation_chain and
+    get_qdrant_client are applied per-test.
+    """
+    from unittest.mock import AsyncMock, patch
+
+    from src.api.main import app
+
+    mock_qdrant = MagicMock()
+    mock_qdrant.close = AsyncMock()
+
+    with (
+        patch("src.retrieval.reranker.CrossEncoder", return_value=MagicMock()),
+        patch("src.ingestion.embedder.AzureOpenAIEmbeddings", return_value=MagicMock()),
+        patch("src.generation.chain.AzureChatOpenAI", return_value=MagicMock()),
+        patch("src.api.main.AsyncQdrantClient", return_value=mock_qdrant),
+        TestClient(app, raise_server_exceptions=False) as client,
+    ):
         yield client
 
 
