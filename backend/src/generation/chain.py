@@ -115,7 +115,7 @@ class GenerationChain:
         self._hybrid = hybrid_retriever
         self._llm = AzureChatOpenAI(
             azure_endpoint=settings.azure_openai_endpoint,
-            api_key=settings.azure_openai_api_key,
+            api_key=settings.azure_openai_api_key.get_secret_value(),
             azure_deployment=settings.azure_chat_deployment,
             api_version=settings.azure_openai_api_version,
             temperature=0,
@@ -149,12 +149,7 @@ class GenerationChain:
         )
 
         try:
-            # Retrieve docs explicitly so they are available for citations and
-            # confidence scoring without any side-channel attribute.
-            docs = await kb_retriever._aget_relevant_documents(
-                query,
-                run_manager=AsyncCallbackManagerForRetrieverRun.get_noop_manager(),
-            )
+            docs = await kb_retriever.ainvoke(query)
 
             # Build numbered context string matching the [N] citation convention
             # in the system prompt.
