@@ -28,6 +28,7 @@ class Settings(BaseSettings):
 
     # Service authentication
     api_key: SecretStr
+    cors_origins: list[str] = ["*"]
 
     # Document ingestion
     data_dir: str = "/app/data"
@@ -36,6 +37,12 @@ class Settings(BaseSettings):
     embedding_vector_size: int = 3072
     embedding_batch_size: int = 100
     bm25_index_path: str = "/app/data/bm25_index.pkl"
+
+    # Hybrid retrieval
+    retrieval_top_k: int = 10
+    reranker_top_k: int = 5
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    rrf_k: int = 60
 
     # LangSmith tracing (optional; leave blank to disable)
     langsmith_api_key: str = ""

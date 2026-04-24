@@ -60,6 +60,11 @@ def test_get_settings_returns_settings_instance() -> None:
     get_settings.cache_clear()
 
 
+def test_cors_origins_default_is_wildcard() -> None:
+    s = _minimal_settings()
+    assert s.cors_origins == ["*"]
+
+
 def test_missing_required_field_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     """Settings must raise ValidationError when required env vars are absent.
 

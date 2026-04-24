@@ -93,7 +93,7 @@ class QdrantVectorStore:
                 PointStruct(
                     id=chunk.metadata["chunk_id"],
                     vector=chunk.vector,
-                    payload=dict(chunk.metadata),
+                    payload={**dict(chunk.metadata), "text": chunk.text},
                 )
             )
 

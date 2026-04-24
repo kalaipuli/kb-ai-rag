@@ -5,6 +5,24 @@ module level (before any src import) so that ``get_settings()`` never fails
 due to missing required fields during test collection or execution.
 """
 
+# ---------------------------------------------------------------------------
+# Test settings conventions
+#
+# Two patterns are used across this test suite:
+#
+# 1. Real Settings object (use for route/middleware tests):
+#    Use the `mock_settings` fixture defined below, which yields a real
+#    Settings instance and wires it into FastAPI's dependency_overrides.
+#
+# 2. MagicMock settings (use for pure-unit retrieval/pipeline tests):
+#    Define a local `_make_settings()` returning MagicMock(). This avoids
+#    the pydantic-settings validation overhead and is appropriate when the
+#    test only needs specific config attributes (e.g. retrieval_top_k=5).
+#
+# Phase 1c test authors: use pattern 2 for chain/retrieval unit tests,
+# pattern 1 for any test that exercises FastAPI routes.
+# ---------------------------------------------------------------------------
+
 import os
 from collections.abc import Generator
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -41,6 +59,12 @@ def _make_test_settings() -> Settings:
         data_dir="/tmp/test-data",
         chunk_size=512,
         chunk_overlap=64,
+        bm25_index_path="/tmp/test-bm25.pkl",
+        embedding_vector_size=3072,
+        retrieval_top_k=10,
+        reranker_top_k=5,
+        reranker_model="cross-encoder/ms-marco-MiniLM-L-6-v2",
+        rrf_k=60,
         langsmith_api_key="",
         langchain_tracing_v2=False,
         tavily_api_key="",
