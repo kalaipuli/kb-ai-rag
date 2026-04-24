@@ -11,7 +11,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 | Phase | Name | Registry | Status | Gate |
 |-------|------|----------|--------|------|
 | 0 | Scaffolding + Architect Fixes | [tasks](phase0/tasks.md) · [fixes](phase0/fixes.md) | ✅ Complete | Passed 2026-04-23 |
-| 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) · [1c](phase1/1c-generation/tasks.md) · [1c fixes](phase1/1c-generation/fixes.md) | 🔄 In Progress | — |
+| 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) · [1c](phase1/1c-generation/tasks.md) · [1c fixes](phase1/1c-generation/fixes.md) · [1d](phase1/1d-api/tasks.md) | 🔄 In Progress | — |
 | 2 | Agentic Pipeline (LangGraph) | — | ⏳ Not Started | — |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
@@ -21,25 +21,41 @@ This is the single cross-phase status view. For task-level detail, open the link
 
 ---
 
+## Stack Upgrade Queue
+
+> Full proposal: [docs/stack-upgrade-proposal.md](../stack-upgrade-proposal.md) — reviewed 2026-04-24 by Architect · Backend · Frontend agents.
+
+| Tier | Actions | Gate |
+|------|---------|------|
+| [Tier 1](../stack-upgrade-proposal.md#tier-1--before-phase-1d-starts) | pytest-asyncio strict mode · `SecretStr` unwrap · qdrant-client ^1.12 · public retriever method | **Before Phase 1d** |
+| [Tier 2](../stack-upgrade-proposal.md#tier-2--phase-1d-implementation-patterns) | Lifespan state · Annotated DI · BackgroundTasks · StreamingResponse · audit unused langchain deps | **During Phase 1d** |
+| [Tier 3](../stack-upgrade-proposal.md#tier-3--phase-2-pre-requisites-gate-zero) | LangGraph exact version lock · LangChain bundle upgrade · ADR-004 amendment · AgentState schema | **Phase 2 gate zero** |
+| [Tier 4](../stack-upgrade-proposal.md#tier-4--frontend-before-any-component-code) | Next.js 15 · React 19 · Tailwind 4 · ESLint 9 · TypeScript 5.8 | **Before Phase 1e** |
+| [Hold](../stack-upgrade-proposal.md#hold--do-not-upgrade-yet) | RAGAS eval group isolation · Python 3.13 evaluation | Phase 5 / Phase 4 |
+
+---
+
 ## Active Phase
 
 **Feature 1c — Generation** complete + architect fixes resolved 2026-04-24. All 13 issues closed (2 Critical, 3 High, 5 Medium, 3 Low). LCEL migration done, shared schema module (`src/schemas/`), ADR-007 + ADR-008 written. See [1c fixes](phase1/1c-generation/fixes.md).
 
 **142 unit tests passing | mypy strict: 0 errors (33 files) | ruff: 0 warnings**
 
-**Feature 1d — API** is next: `POST /api/v1/ingest`, `POST /api/v1/query`, `GET /api/v1/health`, `GET /api/v1/collections`.
+**Feature 1d — API** complete 2026-04-24. All 14 tasks done. Tier 1 fixes applied, Tier 2 patterns used throughout. 162 unit tests passing | mypy strict: 0 errors (37 files) | ruff: 0 warnings. See [1d tasks](phase1/1d-api/tasks.md).
+
+**Feature 1e — UI** is next. Before starting: complete [Tier 4 frontend bundle upgrade](../stack-upgrade-proposal.md#tier-4--frontend-before-any-component-code) (Next.js 15 + React 19 + Tailwind 4 + ESLint 9 + TypeScript 5.8).
 
 ---
 
 ## Currently In Progress
 
-_Nothing — 1c complete + fixes resolved. Feature 1d (API endpoints) not yet started._
+_Nothing — 1d complete. Feature 1e (Next.js UI) not yet started. Tier 4 upgrade is the pre-requisite._
 
 ---
 
 ## Blocked / At Risk
 
-_None._
+_No blockers. Tier 4 frontend upgrade is required before Phase 1e begins._
 
 ---
 
@@ -94,16 +110,23 @@ _None._
 
 #### 1d. API
 
+> **Stack gate:** [Tier 1 fixes](../stack-upgrade-proposal.md#tier-1--before-phase-1d-starts) must be done before this feature starts. Use [Tier 2 patterns](../stack-upgrade-proposal.md#tier-2--phase-1d-implementation-patterns) (lifespan state, Annotated DI, BackgroundTasks, StreamingResponse) throughout.
+
 | Feature | Description | Status |
 |---------|-------------|--------|
-| `POST /api/v1/ingest` | Ingest a folder of files | ⏳ Pending |
-| `POST /api/v1/query` | Query the knowledge base | ⏳ Pending |
-| `GET /api/v1/health` | Liveness + Qdrant connectivity | ⏳ Pending |
-| `GET /api/v1/collections` | List indexed collections + doc counts | ⏳ Pending |
-| API key auth | `X-API-Key` header middleware | ✅ Done (Phase 0) |
-| OpenAPI docs | `/docs` with full schema | ⏳ Pending |
+| `POST /api/v1/ingest` | Ingest a folder of files (BackgroundTasks, 202 Accepted) | ✅ Done |
+| `POST /api/v1/query` | SSE streaming — token / citations / done events | ✅ Done |
+| `GET /api/v1/health` | Liveness + Qdrant connectivity | ✅ Done |
+| `GET /api/v1/collections` | List indexed collections + doc counts | ✅ Done |
+| API key auth | `X-API-Key` header middleware | ✅ Done |
+| OpenAPI docs | `/docs` with full schema | ✅ Done |
+| Lifespan singletons | `Embedder`, `HybridRetriever`, `GenerationChain`, `AsyncQdrantClient` in `app.state` | ✅ Done |
+| Annotated DI | `SettingsDep`, `GenerationChainDep`, `QdrantClientDep` in `src/api/deps.py` | ✅ Done |
+| `astream_generate` | SSE streaming method on `GenerationChain` | ✅ Done |
 
 #### 1e. UI
+
+> **Stack gate:** Complete [Tier 4 frontend bundle upgrade](../stack-upgrade-proposal.md#tier-4--frontend-before-any-component-code) before writing any component — Next.js 15, React 19, Tailwind 4, ESLint 9, TypeScript 5.8. Frontend is greenfield; zero migration cost now.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -113,6 +136,8 @@ _None._
 | Sidebar | Collection stats + ingest trigger | ⏳ Pending |
 
 #### 1f. Evaluation Baseline
+
+> **Stack note:** RAGAS stays at `^0.2` for Phase 1f. Before Phase 5 automation, move it to a separate Poetry eval group. See [RAGAS isolation](../stack-upgrade-proposal.md#hold--do-not-upgrade-yet).
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -131,11 +156,13 @@ _None._
 
 ### Phase 2 — Agentic Pipeline ⏳ Not Started
 
+> **Stack gate zero:** Before any Phase 2 task begins, complete [Tier 3 pre-requisites](../stack-upgrade-proposal.md#tier-3--phase-2-pre-requisites-gate-zero): lock LangGraph to an exact confirmed version, upgrade the LangChain bundle together, write the ADR-004 amendment, and define `AgentState` schema. Do not write any agent node until these are done.
+
 #### LangGraph State Machine
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| `AgentState` TypedDict | Full state schema (session, query, docs, answer, citations, …) | ⏳ Pending |
+| `AgentState` TypedDict | Full state schema with `Annotated` reducers — define before any node | ⏳ Pending |
 | Graph compilation | `StateGraph` + `SqliteSaver` checkpointer | ⏳ Pending |
 | Conditional edges | Router → Retriever → Grader → Generator → Critic routing | ⏳ Pending |
 
@@ -196,6 +223,8 @@ _None._
 ---
 
 ### Phase 5 — Observability & Evaluation ⏳ Not Started
+
+> **Stack pre-requisite:** Before setting up RAGAS automation, move `ragas` into `[tool.poetry.group.eval.dependencies]` in `pyproject.toml`. See [RAGAS isolation](../stack-upgrade-proposal.md#hold--do-not-upgrade-yet).
 
 | Feature | Description | Status |
 |---------|-------------|--------|
