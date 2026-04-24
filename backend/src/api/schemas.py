@@ -18,6 +18,10 @@ __all__ = [
     "QueryRequest",
     "CitationItem",
     "QueryResponse",
+    "IngestRequest",
+    "IngestAcceptedResponse",
+    "CollectionInfo",
+    "CollectionsResponse",
 ]
 
 
@@ -41,3 +45,30 @@ class QueryRequest(BaseModel):
     query: str
     filters: dict[str, str] | None = None
     k: int | None = None
+
+
+class IngestRequest(BaseModel):
+    """Request body for POST /api/v1/ingest. All fields are optional."""
+
+    data_dir: str | None = None
+
+
+class IngestAcceptedResponse(BaseModel):
+    """202 Accepted response for POST /api/v1/ingest."""
+
+    status: str
+    message: str
+
+
+class CollectionInfo(BaseModel):
+    """Info about a single Qdrant collection."""
+
+    name: str
+    document_count: int
+    vector_count: int
+
+
+class CollectionsResponse(BaseModel):
+    """Response body for GET /api/v1/collections."""
+
+    collections: list[CollectionInfo]
