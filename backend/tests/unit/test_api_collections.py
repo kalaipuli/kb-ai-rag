@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from fastapi.testclient import TestClient
 
 from src.config import Settings
@@ -17,7 +16,7 @@ def _make_mock_qdrant(
     names = collection_names or []
 
     col_desc = [MagicMock(name=n) for n in names]
-    for desc, n in zip(col_desc, names):
+    for desc, n in zip(col_desc, names, strict=True):
         desc.name = n
 
     collections_result = MagicMock()
@@ -25,7 +24,7 @@ def _make_mock_qdrant(
 
     col_info = MagicMock()
     col_info.points_count = points_count
-    col_info.vectors_count = vectors_count
+    col_info.indexed_vectors_count = vectors_count
 
     mock = MagicMock()
     mock.get_collections = AsyncMock(return_value=collections_result)

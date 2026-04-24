@@ -24,8 +24,6 @@ from src.ingestion.models import ChunkMetadata
 from src.retrieval.models import RetrievalResult
 from src.schemas.generation import GenerationResult
 
-pytestmark = pytest.mark.asyncio
-
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
@@ -374,6 +372,7 @@ def _make_streaming_runnable(tokens: list[str]) -> RunnableLambda:  # type: igno
 
 
 class TestGenerationChainStream:
+    pytestmark = pytest.mark.asyncio
     async def test_astream_generate_yields_token_then_citations_then_done(
         self, mocker: MagicMock
     ) -> None:

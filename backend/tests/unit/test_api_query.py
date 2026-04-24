@@ -80,9 +80,9 @@ class TestQueryEndpoint:
                 json={"query": "question"},
                 headers=authenticated_headers,
             ) as response:
-                lines = [l for l in response.iter_lines() if l.startswith("data: ")]
+                lines = [line for line in response.iter_lines() if line.startswith("data: ")]
 
-            events = [json.loads(l[len("data: "):]) for l in lines]
+            events = [json.loads(line[len("data: "):]) for line in lines]
             types = [e["type"] for e in events]
 
             assert "token" in types
@@ -117,9 +117,9 @@ class TestQueryEndpoint:
                 json={"query": "question"},
                 headers=authenticated_headers,
             ) as response:
-                lines = [l for l in response.iter_lines() if l.startswith("data: ")]
+                lines = [line for line in response.iter_lines() if line.startswith("data: ")]
 
-            events = [json.loads(l[len("data: "):]) for l in lines]
+            events = [json.loads(line[len("data: "):]) for line in lines]
             citations_event = next(e for e in events if e["type"] == "citations")
 
             assert "confidence" in citations_event
@@ -148,9 +148,9 @@ class TestQueryEndpoint:
                 json={"query": "question"},
                 headers=authenticated_headers,
             ) as response:
-                lines = [l for l in response.iter_lines() if l.startswith("data: ")]
+                lines = [line for line in response.iter_lines() if line.startswith("data: ")]
 
-            events = [json.loads(l[len("data: "):]) for l in lines]
+            events = [json.loads(line[len("data: "):]) for line in lines]
             assert events[-1]["type"] == "done"
         finally:
             app.dependency_overrides.pop(get_generation_chain, None)

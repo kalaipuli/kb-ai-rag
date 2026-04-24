@@ -24,7 +24,7 @@ async def list_collections(qdrant: QdrantClientDep) -> CollectionsResponse:
                 CollectionInfo(
                     name=col.name,
                     document_count=info.points_count or 0,
-                    vector_count=info.vectors_count or 0,
+                    vector_count=info.indexed_vectors_count or 0,
                 )
             )
         logger.info("collections_listed", count=len(infos))
