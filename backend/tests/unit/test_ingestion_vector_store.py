@@ -142,11 +142,13 @@ class TestUpsert:
         assert len(points) == 1
         assert points[0].id == "chunk-uuid-1"
         assert points[0].vector == vec
-        # Full payload must be present
+        # Full payload must be present, including full chunk text
         payload = points[0].payload
         assert payload["doc_id"] == "doc-1"
         assert payload["filename"] == "a.pdf"
         assert payload["file_type"] == "pdf"
+        assert "text" in payload
+        assert payload["text"] == "some text content here"
 
     async def test_upsert_no_chunks_skips_call(self) -> None:
         settings = _make_settings()

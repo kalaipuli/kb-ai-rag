@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-23
+> Maintained by: project-manager agent | Last updated: 2026-04-24
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -11,11 +11,11 @@ This is the single cross-phase status view. For task-level detail, open the link
 | Phase | Name | Registry | Status | Gate |
 |-------|------|----------|--------|------|
 | 0 | Scaffolding + Architect Fixes | [tasks](phase0/tasks.md) · [fixes](phase0/fixes.md) | ✅ Complete | Passed 2026-04-23 |
-| 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [fixes](phase1/1a-ingestion/fixes.md) | 🔄 In Progress | — |
-| 2 | LangGraph Agents | — | ⏳ Not Started | — |
+| 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) | 🔄 In Progress | — |
+| 2 | Agentic Pipeline (LangGraph) | — | ⏳ Not Started | — |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
-| 5 | Evaluation & Observability | — | ⏳ Not Started | — |
+| 5 | Observability & Evaluation | — | ⏳ Not Started | — |
 | 6 | Production Hardening | — | ⏳ Not Started | — |
 | 7 | Azure Deployment & CI/CD | — | ⏳ Not Started | — |
 
@@ -23,15 +23,17 @@ This is the single cross-phase status view. For task-level detail, open the link
 
 ## Active Phase
 
-**Feature 1b — Hybrid Retrieval** is next. Feature 1a complete + architect fixes resolved 2026-04-24 — 91 unit tests, mypy strict, ruff clean.
+**Feature 1b — Hybrid Retrieval** complete + architect fixes resolved 2026-04-24. All 13 issues closed (1 Critical, 4 High, 5 Medium, 3 Low). See [1b fixes](phase1/1b-retrieval/fixes.md).
 
-Current focus: dense Qdrant retrieval, BM25 keyword search, RRF fusion, cross-encoder re-ranker.
+**131 unit tests passing | mypy strict: 0 errors (28 files) | ruff: 0 warnings**
+
+**Feature 1c — Generation** is next: LangChain `RetrievalQA` chain, system prompt, `{answer, citations, confidence}` response schema (schemas already defined in F05).
 
 ---
 
 ## Currently In Progress
 
-_Nothing — Feature 1a complete. Feature 1b (Retrieval) not yet started._
+_Nothing — 1b complete + fixes resolved. Feature 1c (Generation) not yet started._
 
 ---
 
@@ -41,8 +43,240 @@ _None._
 
 ---
 
+## Phase Feature Breakdown
+
+### Phase 0 — Scaffolding ✅ Complete
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Poetry + pyproject.toml | Project setup, dependency management | ✅ Done |
+| Ruff + mypy (strict) | Lint + format + type checking configured | ✅ Done |
+| Pydantic Settings | `.env` local, Azure Key Vault prod | ✅ Done |
+| structlog | Structured JSON logging with correlation ID | ✅ Done |
+| Docker Compose | FastAPI placeholder + Qdrant | ✅ Done |
+| GitHub Actions CI | lint → type check (no deploy) | ✅ Done |
+| ADRs (001–005) | Qdrant, Azure AI Foundry, hybrid retrieval, LangGraph, Next.js | ✅ Done |
+| Architect Review Fixes | 10 critical fixes resolved | ✅ Done |
+
+---
+
+### Phase 1 — Core MVP 🔄 In Progress
+
+#### 1a. Ingestion Pipeline
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `BaseLoader` ABC | Loader abstraction interface | ✅ Done |
+| `LocalFileLoader` | PDF (pypdf) + TXT native loader | ✅ Done |
+| `RecursiveCharacterTextSplitter` | Configurable chunk size + overlap | ✅ Done |
+| `ChunkMetadata` schema | Full 13-field payload per chunk | ✅ Done |
+| `Embedder` | Azure OpenAI text-embedding-3-large, async batched | ✅ Done |
+| Qdrant upsert | Vector + full payload per chunk | ✅ Done |
+| BM25 index | In-memory build at ingest, persisted to disk | ✅ Done |
+| Ingestion pipeline | End-to-end orchestration | ✅ Done |
+
+#### 1b. Retrieval
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Dense search | Qdrant cosine similarity, top-k | ✅ Done |
+| Sparse search | BM25 keyword match, top-k | ✅ Done |
+| RRF fusion | Reciprocal Rank Fusion merging both result sets | ✅ Done |
+| Cross-encoder re-ranker | `ms-marco-MiniLM-L-6-v2`, CPU, HuggingFace | ✅ Done |
+
+#### 1c. Generation (basic chain — no agents)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| LangChain `RetrievalQA` chain | Azure OpenAI GPT-4o | ⏳ Pending |
+| System prompt | Answer from context only, cite sources, flag uncertainty | ⏳ Pending |
+| Response schema | `{answer, citations, confidence}` | ⏳ Pending |
+
+#### 1d. API
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `POST /api/v1/ingest` | Ingest a folder of files | ⏳ Pending |
+| `POST /api/v1/query` | Query the knowledge base | ⏳ Pending |
+| `GET /api/v1/health` | Liveness + Qdrant connectivity | ⏳ Pending |
+| `GET /api/v1/collections` | List indexed collections + doc counts | ⏳ Pending |
+| API key auth | `X-API-Key` header middleware | ✅ Done (Phase 0) |
+| OpenAPI docs | `/docs` with full schema | ⏳ Pending |
+
+#### 1e. UI
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Next.js chat interface | Query input + answer display | ⏳ Pending |
+| Citations display | Filename + page number per source | ⏳ Pending |
+| Confidence badge | Visual confidence indicator | ⏳ Pending |
+| Sidebar | Collection stats + ingest trigger | ⏳ Pending |
+
+#### 1f. Evaluation Baseline
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Golden dataset | 20-question Q&A set from knowledge corpus | ⏳ Pending |
+| RAGAS run | faithfulness, answer relevancy, context recall, precision | ⏳ Pending |
+| Results persisted | `docs/evaluation_results.md` | ⏳ Pending |
+
+**MVP gate (all must pass before Phase 2):**
+- [ ] Ingest 30+ local files end-to-end without errors
+- [ ] `POST /query` returns answer + citations in < 8s P95 locally
+- [ ] RAGAS faithfulness ≥ 0.70
+- [ ] API key blocks unauthenticated requests
+- [ ] `docker compose up` — full stack running in < 90s
+
+---
+
+### Phase 2 — Agentic Pipeline ⏳ Not Started
+
+#### LangGraph State Machine
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `AgentState` TypedDict | Full state schema (session, query, docs, answer, citations, …) | ⏳ Pending |
+| Graph compilation | `StateGraph` + `SqliteSaver` checkpointer | ⏳ Pending |
+| Conditional edges | Router → Retriever → Grader → Generator → Critic routing | ⏳ Pending |
+
+#### Agent Nodes
+
+| Agent | Role | Model | Status |
+|-------|------|-------|--------|
+| **Router** | Classifies query type + retrieval strategy | GPT-4o-mini | ⏳ Pending |
+| **Retriever** | Executes retrieval (no LLM) | — | ⏳ Pending |
+| **Grader** | Scores chunk relevance | GPT-4o-mini | ⏳ Pending |
+| **Generator** | Produces cited answer | GPT-4o | ⏳ Pending |
+| **Critic** | Detects hallucination risk, triggers re-retrieve | GPT-4o-mini | ⏳ Pending |
+
+#### Agentic Patterns
+
+| Pattern | Description | Status |
+|---------|-------------|--------|
+| Corrective RAG (CRAG) | Grader triggers Tavily web search when all chunks score < 0.5 | ⏳ Pending |
+| Self-RAG | Critic re-retrieves with refined query when hallucination risk > 0.7 | ⏳ Pending |
+| Adaptive RAG | Router selects dense / hybrid / web strategy per query type | ⏳ Pending |
+| HyDE | Hypothetical Document Embeddings for abstract queries | ⏳ Pending |
+| Step-back prompting | Reframe specific → general before retrieval | ⏳ Pending |
+
+#### Conversational Memory
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `SqliteSaver` checkpointer | Per-session SQLite state persistence | ⏳ Pending |
+| Session ID header | `X-Session-ID` passed in API request | ⏳ Pending |
+| Context window | Last 5 exchanges injected into agent context | ⏳ Pending |
+
+---
+
+### Phase 3 — Azure Connectors ⏳ Not Started
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `AzureBlobLoader` | Lists + downloads files from configured container | ⏳ Pending |
+| Incremental sync | Tracks `last_modified` per blob, skips unchanged | ⏳ Pending |
+| `BaseRetriever` ABC | `retrieve(query, vector, k) → list[Document]` interface | ⏳ Pending |
+| `QdrantRetriever` | Implements `BaseRetriever` for Qdrant | ⏳ Pending |
+| `AzureSearchRetriever` | Azure AI Search semantic ranking, normalized to `Document` | ⏳ Pending |
+| RRF merge (dual-source) | Merge Qdrant + Azure Search results via RRF | ⏳ Pending |
+| `RetrieverRegistry` | Runtime retriever selection by name | ⏳ Pending |
+
+---
+
+### Phase 4 — Multi-Hop Planning ⏳ Not Started
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Planner agent | Decomposes `multi_hop` queries into 2–4 ordered sub-questions | ⏳ Pending |
+| Parallel sub-retrieval | `asyncio.gather` fan-out to Retriever per sub-question | ⏳ Pending |
+| Synthesizer node | Merges partial answers into final coherent response | ⏳ Pending |
+| Human-in-the-loop | `interrupt_before` Generator when confidence < 0.4 | ⏳ Pending |
+| Approval endpoint | `POST /api/v1/query/{session_id}/approve` to resume graph | ⏳ Pending |
+
+---
+
+### Phase 5 — Observability & Evaluation ⏳ Not Started
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| LangSmith tracing | End-to-end graph traces with custom tags per node | ⏳ Pending |
+| Token cost tracking | Cost per agent node in LangSmith | ⏳ Pending |
+| RAGAS automation | Weekly eval via GitHub Actions scheduled job | ⏳ Pending |
+| RAGAS regression gate | CI fails if faithfulness drops > 5% from baseline | ⏳ Pending |
+| Azure App Insights | Custom events: query, retrieval, fallback, answer | ⏳ Pending |
+| Latency tracking | P50 / P95 per pipeline stage | ⏳ Pending |
+| Metrics dashboard | Query volume, fallback rate, avg confidence, cost/query | ⏳ Pending |
+| `GET /api/v1/metrics` | Metrics endpoint | ⏳ Pending |
+
+---
+
+### Phase 6 — Production Hardening ⏳ Not Started
+
+#### Security
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Azure AD / Entra ID auth | OAuth2 Bearer JWT replaces API key | ⏳ Pending |
+| Prompt injection guard | Rule-based + lightweight classifier before any LLM call | ⏳ Pending |
+| Azure Key Vault integration | Zero secrets in code or env files in prod | ⏳ Pending |
+
+#### Reliability
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Retry with backoff | `tenacity` exponential backoff on Azure OpenAI calls | ⏳ Pending |
+| Circuit breaker | Per-upstream: fail 3x → degraded response, not 500 | ⏳ Pending |
+| Request timeout budgets | Router: 3s, Generator: 20s per node | ⏳ Pending |
+| Rate limiting | Token bucket per user via Redis or Azure API Management | ⏳ Pending |
+
+#### Async Ingestion Worker
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Azure Service Bus queue | Ingestion jobs queued async | ⏳ Pending |
+| Worker container | Separate service: embed + Qdrant upsert | ⏳ Pending |
+| Job status API | `GET /api/v1/jobs/{job_id}` → `{status, progress, errors}` | ⏳ Pending |
+
+---
+
+### Phase 7 — Azure Deployment & CI/CD ⏳ Not Started
+
+#### Infrastructure as Code (Terraform)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `main.tf` | Provider config, remote backend (Azure Blob Storage) | ⏳ Pending |
+| Modules | `container_apps/`, `acr/`, `keyvault/`, `servicebus/` | ⏳ Pending |
+| Environments | `dev.tfvars`, `prod.tfvars` | ⏳ Pending |
+
+#### Docker
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `Dockerfile.api` | FastAPI service image | ⏳ Pending |
+| `Dockerfile.worker` | Async ingestion worker image | ⏳ Pending |
+| Qdrant persistence | Official image + Azure Managed Disk | ⏳ Pending |
+
+#### GitHub Actions
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `ci.yml` | lint → type check → unit → integration → RAGAS gate | ⏳ Pending |
+| `deploy.yml` | build → push ACR → deploy Container Apps (on merge to main) | ⏳ Pending |
+
+#### Azure Container Apps
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| API autoscale | 1–10 replicas on HTTP request queue depth | ⏳ Pending |
+| Worker scale-to-zero | Scales down when no Service Bus messages pending | ⏳ Pending |
+| Qdrant persistent replica | Single replica with persistent disk | ⏳ Pending |
+
+---
+
 ## Phase Gate Log
 
 | Phase | Gate Passed | Notes |
 |-------|-------------|-------|
 | 0 | 2026-04-23 | 29 unit tests, mypy strict (11 files), ruff clean, tsc clean, 5 ADRs, CI workflow, 10 architect fixes resolved |
+| 1 | — | Gate: faithfulness ≥ 0.70, full stack < 90s, 30+ files ingested |

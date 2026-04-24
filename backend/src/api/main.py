@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from src.api.middleware.auth import api_key_middleware
 from src.api.routes.health import router as health_router
 from src.api.schemas import ErrorResponse
+from src.config import get_settings
 from src.exceptions import (
     ConfigurationError,
     EmbeddingError,
@@ -52,7 +53,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=get_settings().cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

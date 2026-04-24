@@ -67,3 +67,11 @@ class Embedder:
 
         logger.info("embedding_complete", embedded_count=len(embedded))
         return embedded
+
+    async def embed_query(self, query: str) -> list[float]:
+        """Embed a single query string for retrieval."""
+        try:
+            return await self._embeddings.aembed_query(query)
+        except Exception as exc:
+            logger.error("query_embedding_failed", error=str(exc))
+            raise EmbeddingError(f"Azure OpenAI query embedding failed: {exc}") from exc
