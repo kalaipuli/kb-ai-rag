@@ -40,3 +40,10 @@ class ConfigurationError(KBRagError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+
+class GenerationError(KBRagError):
+    """Raised when the LLM generation step fails or returns an unexpected result."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)

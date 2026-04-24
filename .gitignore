@@ -35,6 +35,7 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+*.backup
 
 # Docker
 *.log
