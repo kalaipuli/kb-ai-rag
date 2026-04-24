@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { clsx } from "clsx";
 import type { Message } from "@/types";
 import { CitationList } from "./CitationList";
@@ -7,7 +8,7 @@ interface ChatMessageProps {
   message: Message;
 }
 
-export function ChatMessage({ message }: ChatMessageProps): React.JSX.Element {
+export function ChatMessage({ message }: ChatMessageProps): JSX.Element {
   const isUser = message.role === "user";
 
   return (

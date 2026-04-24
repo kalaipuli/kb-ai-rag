@@ -14,6 +14,33 @@ Phase → Feature → Tasks → Subtasks (if needed)
 - A **Task** is a single, completable unit of work — one function, one module, one endpoint
 - Write the task list before starting. Never start coding an undefined task.
 
+### Pre-implementation gate — mandatory before writing any code
+
+Before the implementing agent writes a single line, the following must be verified and recorded in the task's registry entry. Implementation does not start until all four checks are pasted as output in `docs/registry/phaseN/tasks.md`.
+
+**Gate 1 — No duplicate schema for the type this task will produce:**
+```bash
+grep -rn "class <YourTypeName>" backend/src/ --include="*.py"
+```
+Expected: zero matches. Multiple definitions of the same concept is a blocker. Canonical location: `backend/src/api/schemas.py`.
+
+**Gate 2 — ADR read for every architectural choice in the task plan:**
+List which ADRs govern the approach (`ls docs/adr/`). If no ADR covers a meaningful design choice in the plan, write the ADR first.
+
+**Gate 3 — Lifespan singleton path confirmed for every shared resource:**
+```bash
+grep -n "app.state\|QdrantClientDep\|SettingsDep\|GenerationChainDep" \
+  backend/src/api/deps.py backend/src/api/main.py
+```
+If the resource is not on `app.state` with a `Dep` alias in `deps.py`, add it there before writing the route.
+
+**Gate 4 — No deprecated LangChain symbols in the plan:**
+```bash
+grep -rn "RetrievalQA\|LLMChain\|StuffDocumentsChain\|ConversationalRetrievalChain" \
+  backend/src/ --include="*.py"
+```
+Expected: zero matches. Use LCEL (`prompt | llm | parser`) for all chain composition.
+
 ## 2. Small, Incremental Changes
 - Each commit implements exactly one task. Not one feature — one task.
 - A change that cannot be described in a single Conventional Commit subject line is too large — split it.
@@ -26,9 +53,17 @@ Phase → Feature → Tasks → Subtasks (if needed)
 - A task is not complete until its test is written **and passes**.
 - Test the behaviour (what the function does), not the implementation (how it does it).
 
+**Error-path coverage is required, not optional.** For every function that calls an external service (Azure OpenAI, Qdrant, disk I/O), the test file must include at least one test that:
+1. Patches the external call to raise an exception
+2. Asserts the correct domain exception is raised by the function under test
+3. Asserts a structlog error event is emitted
+
+A task whose tests cover only the happy path does **not** satisfy the Definition of Done.
+
 ```
 Task: implement RRF fusion
   → Write test_hybrid.py::test_rrf_merges_and_ranks_correctly first
+  → Write test_hybrid.py::test_rrf_raises_on_malformed_input (error path)
   → Implement hybrid.py::reciprocal_rank_fusion
   → Run test — green → commit
 ```
@@ -58,14 +93,45 @@ Before marking a feature complete and moving to the next:
 - Document the version choice in `pyproject.toml` comments if a newer version was intentionally skipped (e.g., breaking API change).
 
 ## 7. Definition of Done (per task)
-A task is done when **all** of the following are true:
-- [ ] Implementation is complete and matches the agreed design
-- [ ] Unit test written and passing
-- [ ] `mypy` passes (backend) / `tsc --noEmit` passes (frontend)
-- [ ] `ruff` / `eslint` passes with zero warnings
-- [ ] `.env.example` updated if a new config variable was introduced
+A task is done when **all** of the following commands produce zero output or pass cleanly. Run them in order; a failure is a blocker — do not mark the task ✅ Done until every command is clean.
+
+```bash
+# 1. Lint — zero warnings
+ruff check backend/src/ backend/tests/
+
+# 2. Type check — strict, zero errors
+mypy backend/src/ --strict
+
+# 3. Tests — all green
+pytest backend/tests/unit/ -q --tb=short
+
+# 4. No deprecated LangChain symbols
+grep -rn "RetrievalQA\|LLMChain\|StuffDocumentsChain\|ConversationalRetrievalChain" \
+  backend/src/ --include="*.py"
+
+# 5. No raw SecretStr passed to third-party clients
+grep -rn "api_key=settings\." backend/src/ --include="*.py" | grep -v "get_secret_value"
+
+# 6. No client instantiation inside route handlers
+grep -rn "AsyncQdrantClient(\|AzureChatOpenAI(\|AzureOpenAIEmbeddings(" \
+  backend/src/api/routes/ --include="*.py"
+
+# 7. No duplicate class names across modules
+grep -rn "^class " backend/src/ --include="*.py" | awk -F: '{print $NF}' | sort | uniq -d
+
+# 8. No print() in source files
+grep -rn "^[[:space:]]*print(" backend/src/ --include="*.py"
+
+# 9. .env.example covers every new Settings field (manual check)
+#    Compare Settings fields vs .env.example entries; report any gap
+```
+
+In addition to the command gates above, confirm:
+- [ ] Implementation matches the agreed design (no scope creep)
+- [ ] `.env.example` updated for every new `Settings` field
 - [ ] ADR written if an architectural decision was made
 - [ ] Committed with a valid Conventional Commit message
+- [ ] Error-path test exists for every function that calls an external service
 
 ## 8. No Orphaned Code
 - Do not write code that is not yet called or tested — it will rot and mislead.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import type { JSX, KeyboardEvent, ChangeEvent } from "react";
 import { Send } from "lucide-react";
 
 interface ChatInputProps {
@@ -8,7 +9,7 @@ interface ChatInputProps {
   disabled: boolean;
 }
 
-export function ChatInput({ onSubmit, disabled }: ChatInputProps): React.JSX.Element {
+export function ChatInput({ onSubmit, disabled }: ChatInputProps): JSX.Element {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -22,14 +23,14 @@ export function ChatInput({ onSubmit, disabled }: ChatInputProps): React.JSX.Ele
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>): void {
+  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>): void {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
   }
 
-  function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>): void {
+  function handleInput(e: ChangeEvent<HTMLTextAreaElement>): void {
     setValue(e.target.value);
     const el = e.target;
     el.style.height = "auto";

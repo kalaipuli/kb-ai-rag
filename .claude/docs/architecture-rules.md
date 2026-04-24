@@ -62,6 +62,31 @@ All routes are prefixed `/api/v1/`. Never change an existing route signature —
 The frontend consumes with `fetch` + `ReadableStream`, not `EventSource` (to support POST).
 Three event types only: `token`, `citations`, `done`.
 
+## Schema Ownership — Single Definition Rule
+
+`backend/src/api/schemas.py` is the authoritative location for all request/response and citation types shared across modules. `backend/src/schemas/` owns generation-specific types only when they are **not** also API types (see ADR-008).
+
+**Before defining any new Pydantic model, verify no equivalent exists:**
+```bash
+grep -rn "class <YourTypeName>" backend/src/ --include="*.py"
+```
+Expected: zero matches. If a structurally equivalent model exists in another module, import it — do not redefine it.
+
+No type that appears in an API response may be re-declared in `generation/`, `retrieval/`, or `ingestion/`. Adding a field to a shared type means editing the one canonical file and updating all import sites.
+
+## Lifespan Singleton — No Per-Request Client Creation
+
+`AsyncQdrantClient`, `AzureChatOpenAI`, `AzureOpenAIEmbeddings`, `BM25Store`, and `CrossEncoderReranker` are initialized **once** in the FastAPI `lifespan` context manager and stored on `app.state`. Route handlers access them exclusively via typed `Dep` aliases in `backend/src/api/deps.py`.
+
+**Verify before any route is written:**
+```bash
+grep -rn "AsyncQdrantClient(\|AzureChatOpenAI(\|AzureOpenAIEmbeddings(" \
+  backend/src/api/routes/ --include="*.py"
+```
+Expected: zero matches. Any client construction inside a route file is a Critical finding.
+
+Adding a new shared resource to lifespan requires a matching `Dep` alias in `deps.py` in the **same commit**.
+
 ## Architecture Decision Records
 Every significant architectural choice gets an ADR in `docs/adr/`.
 

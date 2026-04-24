@@ -10,7 +10,7 @@
 
 ## Project
 
-Enterprise Agentic RAG platform. Five LangGraph agents orchestrate hybrid retrieval (Qdrant + BM25) over PDF/text knowledge articles, evaluated with RAGAS, deployed on Azure. See [GOAL.md](GOAL.md) and [PROJECT_PLAN.md](PROJECT_PLAN.md) for full context.
+Enterprise Agentic RAG platform. Five LangGraph agents orchestrate hybrid retrieval (Qdrant + BM25) over PDF/text knowledge articles, evaluated with RAGAS, deployed on Azure. See [GOAL.md](GOAL.md) and [PROJECT_PLAN_SUMMARY.md](PROJECT_PLAN_SUMMARY.md) for full context.
 
 ---
 
@@ -26,6 +26,7 @@ Enterprise Agentic RAG platform. Five LangGraph agents orchestrate hybrid retrie
 | [git-rules.md](.claude/docs/git-rules.md) | Before committing or opening a PR — branch strategy, Conventional Commits, PR checklist |
 | [project-context.md](.claude/docs/project-context.md) | When setting up the environment or orienting to the repo — layout, local dev commands, env vars |
 | [anti-patterns.md](.claude/docs/anti-patterns.md) | When in doubt about an approach — prohibited patterns and correct alternatives |
+| [architect-review-checklist.md](.claude/docs/architect-review-checklist.md) | At the start of every architect review — 7 priority-ordered grep checks to run before reading implementation detail |
 
 ---
 
@@ -33,10 +34,10 @@ Enterprise Agentic RAG platform. Five LangGraph agents orchestrate hybrid retrie
 
 These three rules are active in every session without needing to load a section file.
 
-**1. Definition of Done** — a task is not complete until:
+**1. Definition of Done** — a task is not complete until all DoD command gates in `development-process.md §7` pass with zero output, **plus**:
 - [ ] Implementation matches the agreed design
-- [ ] Unit test written and passing
-- [ ] `mypy` / `tsc --noEmit` passes
+- [ ] Unit test written and passing (including at least one error-path test per external call)
+- [ ] `mypy --strict` / `tsc --noEmit` passes — zero errors
 - [ ] `ruff` / `eslint` passes — zero warnings
 - [ ] `.env.example` updated if a new env var was introduced
 - [ ] ADR written if an architectural decision was made

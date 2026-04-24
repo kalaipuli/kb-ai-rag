@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { useStream } from "./useStream";
 import * as streaming from "@/lib/streaming";
-import type { StreamEvent } from "@/types";
+import type { StreamEvent, TokenEvent } from "@/types";
 
 vi.mock("@/lib/streaming");
 
@@ -39,8 +39,8 @@ describe("useStream", () => {
 
   it("accumulates token events into assistant message content", async () => {
     const events: StreamEvent[] = [
-      { type: "token", data: "Hello" },
-      { type: "token", data: " world" },
+      { type: "token", content: "Hello" },
+      { type: "token", content: " world" },
     ];
     vi.spyOn(streaming, "streamQuery").mockReturnValue(makeGenerator(events));
     const { result } = renderHook(() => useStream());
@@ -54,9 +54,16 @@ describe("useStream", () => {
   });
 
   it("updates citations from citations event", async () => {
-    const citations = [{ filename: "doc.pdf", page: 3, chunk_index: 0, score: 0.9 }];
+    const citations = [
+      {
+        chunk_id: "c1",
+        filename: "doc.pdf",
+        source_path: "/docs/doc.pdf",
+        page_number: 3,
+      },
+    ];
     const events: StreamEvent[] = [
-      { type: "citations", data: citations },
+      { type: "citations", citations, confidence: 0.9 },
     ];
     vi.spyOn(streaming, "streamQuery").mockReturnValue(makeGenerator(events));
     const { result } = renderHook(() => useStream());
@@ -69,9 +76,13 @@ describe("useStream", () => {
     expect(assistant?.citations).toEqual(citations);
   });
 
-  it("sets confidence and clears isStreaming on done event", async () => {
+  it("sets confidence and clears isStreaming on citations event", async () => {
     const events: StreamEvent[] = [
-      { type: "done", data: { session_id: "s1", confidence: 0.88 } },
+      {
+        type: "citations",
+        citations: [],
+        confidence: 0.88,
+      },
     ];
     vi.spyOn(streaming, "streamQuery").mockReturnValue(makeGenerator(events));
     const { result } = renderHook(() => useStream());
@@ -100,6 +111,28 @@ describe("useStream", () => {
 
     expect(result.current.error?.message).toBe("Network error");
     expect(result.current.isStreaming).toBe(false);
+  });
+
+  it("isStreaming is true while stream is in flight", async () => {
+    // Generator yields one token then stalls indefinitely — simulates mid-stream state.
+    vi.spyOn(streaming, "streamQuery").mockImplementation(async function* () {
+      yield { type: "token", content: "hello" } as TokenEvent;
+      await new Promise<void>(() => {
+        /* never resolves — keeps the stream open */
+      });
+    });
+
+    const { result } = renderHook(() => useStream());
+
+    // Start submit but intentionally do not await — the stream is in flight.
+    act(() => {
+      void result.current.submit("test?");
+    });
+
+    // After the first token is dispatched, isStreaming must still be true.
+    await waitFor(() => {
+      expect(result.current.isStreaming).toBe(true);
+    });
   });
 
   it("resets error via resetError", async () => {

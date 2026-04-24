@@ -35,7 +35,12 @@ describe("ChatMessage", () => {
 
   it("renders citations for assistant messages", () => {
     const citations = [
-      { filename: "guide.pdf", page: 2, chunk_index: 0, score: 0.85 },
+      {
+        chunk_id: "c1",
+        filename: "guide.pdf",
+        source_path: "/docs/guide.pdf",
+        page_number: 2,
+      },
     ];
     render(
       <ChatMessage
@@ -56,7 +61,12 @@ describe("ChatMessage", () => {
 
   it("does not render citations or badge for user messages", () => {
     const citations = [
-      { filename: "guide.pdf", page: 2, chunk_index: 0, score: 0.85 },
+      {
+        chunk_id: "c1",
+        filename: "guide.pdf",
+        source_path: "/docs/guide.pdf",
+        page_number: 2,
+      },
     ];
     render(
       <ChatMessage

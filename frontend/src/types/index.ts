@@ -1,8 +1,8 @@
 export interface Citation {
+  chunk_id: string;
   filename: string;
-  page: number | null;
-  chunk_index: number;
-  score: number;
+  source_path: string;
+  page_number: number | null;
 }
 
 export interface Message {
@@ -15,24 +15,27 @@ export interface Message {
 }
 
 export interface QueryRequest {
-  question: string;
+  query: string;
+  filters?: Record<string, string> | null;
+  k?: number | null;
 }
 
-export interface HealthResponse {
-  status: string;
-  qdrant: string;
-  collection_count: number;
+export interface TokenEvent {
+  type: "token";
+  content: string;
 }
 
-export interface DonePayload {
-  session_id: string;
+export interface CitationsEvent {
+  type: "citations";
+  citations: Citation[];
   confidence: number;
 }
 
-export interface StreamEvent {
-  type: "token" | "citations" | "done";
-  data: string | Citation[] | DonePayload;
+export interface DoneEvent {
+  type: "done";
 }
+
+export type StreamEvent = TokenEvent | CitationsEvent | DoneEvent;
 
 export interface IngestAcceptedResponse {
   status: string;
@@ -49,7 +52,3 @@ export interface CollectionsResponse {
   collections: CollectionInfo[];
 }
 
-export interface ApiError {
-  // domain errors: plain message; 422 validation errors: JSON-stringified list
-  detail: string;
-}

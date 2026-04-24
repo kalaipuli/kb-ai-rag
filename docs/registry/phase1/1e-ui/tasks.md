@@ -28,7 +28,8 @@
 | T15 | ✅ Done | Write component tests for ConfidenceBadge, CitationList, ChatMessage | tester | T10 |
 | T16 | ✅ Done | Write component tests for ChatInput and Sidebar | tester | T11, T12 |
 | T17 | ✅ Done | DoD gate: tsc --noEmit zero errors + eslint zero warnings + npm run build | frontend-developer | T13, T14, T15, T16 |
-| T18 | 🔄 In Progress | Commit all 1e changes (Conventional Commits) + update DASHBOARD.md | project-manager | T17 |
+| T18 | ✅ Done | Commit all 1e changes (Conventional Commits) + update DASHBOARD.md | project-manager | T17 |
+| T19 | ✅ Done | Architect review — 16 findings raised + all resolved (see fixes.md) | architect + frontend-developer + tester | T18 |
 
 ---
 
