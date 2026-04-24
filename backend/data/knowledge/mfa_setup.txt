@@ -1,0 +1,38 @@
+Title: Multi-Factor Authentication (MFA) Setup Guide
+
+Overview
+Multi-Factor Authentication is mandatory for all corporate accounts. MFA adds a second layer of verification beyond your password, protecting accounts even if credentials are compromised. Microsoft Authenticator is the required MFA application for all employees.
+
+Installing Microsoft Authenticator
+Download Microsoft Authenticator from the Apple App Store (iOS) or Google Play Store (Android). Search for "Microsoft Authenticator" and install the official app published by Microsoft Corporation.
+
+Registering Your Account
+1. On your desktop, navigate to aka.ms/mysecurityinfo and sign in with your corporate credentials.
+2. Click "Add sign-in method" and select "Authenticator app".
+3. Click "Next" and then "Next" again on the "Set up your account" screen.
+4. Open Microsoft Authenticator on your phone. Tap the "+" icon and select "Work or school account".
+5. Select "Scan a QR code" and scan the QR code displayed on screen.
+6. A 6-digit code will appear in the app. Enter it on screen to confirm registration.
+7. Click "Next" and then "Done".
+
+Authentication Methods Priority
+Employees must register at least two methods. Recommended order:
+1. Microsoft Authenticator push notification (most secure, works without cellular signal on Wi-Fi)
+2. Microsoft Authenticator TOTP code (works offline)
+3. SMS to mobile number (backup — less secure)
+4. Phone call (emergency only)
+
+Using MFA When Signing In
+After entering your password, you will be prompted for MFA. If you have push notifications enabled, approve the notification on your phone. Alternatively, open the Authenticator app and enter the 6-digit code shown for your account.
+
+Troubleshooting
+- Push notification not arriving: Check mobile data/Wi-Fi is active. Open the Authenticator app and use the TOTP code instead.
+- Lost or replaced phone: Contact the Help Desk immediately at extension 4357. They will temporarily disable MFA on your account after identity verification, allowing you to re-register a new device.
+- Authenticator app out of sync: In the app, go to Settings > Time Correction for Codes > Sync Now.
+- "Request denied" error: Do not approve MFA requests you did not initiate. Report unexpected prompts to security@company.internal.
+
+Traveling Without Mobile Service
+When traveling internationally, use the Authenticator app TOTP codes (work offline without any cellular or Wi-Fi connection). If traveling to a country where Microsoft services are blocked, contact IT at least 5 business days in advance.
+
+Phishing Awareness
+Never approve an MFA push notification if you are not actively signing in. Attackers use "MFA fatigue" attacks — repeatedly sending push requests hoping a user approves accidentally. If you receive unexpected MFA prompts, deny them and report to security@company.internal immediately.

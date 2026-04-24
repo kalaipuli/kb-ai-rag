@@ -43,6 +43,8 @@ Thumbs.db
 # Data files — managed via Docker volumes
 backend/data/*
 !backend/data/.gitkeep
+!backend/data/knowledge/
+backend/data/knowledge/*.pdf
 
 # BM25 index — rebuilt at runtime
 *.pkl

@@ -1,0 +1,39 @@
+Title: Email Configuration Guide — Outlook and Mobile
+
+Overview
+The company uses Microsoft 365 Exchange Online for corporate email. All employees are provisioned a mailbox at firstname.lastname@company.com. Email is accessible via Outlook desktop, Outlook Web App (OWA), and the Outlook mobile app.
+
+Outlook Desktop Setup (Windows)
+Outlook is pre-installed and auto-configured on managed Windows laptops via Group Policy. On first launch, sign in with your corporate email address. Outlook will automatically discover your Exchange Online mailbox and configure it. No manual server settings are required.
+
+Outlook Desktop Setup (macOS)
+1. Download Outlook from the IT Self-Service Portal or the Mac App Store (use the corporate licence — do not purchase personally).
+2. Launch Outlook and click "Add Account".
+3. Enter your corporate email address and click Continue.
+4. Sign in with your corporate credentials and complete MFA.
+5. Outlook will auto-configure your Exchange settings.
+
+Outlook Web App (OWA)
+Access email from any browser at outlook.office.com. Sign in with your corporate email and complete MFA. OWA supports full email, calendar, contacts, and tasks functionality. OWA is the recommended access method on personal or shared devices.
+
+Mobile Email Setup (iOS and Android)
+1. Install the Microsoft Outlook app from the App Store or Google Play.
+2. Open the app and tap "Add Account".
+3. Enter your corporate email address and tap "Add Account".
+4. Sign in with your corporate credentials.
+5. Complete MFA when prompted.
+6. Intune will enroll your device for managed app policies — this is required to access corporate email on mobile. Personal data on your device is not affected.
+
+If prompted to install the Intune Company Portal app, do so before completing Outlook setup.
+
+Email Retention and Archiving
+Corporate email is subject to a 7-year retention policy for compliance. Do not delete emails related to business decisions, contracts, or legal matters. Deleted items are retained in the Recoverable Items folder for 30 days and can be restored via OWA (Recover Deleted Items).
+
+Shared Mailboxes and Distribution Lists
+To request access to a shared mailbox or to be added to a distribution list, submit a request via the IT portal. Access to shared mailboxes requires manager approval. Distribution list membership is managed by the list owner — contact them directly for subscription changes.
+
+Large Attachments
+The maximum email attachment size is 25 MB. For larger files, upload to SharePoint or OneDrive and share the link instead. File sharing links respect permissions — ensure recipients have appropriate access before sharing.
+
+Phishing and Suspicious Email
+Do not click links or open attachments in unexpected emails. Report suspicious emails using the "Report Phishing" button in Outlook (PhishAlarm add-in). IT Security will investigate and respond within 4 hours for critical threats.

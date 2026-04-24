@@ -1,0 +1,33 @@
+Title: Laptop Provisioning Checklist for New Employees
+
+Overview
+New employees receive a pre-configured corporate laptop within their first day. The device is enrolled in Microsoft Intune for mobile device management (MDM) and has baseline security policies applied before delivery.
+
+Standard Hardware Configuration
+- Model: Dell Latitude 5540 (Windows 11) or Apple MacBook Pro 14" (macOS Sonoma) — role-dependent
+- RAM: 16 GB (engineers receive 32 GB)
+- Storage: 512 GB NVMe SSD (encrypted with BitLocker on Windows, FileVault on macOS)
+- Pre-installed software: Microsoft 365, GlobalProtect VPN, CrowdStrike Falcon, Bitwarden
+
+Day-1 Device Setup Steps
+1. Power on the device and connect to corporate Wi-Fi (SSID: Corp-Secure) or use an ethernet cable.
+2. Sign in with your corporate email and password when prompted by the Windows OOBE or macOS Setup Assistant.
+3. Complete MFA registration as prompted (see MFA Setup Guide).
+4. Allow Microsoft Intune to install required policies and applications — this takes approximately 15–30 minutes. Do not interrupt.
+5. Restart when prompted.
+6. Install any role-specific software via the IT Self-Service Portal (Software Center on Windows / Self Service on macOS).
+
+Requesting Non-Standard Hardware
+Employees requiring non-standard equipment (dual monitors, ergonomic peripherals, external GPU, Linux device) must submit a request via the IT Hardware Request Form in the Self-Service Portal. Requests require manager approval and are fulfilled within 5–7 business days. Budget must be confirmed with Finance for orders exceeding £500.
+
+Device Enrollment Verification
+Confirm your device is enrolled in Intune by visiting myapps.microsoft.com and checking that all assigned apps appear. If enrollment is incomplete, run the Intune Company Portal app and click "Check status". Contact the Help Desk if issues persist after 1 business day.
+
+Lost or Stolen Devices
+Report immediately to IT Security (security@company.internal) and your manager. IT will remotely wipe the device within 1 hour of receiving the report. Do not delay reporting — corporate data on un-wiped devices creates a compliance risk. File a police report if theft is suspected.
+
+Returning Devices
+Upon offboarding, return your device to IT Support within your last working day. Remove all personal files beforehand. The device will be wiped and re-provisioned. Failure to return devices may result in payroll deductions per the Asset Recovery Policy (POL-IT-008).
+
+Peripherals
+Standard peripherals (mouse, keyboard, USB hub, monitor cable) can be collected from the IT Supply Room, Building A, Room 108. Premium peripherals require approval via the Hardware Request Form.

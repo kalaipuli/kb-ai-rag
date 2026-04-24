@@ -1,0 +1,41 @@
+Title: Remote Desktop Setup Guide
+
+Overview
+Remote Desktop allows employees to connect to their office workstation or to Windows Virtual Desktop (WVD) sessions from their laptop or home computer. This is useful for accessing applications installed only on workstations, running resource-intensive tasks, or working from a device without the full software stack.
+
+Connecting to Your Office Workstation (Windows)
+Prerequisites: your office workstation must be powered on and not locked by another session. VPN connection required.
+
+1. Connect to the VPN.
+2. Open Remote Desktop Connection (mstsc.exe).
+3. Enter your workstation hostname (format: WS-LASTNAME01 — find yours in the IT Asset Portal).
+4. Click Connect. Enter your corporate credentials (domain\username).
+5. Complete MFA if prompted by the NLA authentication policy.
+
+Connecting from macOS
+1. Install "Microsoft Remote Desktop" from the Mac App Store.
+2. Click the "+" icon and select "Add PC".
+3. Enter your workstation hostname and click Add.
+4. Double-click the added entry to connect. Enter credentials when prompted.
+
+Windows Virtual Desktop (WVD)
+WVD provides pooled Windows 11 virtual sessions for employees who do not have a dedicated workstation. Access is browser-based:
+1. Navigate to client.wvd.microsoft.com.
+2. Sign in with your corporate credentials.
+3. Click on the desktop or application you are assigned to.
+
+WVD sessions auto-save application state for up to 4 hours of inactivity. Sessions idle beyond 4 hours are disconnected and session state is lost — save your work regularly.
+
+Performance Optimisation
+- Use wired ethernet rather than Wi-Fi for remote desktop sessions.
+- Reduce colour depth to 16-bit and disable wallpaper in the Remote Desktop Connection display settings for better performance on slow connections.
+- Enable RemoteFX or GPU-accelerated sessions only if your role requires it (submit a request via the IT portal).
+
+Troubleshooting
+- "Remote Desktop can't connect to the remote computer": Verify the workstation hostname is correct and the machine is powered on. Check VPN is connected.
+- Blank screen on connection: Disconnect and reconnect. If persistent, restart the Remote Desktop service on the target machine by contacting the Help Desk.
+- Session disconnects frequently: Check network stability. Increase session timeout via Group Policy (IT team can adjust for your workstation).
+- Credential prompt loops: Clear saved credentials in Windows Credential Manager and re-enter.
+
+Session Limits
+Each employee may have one active Remote Desktop session to their workstation at a time. Multiple concurrent WVD sessions are not permitted. Idle sessions beyond 2 hours are automatically disconnected by policy to free resources.

@@ -1,0 +1,32 @@
+Title: VPN Setup and Configuration Guide
+
+Overview
+The corporate VPN provides secure remote access to internal network resources, including file shares, internal applications, and development environments. All remote work must be conducted over the VPN.
+
+Supported VPN Clients
+The company supports GlobalProtect (Palo Alto Networks) as the standard VPN client. Download it from the IT Self-Service Portal under "Remote Access Tools". Windows and macOS versions are available. Mobile clients are available for iOS and Android via the App Store / Google Play.
+
+Initial Setup
+1. Download and install GlobalProtect from the IT Self-Service Portal.
+2. Launch the client and enter the portal address: vpn.company.internal
+3. Authenticate with your corporate email address and Active Directory password.
+4. Complete the MFA challenge via Microsoft Authenticator (push notification or TOTP code).
+5. The VPN will connect and display a "Connected" status in the system tray.
+
+Connecting and Disconnecting
+To connect, click the GlobalProtect icon in the system tray and select "Connect". To disconnect, click the icon and select "Disconnect". Always disconnect before shutting down your laptop to ensure clean session termination.
+
+Troubleshooting Connection Failures
+- Authentication error: Verify your AD password has not expired. Reset at password.company.internal.
+- MFA timeout: Ensure system clock is synchronized (time drift invalidates TOTP codes). On Windows run: w32tm /resync. On macOS enable "Set time automatically" in Date & Time preferences.
+- Certificate error: The GlobalProtect client may need a certificate update. Run "Check for updates" in the client or reinstall from the portal.
+- Gateway unreachable: Check that your local internet connection is active. Try connecting to vpn.company.internal from a browser to verify DNS resolution.
+
+Split Tunneling Policy
+The VPN is configured in full-tunnel mode for all employees. All traffic, including internet traffic, is routed through the corporate network during VPN sessions. Exceptions for specific streaming or personal use sites are not supported.
+
+Always-On VPN
+Managed corporate laptops are enrolled in Always-On VPN, which automatically connects whenever the device is not on a recognized corporate Wi-Fi network. Always-On cannot be manually disabled. Contact the Network team (network-team@company.internal) if you encounter issues caused by Always-On behavior.
+
+Support
+For VPN issues not resolved by this guide, open a ticket via the IT Help Desk portal or call extension 4357. Include your error message, operating system version, and GlobalProtect client version in the ticket.

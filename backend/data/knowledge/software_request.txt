@@ -1,0 +1,36 @@
+Title: Software Request Process
+
+Overview
+All software installed on corporate devices must be approved and licensed. Unauthorized software installation violates the Acceptable Use Policy (POL-IT-001) and may create security and compliance risks. The IT Self-Service Portal provides a catalog of pre-approved software available for self-installation.
+
+Pre-Approved Software (Self-Install)
+The following software is pre-approved and available in the Self-Service Portal without a formal request:
+- Visual Studio Code, IntelliJ IDEA Community, PyCharm Community
+- Docker Desktop (requires manager acknowledgement of licensing terms for commercial use)
+- Postman, Insomnia
+- Git, GitHub Desktop
+- Slack, Zoom, Microsoft Teams
+- Figma (browser-based — no install needed)
+- 7-Zip, WinRAR
+- Adobe Acrobat Reader
+
+Requesting New Software
+For software not in the catalog:
+1. Check whether a license is already held via the Software Asset Management Portal at sam.company.internal.
+2. If a license exists, submit a "License Assignment Request" — fulfilled within 1 business day.
+3. If no license exists, submit a "New Software Request" form in the IT Self-Service Portal. Include: software name, version, business justification, and estimated number of users.
+
+Review and Approval Process
+New software requests are reviewed by IT Security within 3 business days. The review covers: vendor security posture, data handling practices, GDPR compliance, and compatibility with existing tooling. Requests for software with elevated network access may require CISO approval.
+
+Open Source Software
+Open source tools may be installed in development environments after a licence compatibility check. Copyleft licences (GPL, AGPL) require Legal review before inclusion in products. Submit a review request at legal@company.internal with the software name and planned use.
+
+SaaS Subscriptions
+All new SaaS subscriptions must go through the IT Procurement process regardless of cost. This applies even for free-tier tools that will handle company data. Procurement forms are available at procurement.company.internal. Subscriptions must not be purchased on personal cards without prior approval.
+
+Removal of Unauthorized Software
+IT Security periodically scans all managed devices using CrowdStrike and Intune. Unauthorized software will be flagged and removed remotely. Repeated violations will be escalated to HR under the disciplinary policy.
+
+Licence Renewals
+IT will notify software owners 30 days before licence expiry. Renewal requests must be submitted via the Procurement Portal. If a licence is not renewed by the expiry date, access will be revoked automatically.

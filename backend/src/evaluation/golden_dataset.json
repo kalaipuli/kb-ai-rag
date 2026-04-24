@@ -1,0 +1,102 @@
+[
+  {
+    "id": "q001",
+    "question": "What VPN client does the company use and where can I download it?",
+    "ground_truth": "The company uses GlobalProtect by Palo Alto Networks as the standard VPN client. It can be downloaded from the IT Self-Service Portal under 'Remote Access Tools'. Windows and macOS versions are available, and mobile clients are available for iOS and Android via the App Store and Google Play."
+  },
+  {
+    "id": "q002",
+    "question": "My VPN shows an MFA timeout error. How do I fix it?",
+    "ground_truth": "An MFA timeout is usually caused by a time drift issue that invalidates TOTP codes. On Windows, run 'w32tm /resync' to synchronize the system clock. On macOS, enable 'Set time automatically' in Date & Time preferences. Once the clock is synchronized, reconnect to the VPN."
+  },
+  {
+    "id": "q003",
+    "question": "What is the VPN portal address I should enter in GlobalProtect?",
+    "ground_truth": "The VPN portal address to enter in GlobalProtect is vpn.company.internal."
+  },
+  {
+    "id": "q004",
+    "question": "What is the minimum password length required by the corporate password policy?",
+    "ground_truth": "The corporate password policy requires a minimum password length of 14 characters. Passwords must also include at least one uppercase letter, one lowercase letter, one digit, and one special character. Passwords cannot reuse the last 24 passwords and cannot contain your username or display name."
+  },
+  {
+    "id": "q005",
+    "question": "How do I reset my corporate password using the self-service portal?",
+    "ground_truth": "Navigate to password.company.internal, enter your corporate email address, and verify your identity using a registered method such as a Microsoft Authenticator push notification, an SMS to your registered mobile number, or security questions. After verification, enter and confirm your new password meeting all complexity requirements. Allow 2 to 3 minutes for the change to propagate before signing in."
+  },
+  {
+    "id": "q006",
+    "question": "I am locked out and cannot complete self-service password reset. What are my options?",
+    "ground_truth": "If you are locked out and cannot complete SSPR — for example because you lost your phone or never registered — contact the Help Desk. You can call extension 4357 (available 24/7), email helpdesk@company.internal, or visit the IT Support Desk in Building A, Room 102 (Monday to Friday, 8am to 6pm). You will need to provide your employee ID for identity verification."
+  },
+  {
+    "id": "q007",
+    "question": "What should I do if I receive an MFA push notification that I did not initiate?",
+    "ground_truth": "Do not approve unexpected MFA push notifications. Attackers use MFA fatigue attacks by repeatedly sending push requests hoping a user approves accidentally. Deny the request and immediately report the unexpected prompts to security@company.internal."
+  },
+  {
+    "id": "q008",
+    "question": "How do I re-register MFA after getting a new phone?",
+    "ground_truth": "Contact the Help Desk immediately at extension 4357. They will temporarily disable MFA on your account after identity verification, which allows you to re-register your new device. Once MFA is disabled, navigate to aka.ms/mysecurityinfo and add the Authenticator app on your new phone following the registration steps."
+  },
+  {
+    "id": "q009",
+    "question": "How can I use MFA when traveling internationally without mobile service?",
+    "ground_truth": "Use the Microsoft Authenticator app TOTP codes, which work fully offline without any cellular or Wi-Fi connection. Open the Authenticator app and use the 6-digit code shown for your corporate account. If traveling to a country where Microsoft services are blocked, contact IT at least 5 business days in advance."
+  },
+  {
+    "id": "q010",
+    "question": "How long does Microsoft Intune take to install policies on a new corporate laptop?",
+    "ground_truth": "Microsoft Intune takes approximately 15 to 30 minutes to install required policies and applications on a new corporate laptop. During this time the device should not be interrupted. A restart will be prompted once the process is complete."
+  },
+  {
+    "id": "q011",
+    "question": "What should I do immediately if my corporate laptop is lost or stolen?",
+    "ground_truth": "Report the loss or theft immediately to IT Security at security@company.internal and to your manager. IT will remotely wipe the device within 1 hour of receiving the report. Do not delay reporting because corporate data on un-wiped devices creates a compliance risk. File a police report if theft is suspected."
+  },
+  {
+    "id": "q012",
+    "question": "Which open source licence types require a Legal review before being included in a product?",
+    "ground_truth": "Copyleft licences such as GPL and AGPL require Legal review before inclusion in products. Submit a review request to legal@company.internal with the software name and planned use. Open source tools may be installed in development environments after a licence compatibility check."
+  },
+  {
+    "id": "q013",
+    "question": "How long does IT Security take to review a new software request?",
+    "ground_truth": "IT Security reviews new software requests within 3 business days. The review covers the vendor's security posture, data handling practices, GDPR compliance, and compatibility with existing tooling. Requests for software with elevated network access may additionally require CISO approval."
+  },
+  {
+    "id": "q014",
+    "question": "How do I manually map the shared departmental drive on Windows?",
+    "ground_truth": "Open File Explorer and click 'This PC', then click 'Map network drive' in the toolbar. Choose a drive letter and enter the path \\\\fileserver.company.internal\\shared. Tick 'Reconnect at sign-in' and enter your corporate credentials in domain\\username format if prompted. Click Finish and the drive will appear under 'This PC'."
+  },
+  {
+    "id": "q015",
+    "question": "How do I map a network drive on macOS?",
+    "ground_truth": "In Finder press Cmd+K to open the 'Connect to Server' dialog. Enter the server address smb://fileserver.company.internal/shared and click Connect. Enter your corporate username and password when prompted. The share will mount under /Volumes/. To make the mapping persist after reboot, open System Settings, go to General > Login Items, and add the mounted share."
+  },
+  {
+    "id": "q016",
+    "question": "What is the maximum email attachment size in the corporate email system?",
+    "ground_truth": "The maximum email attachment size is 25 MB. For files larger than 25 MB, upload the file to SharePoint or OneDrive and share a link instead. Ensure recipients have appropriate access permissions before sharing the link."
+  },
+  {
+    "id": "q017",
+    "question": "How long are deleted emails retained and can they be recovered?",
+    "ground_truth": "Deleted items are retained in the Recoverable Items folder for 30 days and can be restored during this period via Outlook Web App using the 'Recover Deleted Items' feature. Corporate email is also subject to a 7-year retention policy for compliance purposes."
+  },
+  {
+    "id": "q018",
+    "question": "How do I set up corporate email on my personal mobile device?",
+    "ground_truth": "Install the Microsoft Outlook app from the App Store or Google Play. Open the app, tap 'Add Account', enter your corporate email address, and sign in with your corporate credentials. Complete MFA when prompted. Microsoft Intune will enroll your device for managed app policies, which is required to access corporate email on mobile. Personal data on your device is not affected by this enrollment."
+  },
+  {
+    "id": "q019",
+    "question": "How long before an idle Windows Virtual Desktop session is automatically disconnected?",
+    "ground_truth": "Windows Virtual Desktop sessions that are idle for more than 4 hours are automatically disconnected and session state is lost. Employees should save their work regularly. Active sessions are not affected by this timeout."
+  },
+  {
+    "id": "q020",
+    "question": "How do I connect to my office workstation using Remote Desktop from a macOS laptop?",
+    "ground_truth": "Install 'Microsoft Remote Desktop' from the Mac App Store. Click the '+' icon and select 'Add PC'. Enter your workstation hostname in the format WS-LASTNAME01 (find your hostname in the IT Asset Portal) and click Add. Double-click the added entry to connect, then enter your corporate domain credentials when prompted. You must be connected to the VPN before initiating the connection."
+  }
+]

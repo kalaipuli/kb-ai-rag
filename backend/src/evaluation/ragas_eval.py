@@ -1,0 +1,176 @@
+"""RAGAS evaluation runner for the MVP RAG pipeline.
+
+Loads a golden dataset (question + ground_truth pairs), runs each question
+through GenerationChain, and computes four RAGAS metrics:
+faithfulness, answer_relevancy, context_recall, context_precision.
+
+Install dependencies with: poetry install --with eval
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import math
+import statistics
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import structlog
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+from ragas import EvaluationDataset, SingleTurnSample, evaluate
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from ragas.evaluation import EvaluationResult as RagasEvaluationResult
+from ragas.llms import LangchainLLMWrapper
+from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
+
+from src.config import Settings
+from src.exceptions import GenerationError
+from src.generation.chain import GenerationChain
+from src.schemas.generation import Citation
+
+logger = structlog.get_logger(__name__)
+
+
+@dataclass
+class EvaluationResult:
+    """Aggregated RAGAS metrics for one evaluation run."""
+
+    faithfulness: float
+    answer_relevancy: float
+    context_recall: float
+    context_precision: float
+    per_sample: list[dict[str, float]] = field(default_factory=list)
+
+    def to_markdown(self) -> str:
+        lines = [
+            "## RAGAS Evaluation Results\n",
+            "| Metric | Score |",
+            "|--------|-------|",
+            f"| Faithfulness | {self.faithfulness:.4f} |",
+            f"| Answer Relevancy | {self.answer_relevancy:.4f} |",
+            f"| Context Recall | {self.context_recall:.4f} |",
+            f"| Context Precision | {self.context_precision:.4f} |",
+        ]
+        return "\n".join(lines)
+
+
+def _default_context_fetcher(citations: list[Citation]) -> list[str]:
+    return [f"{c.filename} p.{c.page_number}" for c in citations]
+
+
+def _nanmean(values: list[float]) -> float:
+    finite = [v for v in values if not math.isnan(v)]
+    return statistics.fmean(finite) if finite else 0.0
+
+
+class RagasEvaluator:
+    """Runs a RAGAS evaluation pass over a golden dataset.
+
+    Args:
+        generation_chain: Live GenerationChain to query per golden question.
+        settings: Application settings used to build the Azure LLM/embeddings
+                  wrappers that RAGAS uses internally for metric computation.
+        dataset_path: Path to ``golden_dataset.json``.
+        context_fetcher: Optional override that converts Citation objects to
+                         raw text strings for the ``retrieved_contexts`` field.
+                         Defaults to ``"{filename} p.{page_number}"`` strings.
+    """
+
+    def __init__(
+        self,
+        generation_chain: GenerationChain,
+        settings: Settings,
+        dataset_path: Path,
+        context_fetcher: Callable[[list[Citation]], list[str]] | None = None,
+    ) -> None:
+        self._chain = generation_chain
+        self._dataset_path = dataset_path
+        self._context_fetcher = context_fetcher or _default_context_fetcher
+
+        api_key_str = settings.azure_openai_api_key.get_secret_value()
+        self._ragas_llm = LangchainLLMWrapper(
+            AzureChatOpenAI(
+                azure_endpoint=settings.azure_openai_endpoint,
+                api_key=api_key_str,  # type: ignore[arg-type]
+                azure_deployment=settings.azure_chat_deployment,
+                api_version=settings.azure_openai_api_version,
+                temperature=0,
+            )
+        )
+        self._ragas_embeddings = LangchainEmbeddingsWrapper(
+            AzureOpenAIEmbeddings(
+                azure_endpoint=settings.azure_openai_endpoint,
+                api_key=api_key_str,  # type: ignore[arg-type]
+                azure_deployment=settings.azure_embedding_deployment,
+                api_version=settings.azure_openai_api_version,
+            )
+        )
+
+    def _load_dataset(self) -> list[dict[str, str]]:
+        raw = self._dataset_path.read_text(encoding="utf-8")
+        data: list[dict[str, str]] = json.loads(raw)
+        return data
+
+    async def run(self) -> EvaluationResult:
+        """Query the pipeline for each golden question and compute RAGAS metrics."""
+        dataset = self._load_dataset()
+        samples: list[SingleTurnSample] = []
+
+        for entry in dataset:
+            question = entry["question"]
+            ground_truth = entry["ground_truth"]
+
+            try:
+                result = await self._chain.generate(question)
+            except GenerationError:
+                raise
+            except Exception as exc:
+                logger.error("evaluation_generate_failed", question=question, error=str(exc))
+                raise GenerationError(f"Evaluation generate failed: {exc}") from exc
+
+            contexts = self._context_fetcher(result.citations)
+            samples.append(
+                SingleTurnSample(
+                    user_input=question,
+                    retrieved_contexts=contexts,
+                    response=result.answer,
+                    reference=ground_truth,
+                )
+            )
+
+        eval_dataset = EvaluationDataset(samples=samples)
+
+        ragas_result: RagasEvaluationResult = await asyncio.to_thread(
+            evaluate,
+            dataset=eval_dataset,
+            metrics=[
+                Faithfulness(),
+                AnswerRelevancy(),
+                ContextRecall(),
+                ContextPrecision(),
+            ],
+            llm=self._ragas_llm,
+            embeddings=self._ragas_embeddings,
+            show_progress=False,
+        )
+
+        faithfulness = _nanmean(ragas_result["faithfulness"])
+        answer_relevancy = _nanmean(ragas_result["answer_relevancy"])
+        context_recall = _nanmean(ragas_result["context_recall"])
+        context_precision = _nanmean(ragas_result["context_precision"])
+
+        logger.info(
+            "ragas_evaluation_complete",
+            sample_count=len(samples),
+            faithfulness=round(faithfulness, 4),
+        )
+
+        return EvaluationResult(
+            faithfulness=faithfulness,
+            answer_relevancy=answer_relevancy,
+            context_recall=context_recall,
+            context_precision=context_precision,
+            per_sample=list(ragas_result.scores),
+        )
