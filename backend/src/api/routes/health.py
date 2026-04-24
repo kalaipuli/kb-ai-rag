@@ -8,11 +8,10 @@ vector store.
 """
 
 import structlog
-from fastapi import APIRouter, Depends
-from qdrant_client import AsyncQdrantClient
+from fastapi import APIRouter
 
+from src.api.deps import QdrantClientDep
 from src.api.schemas import HealthResponse
-from src.config import Settings, get_settings
 
 logger = structlog.get_logger(__name__)
 
@@ -20,11 +19,11 @@ router = APIRouter()
 
 
 @router.get("/health", response_model=HealthResponse)
-async def health_check(settings: Settings = Depends(get_settings)) -> HealthResponse:  # noqa: B008
+async def health_check(qdrant: QdrantClientDep) -> HealthResponse:
     """Return service liveness and Qdrant connectivity status.
 
     Args:
-        settings: Injected application settings (via FastAPI dependency).
+        qdrant: Lifespan-managed AsyncQdrantClient (via FastAPI dependency).
 
     Returns:
         HealthResponse with ``qdrant="connected"`` and a live collection count,
@@ -32,9 +31,7 @@ async def health_check(settings: Settings = Depends(get_settings)) -> HealthResp
         store cannot be reached.
     """
     try:
-        client = AsyncQdrantClient(url=settings.qdrant_url)
-        result = await client.get_collections()
-        await client.close()
+        result = await qdrant.get_collections()
         collection_count = len(result.collections)
         logger.info(
             "health_check_ok",

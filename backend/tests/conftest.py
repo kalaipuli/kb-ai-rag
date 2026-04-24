@@ -25,7 +25,7 @@ due to missing required fields during test collection or execution.
 
 import os
 from collections.abc import Generator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -148,11 +148,13 @@ def authenticated_headers() -> dict[str, str]:
 
 @pytest.fixture
 def mock_qdrant_client() -> Generator[MagicMock, None, None]:
-    """Patch AsyncQdrantClient so health checks do not attempt real TCP connections."""
-    with patch("src.api.routes.health.AsyncQdrantClient") as mock_cls:
-        mock_instance = MagicMock()
-        # get_collections and close are awaited in the async handler
-        mock_instance.get_collections = AsyncMock()
-        mock_instance.close = AsyncMock()
-        mock_cls.return_value = mock_instance
-        yield mock_instance
+    """Override the get_qdrant_client dependency so health checks do not attempt real TCP connections."""
+    from src.api.deps import get_qdrant_client
+    from src.api.main import app
+
+    mock_instance = MagicMock()
+    # get_collections is awaited in the async handler
+    mock_instance.get_collections = AsyncMock()
+    app.dependency_overrides[get_qdrant_client] = lambda: mock_instance
+    yield mock_instance
+    app.dependency_overrides.pop(get_qdrant_client, None)

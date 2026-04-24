@@ -39,12 +39,17 @@ from src.retrieval.retriever import HybridRetriever
 
 logger = structlog.get_logger(__name__)
 
+# Single call site — consumed by CORSMiddleware below and reused in lifespan
+# so that env-var overrides applied before import (e.g. in tests) are
+# reflected consistently rather than potentially reading two different states.
+_settings = get_settings()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Initialize singleton services and expose via app.state."""
     configure_logging()
-    settings = get_settings()
+    settings = _settings
 
     bm25_store = BM25Store(index_path=Path(settings.bm25_index_path))
     if Path(settings.bm25_index_path).exists():
@@ -77,7 +82,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_settings().cors_origins,
+    allow_origins=_settings.cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

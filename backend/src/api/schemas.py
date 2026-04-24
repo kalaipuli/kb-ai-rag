@@ -7,7 +7,7 @@ thin and schema evolution is centralised in one place.
 canonical types defined in ``src.schemas.generation``.
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.schemas.generation import Citation as CitationItem
 from src.schemas.generation import GenerationResult as QueryResponse
@@ -42,7 +42,7 @@ class ErrorResponse(BaseModel):
 class QueryRequest(BaseModel):
     """Request body for POST /api/v1/query."""
 
-    query: str
+    query: str = Field(..., min_length=1)
     filters: dict[str, str] | None = None
     k: int | None = None
 

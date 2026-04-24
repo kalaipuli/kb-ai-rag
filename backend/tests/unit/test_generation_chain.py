@@ -24,6 +24,8 @@ from src.ingestion.models import ChunkMetadata
 from src.retrieval.models import RetrievalResult
 from src.schemas.generation import GenerationResult
 
+pytestmark = pytest.mark.asyncio
+
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
@@ -94,7 +96,6 @@ def _make_llm_runnable(answer: str = "Mocked answer.") -> RunnableLambda:  # typ
 
 
 class TestKBRetriever:
-    @pytest.mark.asyncio
     async def test_kb_retriever_aget_returns_documents(self) -> None:
         """_aget_relevant_documents converts RetrievalResults to LangChain Documents."""
         r1 = _make_retrieval_result("c1", "text one", 1.0)
@@ -114,6 +115,7 @@ class TestKBRetriever:
         assert docs[0].metadata["page_number"] == 1
         assert docs[0].metadata["score"] == 1.0
 
+    @pytest.mark.filterwarnings("ignore::pytest.PytestWarning")
     def test_kb_retriever_get_raises(self) -> None:
         """_get_relevant_documents must raise NotImplementedError (sync path forbidden)."""
         hybrid = _make_hybrid_retriever()
@@ -149,7 +151,6 @@ def _source_doc(
 
 
 class TestGenerationChain:
-    @pytest.mark.asyncio
     async def test_generation_chain_returns_result(self, mocker: MagicMock) -> None:
         """GenerationChain.generate returns a valid GenerationResult with correct fields."""
         settings = _make_settings()
@@ -169,7 +170,6 @@ class TestGenerationChain:
         assert result.citations[0].filename == "geo.pdf"
         assert 0.0 <= result.confidence <= 1.0
 
-    @pytest.mark.asyncio
     async def test_generation_chain_deduplicates_citations(self, mocker: MagicMock) -> None:
         """Same chunk_id appearing twice in retrieved docs yields only one citation."""
         settings = _make_settings()
@@ -192,7 +192,6 @@ class TestGenerationChain:
         assert len(result.citations) == 1
         assert result.citations[0].chunk_id == "c1"
 
-    @pytest.mark.asyncio
     async def test_generation_chain_no_docs_confidence_zero(self, mocker: MagicMock) -> None:
         """When retrieval returns no docs, confidence must be exactly 0.0."""
         settings = _make_settings()
@@ -208,7 +207,6 @@ class TestGenerationChain:
 
         assert result.confidence == 0.0
 
-    @pytest.mark.asyncio
     async def test_generation_chain_propagates_error(self, mocker: MagicMock) -> None:
         """If retrieval raises, GenerationError is raised with the original message."""
         settings = _make_settings()
@@ -225,7 +223,6 @@ class TestGenerationChain:
         with pytest.raises(GenerationError, match="retrieval exploded"):
             await gen_chain.generate("broken question")
 
-    @pytest.mark.asyncio
     async def test_generation_chain_multiple_citations_order_preserved(
         self, mocker: MagicMock
     ) -> None:
@@ -252,7 +249,6 @@ class TestGenerationChain:
         assert result.citations[0].chunk_id == "c2"
         assert result.citations[1].chunk_id == "c1"
 
-    @pytest.mark.asyncio
     async def test_generation_chain_confidence_in_unit_interval(
         self, mocker: MagicMock
     ) -> None:
@@ -273,7 +269,6 @@ class TestGenerationChain:
 
         assert 0.0 <= result.confidence <= 1.0
 
-    @pytest.mark.asyncio
     async def test_generation_chain_page_number_none_for_sentinel(
         self, mocker: MagicMock
     ) -> None:
@@ -302,7 +297,6 @@ class TestGenerationChain:
         assert len(result.citations) == 1
         assert result.citations[0].page_number is None
 
-    @pytest.mark.asyncio
     async def test_generation_chain_llm_error_raises_generation_error(
         self, mocker: MagicMock
     ) -> None:
@@ -324,7 +318,6 @@ class TestGenerationChain:
         with pytest.raises(GenerationError, match="LLM failed"):
             await gen_chain.generate("question")
 
-    @pytest.mark.asyncio
     async def test_generation_chain_negative_score_confidence_low(
         self, mocker: MagicMock
     ) -> None:
@@ -372,7 +365,6 @@ def _make_streaming_runnable(tokens: list[str]) -> RunnableLambda:  # type: igno
 
 
 class TestGenerationChainStream:
-    pytestmark = pytest.mark.asyncio
     async def test_astream_generate_yields_token_then_citations_then_done(
         self, mocker: MagicMock
     ) -> None:

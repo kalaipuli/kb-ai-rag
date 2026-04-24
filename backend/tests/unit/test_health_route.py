@@ -1,9 +1,11 @@
 """Unit tests for GET /api/v1/health."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi.testclient import TestClient
 
+from src.api.deps import get_qdrant_client
+from src.api.main import app
 from src.config import Settings
 
 
@@ -13,7 +15,7 @@ def test_health_returns_connected_when_qdrant_ok(
     mock_qdrant_client: MagicMock,
     authenticated_headers: dict[str, str],
 ) -> None:
-    """When AsyncQdrantClient.get_collections() succeeds the response shows 'connected'."""
+    """When get_collections() succeeds the response shows 'connected'."""
     collection_mock = MagicMock()
     collection_mock.collections = [MagicMock(), MagicMock()]
     mock_qdrant_client.get_collections = AsyncMock(return_value=collection_mock)
@@ -32,10 +34,16 @@ def test_health_returns_disconnected_when_qdrant_fails(
     test_client: TestClient,
     authenticated_headers: dict[str, str],
 ) -> None:
-    """When AsyncQdrantClient raises any exception the endpoint still returns HTTP 200."""
-    with patch("src.api.routes.health.AsyncQdrantClient") as mock_cls:
-        mock_cls.side_effect = ConnectionRefusedError("qdrant not running")
+    """When get_collections raises any exception the endpoint still returns HTTP 200."""
+    failing_client = MagicMock()
+    failing_client.get_collections = AsyncMock(
+        side_effect=ConnectionRefusedError("qdrant not running")
+    )
+    app.dependency_overrides[get_qdrant_client] = lambda: failing_client
+    try:
         response = test_client.get("/api/v1/health", headers=authenticated_headers)
+    finally:
+        app.dependency_overrides.pop(get_qdrant_client, None)
 
     assert response.status_code == 200
     body = response.json()

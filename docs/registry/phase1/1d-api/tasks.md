@@ -1,8 +1,8 @@
 # Phase 1d — API Task Registry
 
-> Status: ✅ Complete | Phase: 1d | Started: 2026-04-24 | Completed: 2026-04-24
+> Status: ✅ Complete (+ architect fixes resolved 2026-04-24) | Phase: 1d | Started: 2026-04-24 | Completed: 2026-04-24
 > Governed by: CLAUDE.md §9 — all tasks follow the Definition of Done checklist (§7)
-> Last updated: 2026-04-24
+> Last updated: 2026-04-24 | See [fixes.md](fixes.md) for the 17-item architect review fix log
 
 ---
 
@@ -11,12 +11,12 @@
 | ID | Status | Task | Agent | Depends On |
 |----|--------|------|-------|------------|
 | T01 | ✅ Done | T1-1: Fix pytest-asyncio strict mode (pyproject.toml + async test files) | backend-developer | — |
-| T02 | ✅ Done | T1-2 + T1-4: Unwrap SecretStr + replace `_aget_relevant_documents` in chain.py | backend-developer | — |
+| T02 | ✅ Done | T1-2 + T1-4: Unwrap SecretStr + replace `_aget_relevant_documents` in chain.py | backend-developer | — | ⚠️ DoD note: `AzureChatOpenAI` accepts `SecretStr` natively; `.get_secret_value()` would cause a mypy type error — DoD item wording was incorrect. Verified clean. See F01 in fixes.md. |
 | T03 | ✅ Done | T1-3: Bump qdrant-client to ^1.12, migrate client.search → query_points in dense.py | backend-developer | — |
 | T04 | ✅ Done | T2-5: Audit and remove unused langchain-community / langchain shim deps | backend-developer | — |
-| T05 | ✅ Done | Add IngestRequest, IngestAcceptedResponse, CollectionsResponse schemas to api/schemas.py | backend-developer | — |
+| T05 | ✅ Done | Add IngestRequest, IngestAcceptedResponse, CollectionsResponse schemas to api/schemas.py | backend-developer | — | ⚠️ DoD gap resolved 2026-04-24: unit tests for all 4 schemas added in test_api_schemas.py (F10 in fixes.md). |
 | T06 | ✅ Done | Add `astream_generate` SSE streaming method to GenerationChain | backend-developer | T02 |
-| T07 | ✅ Done | Refactor main.py lifespan: initialize singletons, store in app.state, create Annotated deps | backend-developer | T02, T03 |
+| T07 | ✅ Done | Refactor main.py lifespan: initialize singletons, store in app.state, create Annotated deps | backend-developer | T02, T03 | ⚠️ DoD gap resolved 2026-04-24: health.py migrated from `Depends(get_settings) # noqa: B008` to `SettingsDep` (F07 in fixes.md). |
 | T08 | ✅ Done | Implement POST /api/v1/ingest route (BackgroundTasks, 202 Accepted) | backend-developer | T05, T07 |
 | T09 | ✅ Done | Implement POST /api/v1/query SSE route (StreamingResponse, token/citations/done) | backend-developer | T05, T06, T07 |
 | T10 | ✅ Done | Implement GET /api/v1/collections route | backend-developer | T05, T07 |

@@ -5,6 +5,7 @@ matches ``settings.api_key``.  Paths listed in ``EXEMPT_PATHS`` are always
 allowed through without authentication.
 """
 
+import secrets
 from collections.abc import Awaitable, Callable
 
 import structlog
@@ -45,7 +46,7 @@ async def api_key_middleware(
 
     settings = get_settings()
     api_key = request.headers.get("X-API-Key", "")
-    if not api_key or api_key != settings.api_key.get_secret_value():
+    if not api_key or not secrets.compare_digest(api_key, settings.api_key.get_secret_value()):
         logger.warning("auth_failed", path=request.url.path)
         return JSONResponse(
             status_code=401,

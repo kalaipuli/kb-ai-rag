@@ -1,7 +1,7 @@
 """Unit tests for POST /api/v1/ingest."""
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from fastapi.testclient import TestClient
 
@@ -15,7 +15,7 @@ class TestIngestEndpoint:
         authenticated_headers: dict[str, str],
     ) -> None:
         """POST /api/v1/ingest returns 202 Accepted."""
-        with patch("src.api.routes.ingest.run_pipeline"):
+        with patch("src.api.routes.ingest.run_pipeline", new_callable=AsyncMock):
             response = test_client_1d.post(
                 "/api/v1/ingest",
                 headers=authenticated_headers,
@@ -36,7 +36,7 @@ class TestIngestEndpoint:
         authenticated_headers: dict[str, str],
     ) -> None:
         """Response body has status='accepted' and a non-empty message."""
-        with patch("src.api.routes.ingest.run_pipeline"):
+        with patch("src.api.routes.ingest.run_pipeline", new_callable=AsyncMock):
             response = test_client_1d.post(
                 "/api/v1/ingest",
                 headers=authenticated_headers,
@@ -52,7 +52,9 @@ class TestIngestEndpoint:
         authenticated_headers: dict[str, str],
     ) -> None:
         """run_pipeline is called exactly once as a background task."""
-        with patch("src.api.routes.ingest.run_pipeline") as mock_pipeline:
+        with patch(
+            "src.api.routes.ingest.run_pipeline", new_callable=AsyncMock
+        ) as mock_pipeline:
             test_client_1d.post(
                 "/api/v1/ingest",
                 headers=authenticated_headers,
@@ -66,7 +68,9 @@ class TestIngestEndpoint:
         authenticated_headers: dict[str, str],
     ) -> None:
         """When body.data_dir is provided it is passed to run_pipeline, not settings.data_dir."""
-        with patch("src.api.routes.ingest.run_pipeline") as mock_pipeline:
+        with patch(
+            "src.api.routes.ingest.run_pipeline", new_callable=AsyncMock
+        ) as mock_pipeline:
             test_client_1d.post(
                 "/api/v1/ingest",
                 json={"data_dir": "/custom/path"},
@@ -82,10 +86,29 @@ class TestIngestEndpoint:
         authenticated_headers: dict[str, str],
     ) -> None:
         """When no body is provided, settings.data_dir is used."""
-        with patch("src.api.routes.ingest.run_pipeline") as mock_pipeline:
+        with patch(
+            "src.api.routes.ingest.run_pipeline", new_callable=AsyncMock
+        ) as mock_pipeline:
             test_client_1d.post(
                 "/api/v1/ingest",
                 headers=authenticated_headers,
             )
         args, _ = mock_pipeline.call_args
         assert args[0] == Path(mock_settings.data_dir)
+
+    def test_ingest_invalid_data_dir_returns_202_immediately(
+        self,
+        test_client_1d: TestClient,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """An invalid data_dir path still returns 202 — validation happens in the background task."""
+        with patch(
+            "src.api.routes.ingest.run_pipeline", new_callable=AsyncMock
+        ) as mock_pipeline:
+            response = test_client_1d.post(
+                "/api/v1/ingest",
+                json={"data_dir": "/completely/invalid/path/xyz"},
+                headers=authenticated_headers,
+            )
+        assert response.status_code == 202
+        mock_pipeline.assert_called_once()

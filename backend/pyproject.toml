@@ -23,8 +23,10 @@ azure-keyvault-secrets = "^4.8"
 azure-storage-blob = "^12.23"
 tavily-python = "^0.5"
 tenacity = "^9.0"
-ragas = "^0.2"
 httpx = {extras = ["asyncio"], version = "^0.27"}
+
+[tool.poetry.group.eval.dependencies]
+ragas = "^0.2"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3"

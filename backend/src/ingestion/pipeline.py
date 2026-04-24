@@ -33,7 +33,11 @@ class PipelineResult(BaseModel):
     """Wall-clock time for the full pipeline run in milliseconds."""
 
 
-async def run_pipeline(data_dir: Path, settings: Settings) -> PipelineResult:
+async def run_pipeline(
+    data_dir: Path,
+    settings: Settings,
+    bm25_store: BM25Store | None = None,
+) -> PipelineResult:
     """Run the full document ingestion pipeline.
 
     Stages:
@@ -147,7 +151,11 @@ async def run_pipeline(data_dir: Path, settings: Settings) -> PipelineResult:
 
     # --- Stage 5: BM25 index --------------------------------------------------
     t0 = time.monotonic()
-    bm25_store = BM25Store(index_path=Path(settings.bm25_index_path))
+    # Use the provided singleton store (lifespan-managed) so the running
+    # HybridRetriever's reference is updated in-place.  Fall back to a new
+    # store when called outside the app context (e.g. CLI / tests).
+    if bm25_store is None:
+        bm25_store = BM25Store(index_path=Path(settings.bm25_index_path))
     try:
         bm25_store.build(embedded_chunks)
         bm25_store.save()
