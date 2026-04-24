@@ -12,6 +12,8 @@ patching ``AzureChatOpenAI`` with a ``RunnableLambda`` that returns an
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+pytestmark = pytest.mark.asyncio
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableLambda

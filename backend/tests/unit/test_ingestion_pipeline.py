@@ -7,6 +7,10 @@ QdrantVectorStore, BM25Store) are mocked so no real I/O occurs.
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+pytestmark = pytest.mark.asyncio
+
 from src.config import Settings
 from src.exceptions import EmbeddingError, IngestionError
 from src.ingestion.models import ChunkedDocument, ChunkMetadata, Document

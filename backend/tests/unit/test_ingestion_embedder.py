@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+pytestmark = pytest.mark.asyncio
+
 from src.config import Settings
 from src.exceptions import EmbeddingError
 from src.ingestion.embedder import Embedder
