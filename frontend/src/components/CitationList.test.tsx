@@ -4,10 +4,10 @@ import { CitationList } from "./CitationList";
 import type { Citation } from "@/types";
 
 const makeCitation = (overrides: Partial<Citation> = {}): Citation => ({
+  chunk_id: "c1",
   filename: "policy.pdf",
-  page: 5,
-  chunk_index: 0,
-  score: 0.9,
+  source_path: "/docs/policy.pdf",
+  page_number: 5,
   ...overrides,
 });
 
@@ -24,14 +24,14 @@ describe("CitationList", () => {
   });
 
   it("renders em dash for null page", () => {
-    render(<CitationList citations={[makeCitation({ page: null })]} />);
+    render(<CitationList citations={[makeCitation({ page_number: null })]} />);
     expect(screen.getByText("p.—")).toBeInTheDocument();
   });
 
   it("renders multiple citations", () => {
     const citations = [
-      makeCitation({ filename: "doc1.pdf", page: 1 }),
-      makeCitation({ filename: "doc2.pdf", page: 2 }),
+      makeCitation({ chunk_id: "c1", filename: "doc1.pdf", page_number: 1 }),
+      makeCitation({ chunk_id: "c2", filename: "doc2.pdf", page_number: 2 }),
     ];
     render(<CitationList citations={citations} />);
     expect(screen.getByText("doc1.pdf")).toBeInTheDocument();

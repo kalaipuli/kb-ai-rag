@@ -1,10 +1,11 @@
+import type { JSX } from "react";
 import { clsx } from "clsx";
 
 interface ConfidenceBadgeProps {
   confidence: number;
 }
 
-export function ConfidenceBadge({ confidence }: ConfidenceBadgeProps): React.JSX.Element {
+export function ConfidenceBadge({ confidence }: ConfidenceBadgeProps): JSX.Element {
   const pct = Math.round(confidence * 100);
 
   const colorClass = clsx({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useReducer } from "react";
+import type { Dispatch } from "react";
 import type { Citation, Message, StreamEvent } from "@/types";
 import { streamQuery } from "@/lib/streaming";
 
@@ -97,14 +98,17 @@ export function useStream(): UseStreamReturn {
 
     dispatch({ type: "SUBMIT", userMessage, assistantMessage });
 
+    let hadError = false;
     for await (const event of streamQuery(
-      { question },
-      (err) => dispatch({ type: "ERROR", error: err }),
+      { query: question },
+      (err) => {
+        hadError = true;
+        dispatch({ type: "ERROR", error: err });
+      },
     )) {
-      handleEvent(event, dispatch);
+      if (!hadError) handleEvent(event, dispatch);
     }
-    // Reset isStreaming if no done event arrived (e.g. empty stream or error path)
-    dispatch({ type: "STREAM_END" });
+    if (!hadError) dispatch({ type: "STREAM_END" });
   }, []);
 
   const resetError = useCallback(() => dispatch({ type: "RESET_ERROR" }), []);
@@ -114,14 +118,13 @@ export function useStream(): UseStreamReturn {
 
 function handleEvent(
   event: StreamEvent,
-  dispatch: React.Dispatch<StreamAction>,
+  dispatch: Dispatch<StreamAction>,
 ): void {
   if (event.type === "token") {
-    dispatch({ type: "TOKEN", token: event.data as string });
+    dispatch({ type: "TOKEN", token: event.content });
   } else if (event.type === "citations") {
-    dispatch({ type: "CITATIONS", citations: event.data as Citation[] });
-  } else if (event.type === "done") {
-    const payload = event.data as { confidence: number };
-    dispatch({ type: "DONE", confidence: payload.confidence });
+    dispatch({ type: "CITATIONS", citations: event.citations });
+    dispatch({ type: "DONE", confidence: event.confidence });
   }
+  // event.type === "done" — STREAM_END fires unconditionally after the loop
 }

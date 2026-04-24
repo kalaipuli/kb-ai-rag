@@ -12,6 +12,7 @@ Applies to every file under `frontend/`. Enforced by `tsc --noEmit` and `eslint`
 
 ## Components
 - Components live in `src/components/` and use **named exports** — not default exports
+- Exception: `src/app/**` framework entry files (`page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`) **must** use default exports — the Next.js App Router discovers these files by their default export, so named exports will not work
 - Use `shadcn/ui` components before writing custom UI primitives
 
 ## Data Fetching

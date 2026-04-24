@@ -1,7 +1,4 @@
-import type { Citation, DonePayload, QueryRequest, StreamEvent } from "@/types";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const API_KEY = process.env.API_KEY ?? "";
+import type { QueryRequest, StreamEvent } from "@/types";
 
 export async function* streamQuery(
   payload: QueryRequest,
@@ -9,11 +6,10 @@ export async function* streamQuery(
 ): AsyncGenerator<StreamEvent> {
   let response: Response;
   try {
-    response = await fetch(`${API_URL}/api/v1/query`, {
+    response = await fetch("/api/proxy/query", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-API-Key": API_KEY,
       },
       body: JSON.stringify(payload),
     });
@@ -36,7 +32,6 @@ export async function* streamQuery(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let currentEventType = "";
 
   try {
     while (true) {
@@ -48,16 +43,11 @@ export async function* streamQuery(
       buffer = lines.pop() ?? "";
 
       for (const line of lines) {
-        if (line.startsWith("event: ")) {
-          currentEventType = line.slice(7).trim();
-        } else if (line.startsWith("data: ")) {
+        if (line.startsWith("data: ")) {
           const raw = line.slice(6).trim();
           try {
             const parsed: unknown = JSON.parse(raw);
-            yield {
-              type: currentEventType as StreamEvent["type"],
-              data: parsed as string | Citation[] | DonePayload,
-            };
+            yield parsed as StreamEvent;
           } catch {
             // skip malformed SSE line
           }

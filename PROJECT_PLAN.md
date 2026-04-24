@@ -2,6 +2,7 @@
 ### Project Plan | Phased Delivery | MVP-First
 
 > See [GOAL.md](GOAL.md) for the "why" behind every decision in this plan.
+> Stack versions, upgrade schedule, and implementation patterns: [Stack Upgrade Proposal](docs/stack-upgrade-proposal.md).
 
 ---
 
@@ -19,7 +20,7 @@
 | RAG framework | LangChain | Loaders, splitters, tools |
 | Deployment (MVP) | Docker Compose (local) | Full stack: API + Qdrant + UI |
 | Deployment (prod) | Azure Container Apps | Terraform IaC |
-| Language | Python 3.12 | Full type hints, mypy strict |
+| Language | Python 3.12 | Full type hints, mypy strict — see [upgrade proposal](docs/stack-upgrade-proposal.md) for version lock schedule |
 
 ---
 
@@ -123,6 +124,9 @@
 - Response schema: `{answer, citations: [{filename, chunk_index, score}], confidence}`
 
 #### 1d. API
+
+> **Stack pre-requisite:** Complete [Tier 1 immediate fixes](docs/stack-upgrade-proposal.md#tier-1--before-phase-1d-starts) before writing any 1d code (pytest-asyncio strict mode, `SecretStr` unwrap, qdrant-client bump, public retriever method). Apply [Tier 2 implementation patterns](docs/stack-upgrade-proposal.md#tier-2--phase-1d-implementation-patterns) throughout (lifespan state, `Annotated` deps, `BackgroundTasks`, `StreamingResponse`).
+
 - `POST /api/v1/ingest` — ingest a folder of files
 - `POST /api/v1/query` — query the knowledge base
 - `GET /api/v1/health` — liveness + Qdrant connectivity check
@@ -131,11 +135,17 @@
 - Full OpenAPI docs at `/docs`
 
 #### 1e. UI
+
+> **Stack pre-requisite:** Before writing the first component, complete the [Tier 4 frontend bundle upgrade](docs/stack-upgrade-proposal.md#tier-4--frontend-before-any-component-code): Next.js 15 + React 19 + Tailwind 4 + ESLint 9 + TypeScript 5.8. The frontend is greenfield — zero migration cost at this point, significant cost after.
+
 - Next.js chat interface
 - Displays answer, citations (filename + page), confidence badge
 - Sidebar: collection stats, ingest trigger
 
 #### 1f. Evaluation Baseline
+
+> **Note:** RAGAS stays at `^0.2` for Phase 1f. Before Phase 5 automation is set up, move it into an isolated Poetry eval group — see [RAGAS isolation](docs/stack-upgrade-proposal.md#hold--do-not-upgrade-yet).
+
 - Create 20-question golden dataset from the knowledge article corpus
 - Run RAGAS: faithfulness, answer relevancy, context recall, context precision
 - Persist results to `docs/evaluation_results.md`
@@ -151,6 +161,8 @@
 
 ### Phase 2 — Agentic Pipeline (Days 9–16)
 **Goal:** Replace static chain with LangGraph agent graph. The system now reasons, not just retrieves.
+
+> **Stack gate zero (before any agent node):** Complete all [Tier 3 pre-requisites](docs/stack-upgrade-proposal.md#tier-3--phase-2-pre-requisites-gate-zero): lock LangGraph to an exact confirmed version (not `^`), upgrade the LangChain bundle together, write the ADR-004 amendment, and define `AgentState` schema before writing any node function.
 
 #### LangGraph State Machine
 ```python
@@ -208,6 +220,9 @@ START
 - **Step-back prompting**: reframe specific questions as general principles before retrieval
 
 #### Conversational Memory
+
+> **Note:** Confirm `SqliteSaver` import path for the locked LangGraph version before writing checkpointer code — it may have moved to a separate `langgraph-checkpoint-sqlite` package. See [T3-4](docs/stack-upgrade-proposal.md#t3-4-confirm-sqlitesaver-import-path).
+
 - LangGraph `SqliteSaver` checkpointer: one SQLite DB per session
 - Session ID passed in API request header (`X-Session-ID`)
 - Agent references prior turns in context window (last 5 exchanges)
@@ -246,6 +261,8 @@ Implementations: `QdrantRetriever`, `AzureSearchRetriever`
 ### Phase 4 — Multi-Hop Planning (Days 22–26)
 **Goal:** Handle complex questions that require decomposition and parallel sub-retrieval.
 
+> **Stack note:** Evaluate Python `^3.13` bump at this phase — the `sentence-transformers → torch` wheel chain for 3.13 should be stable by Phase 4. See [hold items](docs/stack-upgrade-proposal.md#hold--do-not-upgrade-yet).
+
 #### Planner Agent
 - Detects `multi_hop` query type from Router
 - Decomposes query into 2–4 ordered sub-questions using structured output (JSON)
@@ -261,6 +278,8 @@ Implementations: `QdrantRetriever`, `AzureSearchRetriever`
 
 ### Phase 5 — Observability & Evaluation (Days 27–30)
 **Goal:** Every agent step is visible. Quality is continuously measured.
+
+> **Stack pre-requisite:** Before setting up RAGAS automation, move `ragas` out of the main dependencies into a separate Poetry eval group (`[tool.poetry.group.eval.dependencies]`). This prevents RAGAS from constraining the API runtime's solver. See [RAGAS isolation](docs/stack-upgrade-proposal.md#hold--do-not-upgrade-yet).
 
 #### LangSmith Integration
 - Every graph execution traced end-to-end
