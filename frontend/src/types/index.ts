@@ -10,25 +10,12 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
+  confidence?: number;
   timestamp: string;
-}
-
-export interface Session {
-  id: string;
-  created_at: string;
-  message_count: number;
 }
 
 export interface QueryRequest {
   question: string;
-  session_id?: string;
-  filters?: QueryFilters;
-}
-
-export interface QueryFilters {
-  filename?: string;
-  file_type?: string;
-  tags?: string[];
 }
 
 export interface HealthResponse {
@@ -47,10 +34,19 @@ export interface StreamEvent {
   data: string | Citation[] | DonePayload;
 }
 
-export interface IngestResponse {
-  job_id: string;
+export interface IngestAcceptedResponse {
   status: string;
-  file_count: number;
+  message: string;
+}
+
+export interface CollectionInfo {
+  name: string;
+  document_count: number;
+  vector_count: number;
+}
+
+export interface CollectionsResponse {
+  collections: CollectionInfo[];
 }
 
 export interface ApiError {

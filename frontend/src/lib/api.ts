@@ -1,4 +1,9 @@
-import type { ApiError, HealthResponse, Session, IngestResponse } from "@/types";
+import type {
+  ApiError,
+  CollectionsResponse,
+  HealthResponse,
+  IngestAcceptedResponse,
+} from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -38,17 +43,17 @@ export async function getHealth(): Promise<HealthResponse> {
   return res.json() as Promise<HealthResponse>;
 }
 
-export async function getSessions(): Promise<Session[]> {
-  const res = await fetch(`${API_URL}/api/v1/sessions`, {
+export async function getCollections(): Promise<CollectionsResponse> {
+  const res = await fetch(`${API_URL}/api/v1/collections`, {
     headers: authHeaders(),
   });
   if (!res.ok) {
-    throw new Error(`Failed to fetch sessions: ${res.status}`);
+    throw new Error(`Failed to fetch collections: ${res.status}`);
   }
-  return res.json() as Promise<Session[]>;
+  return res.json() as Promise<CollectionsResponse>;
 }
 
-export async function triggerIngest(): Promise<IngestResponse> {
+export async function triggerIngest(): Promise<IngestAcceptedResponse> {
   const res = await fetch(`${API_URL}/api/v1/ingest`, {
     method: "POST",
     headers: authHeaders(),
@@ -56,5 +61,5 @@ export async function triggerIngest(): Promise<IngestResponse> {
   if (!res.ok) {
     throw new Error(`Ingest failed: ${res.status}`);
   }
-  return res.json() as Promise<IngestResponse>;
+  return res.json() as Promise<IngestAcceptedResponse>;
 }

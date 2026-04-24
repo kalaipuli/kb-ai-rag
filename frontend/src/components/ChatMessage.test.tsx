@@ -1,0 +1,69 @@
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { ChatMessage } from "./ChatMessage";
+import type { Message } from "@/types";
+
+const makeMessage = (overrides: Partial<Message> = {}): Message => ({
+  id: "1",
+  role: "user",
+  content: "Hello",
+  timestamp: new Date().toISOString(),
+  ...overrides,
+});
+
+describe("ChatMessage", () => {
+  it("renders user message with right-aligned bubble", () => {
+    const { container } = render(<ChatMessage message={makeMessage()} />);
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.className).toMatch(/justify-end/);
+  });
+
+  it("renders assistant message with left-aligned bubble", () => {
+    const { container } = render(
+      <ChatMessage message={makeMessage({ role: "assistant", content: "Hi there" })} />,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper.className).toMatch(/justify-start/);
+  });
+
+  it("shows spinner when assistant content is empty", () => {
+    const { container } = render(
+      <ChatMessage message={makeMessage({ role: "assistant", content: "" })} />,
+    );
+    expect(container.querySelector(".animate-spin")).toBeInTheDocument();
+  });
+
+  it("renders citations for assistant messages", () => {
+    const citations = [
+      { filename: "guide.pdf", page: 2, chunk_index: 0, score: 0.85 },
+    ];
+    render(
+      <ChatMessage
+        message={makeMessage({ role: "assistant", content: "Answer", citations })}
+      />,
+    );
+    expect(screen.getByText("guide.pdf")).toBeInTheDocument();
+  });
+
+  it("renders confidence badge for assistant messages with confidence", () => {
+    render(
+      <ChatMessage
+        message={makeMessage({ role: "assistant", content: "Answer", confidence: 0.9 })}
+      />,
+    );
+    expect(screen.getByText(/High/)).toBeInTheDocument();
+  });
+
+  it("does not render citations or badge for user messages", () => {
+    const citations = [
+      { filename: "guide.pdf", page: 2, chunk_index: 0, score: 0.85 },
+    ];
+    render(
+      <ChatMessage
+        message={makeMessage({ role: "user", content: "Question", citations, confidence: 0.9 })}
+      />,
+    );
+    expect(screen.queryByText("guide.pdf")).not.toBeInTheDocument();
+    expect(screen.queryByText(/High/)).not.toBeInTheDocument();
+  });
+});

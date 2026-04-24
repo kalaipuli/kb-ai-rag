@@ -11,7 +11,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 | Phase | Name | Registry | Status | Gate |
 |-------|------|----------|--------|------|
 | 0 | Scaffolding + Architect Fixes | [tasks](phase0/tasks.md) · [fixes](phase0/fixes.md) | ✅ Complete | Passed 2026-04-23 |
-| 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) · [1c](phase1/1c-generation/tasks.md) · [1c fixes](phase1/1c-generation/fixes.md) · [1d](phase1/1d-api/tasks.md) · [1d fixes](phase1/1d-api/fixes.md) | 🔄 In Progress | — |
+| 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) · [1c](phase1/1c-generation/tasks.md) · [1c fixes](phase1/1c-generation/fixes.md) · [1d](phase1/1d-api/tasks.md) · [1d fixes](phase1/1d-api/fixes.md) · [1e](phase1/1e-ui/tasks.md) | 🔄 In Progress | — |
 | 2 | Agentic Pipeline (LangGraph) | — | ⏳ Not Started | — |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
@@ -45,19 +45,21 @@ This is the single cross-phase status view. For task-level detail, open the link
 
 Key fixes applied: SSE error-path handling, BM25 singleton staleness after ingest, health route Qdrant client churn, `SettingsDep` migration, `ragas` moved to eval dep group, `secrets.compare_digest` for API key auth, 15 new unit tests (177 total).
 
-**Feature 1e — UI** is next. Before starting: complete [Tier 4 frontend bundle upgrade](../stack-upgrade-proposal.md#tier-4--frontend-before-any-component-code) (Next.js 15 + React 19 + Tailwind 4 + ESLint 9 + TypeScript 5.8).
+**Feature 1e — UI** ✅ Complete 2026-04-24. All 17 tasks done. Next.js 15.3.9 · React 19.2.5 · Tailwind 4 · ESLint 9 · TypeScript 5.8. Components: ConfidenceBadge · CitationList · ChatMessage · ChatInput · Sidebar · QueryProvider. Hook: useStream (reducer + STREAM_END). **31 frontend tests passing** | tsc: 0 errors | eslint: 0 warnings | npm run build ✓. See [1e tasks](phase1/1e-ui/tasks.md).
+
+**Feature 1f — Evaluation Baseline** is next. RAGAS stays at `^0.2`; move to eval dep group before Phase 5.
 
 ---
 
 ## Currently In Progress
 
-_Nothing — 1d complete. Feature 1e (Next.js UI) not yet started. Tier 4 upgrade is the pre-requisite._
+_Nothing — 1e complete. Feature 1f (RAGAS evaluation baseline) is next._
 
 ---
 
 ## Blocked / At Risk
 
-_No blockers. Tier 4 frontend upgrade is required before Phase 1e begins._
+_No blockers._
 
 ---
 
