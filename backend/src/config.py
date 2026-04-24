@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,7 +17,7 @@ class Settings(BaseSettings):
 
     # Azure OpenAI / AI Foundry
     azure_openai_endpoint: str
-    azure_openai_api_key: str
+    azure_openai_api_key: SecretStr
     azure_openai_api_version: str = "2024-08-01-preview"
     azure_chat_deployment: str = "gpt-4o"
     azure_embedding_deployment: str = "text-embedding-3-large"
@@ -26,12 +27,15 @@ class Settings(BaseSettings):
     qdrant_collection: str = "kb_documents"
 
     # Service authentication
-    api_key: str
+    api_key: SecretStr
 
     # Document ingestion
     data_dir: str = "/app/data"
     chunk_size: int = 1000
     chunk_overlap: int = 200
+    embedding_vector_size: int = 3072
+    embedding_batch_size: int = 100
+    bm25_index_path: str = "/app/data/bm25_index.pkl"
 
     # LangSmith tracing (optional; leave blank to disable)
     langsmith_api_key: str = ""

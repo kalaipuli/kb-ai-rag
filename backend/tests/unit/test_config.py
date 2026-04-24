@@ -20,8 +20,8 @@ def _minimal_settings(**overrides: object) -> Settings:
 def test_required_fields_accepted() -> None:
     s = _minimal_settings()
     assert s.azure_openai_endpoint == "https://example.openai.azure.com/"
-    assert s.azure_openai_api_key == "sk-test"
-    assert s.api_key == "my-api-key"
+    assert s.azure_openai_api_key.get_secret_value() == "sk-test"
+    assert s.api_key.get_secret_value() == "my-api-key"
 
 
 def test_default_values() -> None:
