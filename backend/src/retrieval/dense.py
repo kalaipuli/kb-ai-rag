@@ -44,13 +44,14 @@ class DenseRetriever:
             )
 
         try:
-            hits = await self._client.search(  # type: ignore[attr-defined]
+            result = await self._client.query_points(
                 collection_name=self._collection,
-                query_vector=query_vector,
+                query=query_vector,
                 limit=k,
                 query_filter=query_filter,
                 with_payload=True,
             )
+            hits = result.points
         except Exception as exc:
             logger.error("qdrant_search_failed", error=str(exc), collection=self._collection)
             raise RetrievalError(f"Qdrant search failed: {exc}") from exc
