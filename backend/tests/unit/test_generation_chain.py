@@ -457,3 +457,78 @@ class TestGenerationChainStream:
         payload = json.loads(citations_raw.removeprefix("data: "))
         assert payload["confidence"] == 0.0
         assert payload["citations"] == []
+
+    async def test_astream_generate_citations_event_has_chunks_retrieved(
+        self, mocker: MagicMock
+    ) -> None:
+        """The citations SSE event must include chunks_retrieved equal to the doc count."""
+        settings = _make_settings()
+        hybrid = _make_hybrid_retriever(
+            [
+                _make_retrieval_result("c1", score=2.5),
+                _make_retrieval_result("c2", score=1.5),
+                _make_retrieval_result("c3", score=0.8),
+            ]
+        )
+
+        mocker.patch(
+            "src.generation.chain.AzureChatOpenAI",
+            return_value=_make_streaming_runnable(["answer"]),
+        )
+
+        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
+
+        events: list[str] = []
+        async for event in gen_chain.astream_generate("question"):
+            events.append(event)
+
+        citations_raw = next(e for e in events if '"type": "citations"' in e)
+        payload = json.loads(citations_raw.removeprefix("data: "))
+        assert "chunks_retrieved" in payload
+        assert payload["chunks_retrieved"] == 3
+
+
+# ---------------------------------------------------------------------------
+# _build_citations tests (T03)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildCitations:
+    async def test_retrieval_score_populated_when_score_present(
+        self, mocker: MagicMock
+    ) -> None:
+        """Citation has retrieval_score when doc.metadata['score'] is present."""
+        settings = _make_settings()
+        hybrid = _make_hybrid_retriever([])
+        mocker.patch("src.generation.chain.AzureChatOpenAI", return_value=_make_llm_runnable())
+        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
+
+        doc = _source_doc(chunk_id="c1", score=1.75)
+        citations, _ = gen_chain._build_citations([doc])
+
+        assert len(citations) == 1
+        assert citations[0].retrieval_score == pytest.approx(1.75)
+
+    async def test_retrieval_score_is_none_when_score_absent(
+        self, mocker: MagicMock
+    ) -> None:
+        """Citation has retrieval_score=None when score key is absent from metadata."""
+        settings = _make_settings()
+        hybrid = _make_hybrid_retriever([])
+        mocker.patch("src.generation.chain.AzureChatOpenAI", return_value=_make_llm_runnable())
+        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
+
+        doc = Document(
+            page_content="No score here.",
+            metadata={
+                "chunk_id": "c1",
+                "filename": "test.pdf",
+                "source_path": "/test.pdf",
+                "page_number": 1,
+                # no "score" key
+            },
+        )
+        citations, _ = gen_chain._build_citations([doc])
+
+        assert len(citations) == 1
+        assert citations[0].retrieval_score is None

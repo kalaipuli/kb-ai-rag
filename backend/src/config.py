@@ -55,6 +55,13 @@ class Settings(BaseSettings):
     # Tavily web-search fallback (Phase 2+; leave blank until then)
     tavily_api_key: str = ""
 
+    # Chunking strategy
+    chunk_strategy: str = "recursive_character"
+    chunk_tokenizer_model: str = "cl100k_base"
+
+    # Evaluation baseline
+    eval_baseline_path: str = "data/eval_baseline.json"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -63,7 +63,7 @@ class Embedder:
         self._semaphore = asyncio.Semaphore(settings.embedding_max_concurrency)
         self._embeddings = AzureOpenAIEmbeddings(
             azure_endpoint=settings.azure_openai_endpoint,
-            api_key=settings.azure_openai_api_key,
+            api_key=settings.azure_openai_api_key.get_secret_value(),  # type: ignore[arg-type]
             api_version=settings.azure_openai_api_version,
             azure_deployment=settings.azure_embedding_deployment,
         )

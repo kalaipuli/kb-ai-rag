@@ -471,7 +471,7 @@ kb-ai-rag/
 
 | # | Question | Impact | Default if skipped |
 |---|----------|--------|-------------------|
-| **Q1** | Do you have an **Azure OpenAI** deployment (GPT-4o + text-embedding-3-large) approved and running? Azure OpenAI requires a separate access request — it's not automatic with an Azure subscription. | Blocks Phase 1 | Use OpenAI API directly for MVP, switch to Azure OpenAI in Phase 3 |
+| **Q1** | Do you have an **Azure OpenAI** deployment (GPT-4o-mini + text-embedding-ada-002) approved and running? Azure OpenAI requires a separate access request — it's not automatic with an Azure subscription. | Blocks Phase 1 | Use OpenAI API directly for MVP, switch to Azure OpenAI in Phase 3 |
 | **Q2** | What is the **knowledge domain** of the PDF/TXT files? (IT support, HR policies, engineering docs, financial, other?) | Shapes golden dataset, demo narrative, and Router prompt | Generic "enterprise knowledge base" |
 | **Q3** | Do you have (or want to create) a **Tavily API account** for the CRAG web search fallback? Free tier: 1,000 searches/month. | Blocks CRAG pattern in Phase 2 | Web search node returns empty; CRAG skipped until key is available |
 | **Q4** | Do you have a **LangSmith account**? Free tier available. | Blocks Phase 5 observability | Skip LangSmith; use local logging only until account is ready |

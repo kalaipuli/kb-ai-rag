@@ -10,6 +10,10 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message }: ChatMessageProps): JSX.Element {
   const isUser = message.role === "user";
+  const hasCitations = !isUser && message.citations && message.citations.length > 0;
+  const distinctSources = hasCitations
+    ? new Set(message.citations!.map((c) => c.filename)).size
+    : 0;
 
   return (
     <div className={clsx("flex", isUser ? "justify-end" : "justify-start")}>
@@ -27,14 +31,25 @@ export function ChatMessage({ message }: ChatMessageProps): JSX.Element {
           )}
         </p>
 
-        {!isUser && message.citations && message.citations.length > 0 && (
-          <CitationList citations={message.citations} />
-        )}
-
         {!isUser && message.confidence !== undefined && (
           <div className="mt-2">
             <ConfidenceBadge confidence={message.confidence} />
           </div>
+        )}
+
+        {hasCitations && (
+          <details className="mt-2">
+            <summary className="cursor-pointer text-xs font-semibold text-gray-500 select-none">
+              Sources ({message.citations!.length})
+            </summary>
+            <div className="mt-1 space-y-0.5 text-xs text-gray-500">
+              {message.chunksRetrieved !== undefined && (
+                <p>{message.chunksRetrieved} chunks retrieved</p>
+              )}
+              {distinctSources > 0 && <p>{distinctSources} distinct source{distinctSources !== 1 ? "s" : ""}</p>}
+            </div>
+            <CitationList citations={message.citations!} />
+          </details>
         )}
       </div>
     </div>

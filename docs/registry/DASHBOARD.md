@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-24 (Phase 1f)
+> Maintained by: project-manager agent | Last updated: 2026-04-26 (Phase 1h complete · Phase 2 ready)
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -12,6 +12,8 @@ This is the single cross-phase status view. For task-level detail, open the link
 |-------|------|----------|--------|------|
 | 0 | Scaffolding + Architect Fixes | [tasks](phase0/tasks.md) · [fixes](phase0/fixes.md) | ✅ Complete | Passed 2026-04-23 |
 | 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) · [1c](phase1/1c-generation/tasks.md) · [1c fixes](phase1/1c-generation/fixes.md) · [1d](phase1/1d-api/tasks.md) · [1d fixes](phase1/1d-api/fixes.md) · [1e](phase1/1e-ui/tasks.md) · [1e fixes](phase1/1e-ui/fixes.md) · [1f](phase1/1f-evaluation/tasks.md) | ✅ Complete | Passed 2026-04-26 |
+| 1g | Retrieval Quality (Chunking + Eval) | [1g](phase1/1g-retrieval-quality/tasks.md) | ✅ Complete | Passed 2026-04-26 |
+| 1h | Quality Transparency (UI + API) | [1h](phase1/1h-quality-transparency/tasks.md) | ✅ Complete | Passed 2026-04-26 |
 | 2 | Agentic Pipeline (LangGraph) | — | ⏳ Not Started | — |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
@@ -37,29 +39,51 @@ This is the single cross-phase status view. For task-level detail, open the link
 
 ## Active Phase
 
-**Feature 1c — Generation** complete + architect fixes resolved 2026-04-24. All 13 issues closed (2 Critical, 3 High, 5 Medium, 3 Low). LCEL migration done, shared schema module (`src/schemas/`), ADR-007 + ADR-008 written. See [1c fixes](phase1/1c-generation/fixes.md).
+**Phase 1 — Core MVP** ✅ Complete 2026-04-26.
 
-**142 unit tests passing | mypy strict: 0 errors (33 files) | ruff: 0 warnings**
+| Feature | Completion | Notes |
+|---------|-----------|-------|
+| 1a Ingestion | 2026-04-23 | LocalFileLoader, RecursiveCharacterTextSplitter, Embedder, Qdrant upsert, BM25 |
+| 1b Retrieval | 2026-04-23 | Dense + sparse + RRF + cross-encoder re-rank |
+| 1c Generation | 2026-04-24 | LCEL chain, ADR-007/008, shared schema module |
+| 1d API | 2026-04-24 | SSE streaming, lifespan singletons, Tier 1/2 patterns |
+| 1e UI | 2026-04-24 | Next.js 15.3.9 · React 19 · Tailwind 4 · TypeScript 5.8 |
+| 1f Evaluation | 2026-04-26 | 20-Q golden dataset · faithfulness 0.9153 · all gate criteria met |
 
-**Feature 1d — API** complete 2026-04-24. All 14 tasks done + 17-item architect review resolved 2026-04-24. Tier 1 fixes applied, Tier 2 patterns used throughout. **177 unit tests passing** | mypy strict: 0 errors (37 files) | ruff: 0 warnings. See [1d tasks](phase1/1d-api/tasks.md) · [1d fixes](phase1/1d-api/fixes.md).
+**201 unit tests passing · 54 frontend tests · mypy strict 0 errors · ruff 0 warnings · tsc 0 errors**
 
-Key fixes applied: SSE error-path handling, BM25 singleton staleness after ingest, health route Qdrant client churn, `SettingsDep` migration, `ragas` moved to eval dep group, `secrets.compare_digest` for API key auth, 15 new unit tests (177 total).
+---
 
-**Feature 1e — UI** ✅ Complete 2026-04-24 (including architect review fixes). All 17 tasks done + 16-item architect review resolved 2026-04-24. Next.js 15.3.9 · React 19 · Tailwind 4 · ESLint 9 · TypeScript 5.8. Key fixes: SSE parser rewritten for backend wire format, server-side proxy routes added (API key never exposed to browser), discriminated union types replacing unsafe casts, `Citation` type corrected to match backend schema, `hadError` guard for post-error stream events. **54 frontend tests passing (8 files)** | tsc: 0 errors | eslint: 0 warnings | npm run build ✓. See [1e tasks](phase1/1e-ui/tasks.md) · [1e fixes](phase1/1e-ui/fixes.md).
+**Phase 1g — Retrieval Quality** ✅ Complete 2026-04-26
 
-**Feature 1f — Evaluation Baseline** ✅ Complete 2026-04-26. Golden dataset (20 Q&A), `src/evaluation/ragas_eval.py`, eval runner `scripts/run_eval.py`, 12 unit tests. Faithfulness **0.9153** · Answer Relevancy **0.9718** · Context Recall **0.9542** · Context Precision **0.9433** — all MVP gate criteria met. **201 unit tests passing | mypy strict: 0 errors | ruff: 0 warnings**. See [1f tasks](phase1/1f-evaluation/tasks.md) · [evaluation results](../evaluation_results.md).
+Scope: token-aware chunking (tiktoken), configurable `SplitterFactory` (`recursive_character` / `sentence_window` / `semantic`), improved evaluation output (`AnswerCorrectness` metric, per-sample table, stddev, failure report, baseline comparison). ADR-009 accepted.
+
+**Gate 3 result:** `langchain-experimental` CONFLICTS with `langchain-text-splitters ^0.3`. `semantic` strategy deferred to Phase 2 — raises `ConfigurationError` referencing ADR-009. `sentence_window` strategy comparison also deferred to Phase 2.
+
+**RAGAS baseline (1g):** faithfulness 0.9028 · answer_relevancy 0.9752 · context_recall 0.9542 · context_precision 0.9642 · answer_correctness 0.7650. Persisted to `data/eval_baseline.json`.
+
+---
+
+**Phase 1h — Quality Transparency** ⏳ Not Started (planned after 1g)
+
+Scope: per-citation retrieval scores in SSE wire format, `_build_citations` refactor in `chain.py`, eval baseline API endpoint, collapsible quality panel in chat UI, score bars in CitationList, EvalBaseline sidebar card. See [1h tasks](phase1/1h-quality-transparency/tasks.md).
+
+**Dependency:** 1h unit tests are fully independent; 1h end-to-end integration requires 1g eval baseline JSON to exist.
 
 ---
 
 ## Currently In Progress
 
-_Phase 1 MVP gate passed 2026-04-26. All criteria met. Phase 2 (Agentic Pipeline) is next — complete Tier 3 stack pre-requisites before starting any agent node._
+_Phase 1g complete 2026-04-26. Ready to begin Phase 1h._
 
 ---
 
 ## Blocked / At Risk
 
-_No blockers._
+| Item | Risk | Mitigation |
+|------|------|-----------|
+| 1g-T07 (semantic strategy) | `langchain-experimental` may conflict with `langchain-core` pin | Dry-run gate before implementation; defer to Phase 2 if conflict |
+| 1h end-to-end test | Requires 1g eval baseline JSON | Unit tests mock the file; flag integration test dependency in 1h gate |
 
 ---
 
@@ -80,7 +104,7 @@ _No blockers._
 
 ---
 
-### Phase 1 — Core MVP 🔄 In Progress
+### Phase 1 — Core MVP ✅ Complete
 
 #### 1a. Ingestion Pipeline
 
@@ -155,6 +179,99 @@ _No blockers._
 - [x] RAGAS faithfulness ≥ 0.70 (actual: 0.9153)
 - [x] API key blocks unauthenticated requests
 - [x] `docker compose up` — full stack running in < 90s
+
+---
+
+### Phase 1g — Retrieval Quality ⏳ Not Started
+
+> **Gate zero:** ADR-009 accepted ✅ · `poetry add langchain-experimental --dry-run` must be run before T05/T07 · Estimated 4–5 days. See [1g tasks](phase1/1g-retrieval-quality/tasks.md).
+
+#### 1g-A. Token-Aware Chunking
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `tiktoken` dependency | Explicit pin `^0.8` in pyproject.toml | ✅ Done |
+| Settings fields | `CHUNK_STRATEGY`, `CHUNK_TOKENIZER_MODEL`, `EVAL_BASELINE_PATH` | ✅ Done |
+| Token-aware length function | Replace `len` with tiktoken counter in `DocumentSplitter` | ✅ Done |
+
+#### 1g-B. Configurable SplitterFactory
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `ChunkStrategy` enum | `recursive_character \| sentence_window \| semantic` | ✅ Done |
+| `SplitterFactory.build()` | Returns correct `TextSplitter` per strategy; receives `Embedder` singleton | ✅ Done |
+| `sentence_window` strategy | NLTK sentence tokenizer, N-sentence windows with token overlap | ✅ Done |
+| `semantic` strategy | Deferred — raises `ConfigurationError`; langchain-experimental conflicts with `^0.3` pin | ✅ Done (deferred) |
+| `DocumentSplitter` refactor | Uses `SplitterFactory` — no hardcoded `RecursiveCharacterTextSplitter` | ✅ Done |
+| `app.state.embedder` + `EmbedderDep` | Embedder singleton on lifespan state; new dep in `deps.py` | ✅ Done |
+| `run_pipeline` + ingest route update | Accepts and forwards `Embedder` to factory | ✅ Done |
+
+#### 1g-C. Evaluation Output Improvements
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `AnswerCorrectness` metric | 5th RAGAS metric; `answer_correctness` field on `EvaluationResult` | ✅ Done |
+| Per-sample score table | All 5 metrics per question in `to_markdown()` output | ✅ Done |
+| Min / max / stddev per metric | Distribution stats added to report | ✅ Done |
+| Failure section | Questions where faithfulness or answer_correctness < 0.7 called out | ✅ Done |
+| Baseline persistence + diff | Writes `data/eval_baseline.json`; diff column on subsequent runs | ✅ Done |
+| RAGAS re-run + comparison | Re-run with new metrics; document strategy comparison | ⏳ Pending (T14 — needs live Azure endpoint) |
+
+**Phase 1g gate (all must pass before Phase 1h begins):**
+- [ ] All 15 tasks ✅ Done
+- [ ] `pytest backend/tests/unit/ -q` — green (includes splitter factory + eval tests)
+- [ ] `mypy backend/src/ --strict` — zero errors
+- [ ] `ruff check` — zero warnings
+- [ ] `data/eval_baseline.json` exists with 5 metrics
+- [ ] ADR-009 langchain-experimental dry-run result documented
+
+---
+
+### Phase 1h — Quality Transparency ⏳ Not Started
+
+> **Gate zero:** Phase 1g gate passed. Estimated 3–4 days. See [1h tasks](phase1/1h-quality-transparency/tasks.md).
+
+#### 1h-A. Retrieval Scores in SSE Wire Format
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `retrieval_score` on `Citation` | `float \| None` field in `schemas/generation.py` | ⏳ Pending |
+| `_build_citations()` refactor | Extracts duplicated citation-building from `generate` + `astream_generate` | ⏳ Pending |
+| `chunks_retrieved` in SSE event | Count of docs before dedup added to `citations` event payload | ⏳ Pending |
+
+#### 1h-B. Eval Baseline API
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `GET /api/v1/eval/baseline` | Reads `Settings.eval_baseline_path`; 404 if not found | ⏳ Pending |
+| Router registration | Eval router added to `main.py` | ⏳ Pending |
+
+#### 1h-C/D. Frontend Chat Quality Panel
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `Citation` TS type update | `retrieval_score?: number` | ⏳ Pending |
+| `CitationsEvent` TS type update | `chunks_retrieved: number` (atomic with backend) | ⏳ Pending |
+| `CitationList` score bars | Per-citation relevance bar (labelled "Relevance", not "Confidence") | ⏳ Pending |
+| `ChatMessage` collapsible panel | `<details>` with chunks retrieved + source count | ⏳ Pending |
+
+#### 1h-E. Sidebar Eval Baseline Card
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `frontend/src/app/api/proxy/eval/baseline/route.ts` | Server-side proxy; API key never in browser | ⏳ Pending |
+| `EvalBaseline.tsx` | Fetches baseline; renders 5 scores; 404-safe fallback | ⏳ Pending |
+| `Sidebar.tsx` update | `EvalBaseline` added under collection stats | ⏳ Pending |
+
+**Phase 1h gate (all must pass before Phase 2 begins):**
+- [ ] All 13 tasks ✅ Done
+- [ ] `pytest backend/tests/unit/ -q` — green
+- [ ] `mypy backend/src/ --strict` — zero errors
+- [ ] `ruff check` — zero warnings
+- [ ] `tsc --noEmit` — zero errors
+- [ ] `eslint` — zero warnings
+- [ ] `npm run build` — succeeds
+- [ ] Manual check: score bars visible in chat, eval baseline in sidebar, panel collapses/expands
 
 ---
 
@@ -312,4 +429,6 @@ _No blockers._
 | Phase | Gate Passed | Notes |
 |-------|-------------|-------|
 | 0 | 2026-04-23 | 29 unit tests, mypy strict (11 files), ruff clean, tsc clean, 5 ADRs, CI workflow, 10 architect fixes resolved |
-| 1 | 2026-04-26 | faithfulness 0.9153 ≥ 0.70, 189 unit tests, mypy strict 0 errors, full stack verified, 17 knowledge files ingested |
+| 1 | 2026-04-26 | faithfulness 0.9153 ≥ 0.70, 201 unit tests, mypy strict 0 errors, full stack verified, 17 knowledge files ingested |
+| 1g | 2026-04-26 | 241 unit tests, mypy strict 0 errors, ruff clean, `data/eval_baseline.json` with 5 metrics, faithfulness 0.9028 |
+| 1h | — | ⏳ Pending — retrieval scores in SSE, eval baseline endpoint, chat quality panel, sidebar card |

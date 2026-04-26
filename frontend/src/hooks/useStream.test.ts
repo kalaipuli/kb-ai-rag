@@ -63,7 +63,7 @@ describe("useStream", () => {
       },
     ];
     const events: StreamEvent[] = [
-      { type: "citations", citations, confidence: 0.9 },
+      { type: "citations", citations, confidence: 0.9, chunks_retrieved: 5 },
     ];
     vi.spyOn(streaming, "streamQuery").mockReturnValue(makeGenerator(events));
     const { result } = renderHook(() => useStream());
@@ -82,6 +82,7 @@ describe("useStream", () => {
         type: "citations",
         citations: [],
         confidence: 0.88,
+        chunks_retrieved: 0,
       },
     ];
     vi.spyOn(streaming, "streamQuery").mockReturnValue(makeGenerator(events));

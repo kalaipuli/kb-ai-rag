@@ -5,7 +5,7 @@ from pathlib import Path
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Request
 
-from src.api.deps import SettingsDep
+from src.api.deps import EmbedderDep, SettingsDep
 from src.api.schemas import IngestAcceptedResponse, IngestRequest
 from src.ingestion.pipeline import run_pipeline
 
@@ -19,6 +19,7 @@ async def ingest_endpoint(
     request: Request,
     background_tasks: BackgroundTasks,
     settings: SettingsDep,
+    embedder: EmbedderDep,
     body: IngestRequest | None = None,
 ) -> IngestAcceptedResponse:
     """Trigger document ingestion from a folder as a background task.
@@ -26,14 +27,15 @@ async def ingest_endpoint(
     Returns 202 Accepted immediately. The pipeline runs after the response
     is sent. If no body is provided, uses the configured data_dir.
 
-    The lifespan-managed BM25Store singleton is passed to the pipeline so that
-    the running HybridRetriever's sparse index is refreshed in-place.
+    The lifespan-managed BM25Store and Embedder singletons are passed to the
+    pipeline so that the running HybridRetriever's sparse index is refreshed
+    in-place and the splitter factory receives the shared embedder instance.
     """
     data_dir = (
         Path(body.data_dir) if body and body.data_dir else Path(settings.data_dir)
     )
     bm25_store = getattr(request.app.state, "bm25_store", None)
-    background_tasks.add_task(run_pipeline, data_dir, settings, bm25_store)
+    background_tasks.add_task(run_pipeline, data_dir, settings, bm25_store, embedder)
     logger.info("ingest_accepted", data_dir=str(data_dir))
     return IngestAcceptedResponse(
         status="accepted",

@@ -1,11 +1,12 @@
 """Unit tests for POST /api/v1/ingest."""
 
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 
 from src.config import Settings
+from src.ingestion.embedder import Embedder
 
 
 class TestIngestEndpoint:
@@ -112,3 +113,27 @@ class TestIngestEndpoint:
             )
         assert response.status_code == 202
         mock_pipeline.assert_called_once()
+
+    def test_ingest_passes_embedder_to_pipeline(
+        self,
+        test_client_1d: TestClient,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """The lifespan embedder singleton is forwarded as the fourth positional arg."""
+        from src.api.deps import get_embedder
+        from src.api.main import app
+
+        mock_embedder = MagicMock(spec=Embedder)
+        app.dependency_overrides[get_embedder] = lambda: mock_embedder
+        try:
+            with patch("src.api.routes.ingest.run_pipeline", new_callable=AsyncMock) as mock_pipeline:
+                test_client_1d.post(
+                    "/api/v1/ingest",
+                    headers=authenticated_headers,
+                )
+            mock_pipeline.assert_called_once()
+            _args, _ = mock_pipeline.call_args
+            # run_pipeline(data_dir, settings, bm25_store, embedder)
+            assert _args[3] is mock_embedder
+        finally:
+            app.dependency_overrides.pop(get_embedder, None)

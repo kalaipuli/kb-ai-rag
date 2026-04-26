@@ -11,6 +11,7 @@ from qdrant_client import AsyncQdrantClient
 
 from src.config import Settings, get_settings
 from src.generation.chain import GenerationChain
+from src.ingestion.embedder import Embedder
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -23,5 +24,10 @@ def get_qdrant_client(request: Request) -> AsyncQdrantClient:
     return request.app.state.qdrant_client  # type: ignore[no-any-return]
 
 
+def get_embedder(request: Request) -> Embedder:
+    return request.app.state.embedder  # type: ignore[no-any-return]
+
+
 GenerationChainDep = Annotated[GenerationChain, Depends(get_generation_chain)]
 QdrantClientDep = Annotated[AsyncQdrantClient, Depends(get_qdrant_client)]
+EmbedderDep = Annotated[Embedder, Depends(get_embedder)]

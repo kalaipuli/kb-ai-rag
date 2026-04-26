@@ -3,6 +3,7 @@ export interface Citation {
   filename: string;
   source_path: string;
   page_number: number | null;
+  retrieval_score?: number;
 }
 
 export interface Message {
@@ -11,6 +12,7 @@ export interface Message {
   content: string;
   citations?: Citation[];
   confidence?: number;
+  chunksRetrieved?: number;
   timestamp: string;
 }
 
@@ -29,6 +31,7 @@ export interface CitationsEvent {
   type: "citations";
   citations: Citation[];
   confidence: number;
+  chunks_retrieved: number;
 }
 
 export interface DoneEvent {

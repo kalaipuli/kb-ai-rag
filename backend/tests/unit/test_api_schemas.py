@@ -42,6 +42,30 @@ class TestCitationItem:
         )
         assert c.page_number == 3
 
+    def test_retrieval_score_serialises_when_present(self) -> None:
+        """retrieval_score is included in model_dump when set to a float."""
+        c = CitationItem(
+            chunk_id="abc",
+            filename="doc.pdf",
+            source_path="/data/doc.pdf",
+            page_number=3,
+            retrieval_score=0.87,
+        )
+        dumped = c.model_dump()
+        assert dumped["retrieval_score"] == pytest.approx(0.87)
+
+    def test_retrieval_score_is_none_by_default(self) -> None:
+        """retrieval_score defaults to None when not provided."""
+        c = CitationItem(
+            chunk_id="abc",
+            filename="doc.pdf",
+            source_path="/data/doc.pdf",
+            page_number=3,
+        )
+        assert c.retrieval_score is None
+        dumped = c.model_dump()
+        assert dumped["retrieval_score"] is None
+
 
 class TestQueryResponse:
     def test_creation_with_citations(self) -> None:

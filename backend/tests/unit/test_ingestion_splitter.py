@@ -1,11 +1,18 @@
 """Unit tests for DocumentSplitter."""
 
+import pytest
+
 from src.config import Settings
+from src.exceptions import ConfigurationError
 from src.ingestion.models import Document
 from src.ingestion.splitter import DocumentSplitter
 
 
-def _make_settings(chunk_size: int = 200, chunk_overlap: int = 20) -> Settings:
+def _make_settings(
+    chunk_size: int = 200,
+    chunk_overlap: int = 20,
+    chunk_strategy: str = "recursive_character",
+) -> Settings:
     return Settings(
         azure_openai_endpoint="https://test.openai.azure.com/",
         azure_openai_api_key="key",
@@ -15,6 +22,9 @@ def _make_settings(chunk_size: int = 200, chunk_overlap: int = 20) -> Settings:
         chunk_overlap=chunk_overlap,
         embedding_batch_size=16,
         bm25_index_path="/tmp/bm25.pkl",
+        chunk_strategy=chunk_strategy,
+        chunk_tokenizer_model="cl100k_base",
+        eval_baseline_path="data/eval_baseline.json",
     )
 
 
@@ -38,8 +48,10 @@ def _make_doc(content: str, doc_id: str = "doc-1", file_type: str = "txt") -> Do
 
 class TestDocumentSplitterBasic:
     def test_single_doc_produces_chunks(self) -> None:
-        # 600-char content should produce 3 chunks with size=200, overlap=20
-        content = ("A" * 190 + " ") * 4  # ~760 chars with spaces
+        # Use varied word content so tiktoken produces realistic token counts.
+        # 500 words at ~1 token each → ~500 tokens; chunk_size=200 → at least 2 chunks.
+        words = ["the", "quick", "brown", "fox", "jumps", "over", "lazy", "dog"]
+        content = " ".join(words * 70)  # ~560 tokens of real words
         doc = _make_doc(content)
         splitter = DocumentSplitter(_make_settings(chunk_size=200, chunk_overlap=20))
         chunks = splitter.split([doc])
@@ -182,3 +194,46 @@ class TestMultipleDocuments:
     def test_empty_doc_list_returns_empty(self) -> None:
         splitter = DocumentSplitter(_make_settings())
         assert splitter.split([]) == []
+
+
+# ---------------------------------------------------------------------------
+# Token-aware chunk boundaries (T03)
+# ---------------------------------------------------------------------------
+
+
+class TestTokenAwareChunking:
+    def test_chunk_token_count_does_not_exceed_chunk_size(self) -> None:
+        """All chunks must have a token count <= chunk_size (plus overlap tolerance)."""
+        import tiktoken
+
+        enc = tiktoken.get_encoding("cl100k_base")
+        # Build content that is clearly larger than chunk_size=100 tokens.
+        content = ("The quick brown fox jumps over the lazy dog. " * 20) + "\n\n" + (
+            "Pack my box with five dozen liquor jugs. " * 20
+        )
+        doc = _make_doc(content)
+        chunk_size = 100
+        splitter = DocumentSplitter(_make_settings(chunk_size=chunk_size, chunk_overlap=10))
+        chunks = splitter.split([doc])
+        assert len(chunks) >= 2, "Content should produce multiple chunks"
+        for chunk in chunks:
+            token_count = len(enc.encode(chunk.text))
+            # Allow a small margin because the splitter may include a partial
+            # final token at a separator boundary.
+            assert token_count <= chunk_size + 20, (
+                f"Chunk has {token_count} tokens, exceeds limit of {chunk_size + 20}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Error paths
+# ---------------------------------------------------------------------------
+
+
+class TestDocumentSplitterErrorPaths:
+    def test_invalid_strategy_raises_configuration_error(self) -> None:
+        """SplitterFactory.build() raises ConfigurationError for unknown strategies;
+        DocumentSplitter must propagate it rather than swallow it."""
+        settings = _make_settings(chunk_strategy="invalid_strategy")
+        with pytest.raises(ConfigurationError, match="invalid_strategy"):
+            DocumentSplitter(settings)

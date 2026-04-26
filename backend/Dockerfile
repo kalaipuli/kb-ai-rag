@@ -31,7 +31,12 @@ RUN mkdir -p /app/cache && chown appuser:appgroup /app/cache
 ENV PATH="/app/.venv/bin:$PATH" \
     HOME=/app \
     HF_HOME=/app/cache \
-    HF_HUB_CACHE=/app/cache/hub
+    HF_HUB_CACHE=/app/cache/hub \
+    NLTK_DATA=/app/cache/nltk
+
+# Download NLTK punkt_tab data required by SentenceWindowSplitter.
+# Running as root before USER switch so the cache directory is writable.
+RUN python -m nltk.downloader -d /app/cache/nltk punkt_tab
 
 USER appuser
 

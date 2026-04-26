@@ -25,6 +25,8 @@ azure-storage-blob = "^12.23"
 tavily-python = "^0.5"
 tenacity = "^9.0"
 httpx = {extras = ["asyncio"], version = "^0.27"}
+tiktoken = "^0.8"
+nltk = "^3.9"
 
 [tool.poetry.group.eval.dependencies]
 ragas = "^0.2"

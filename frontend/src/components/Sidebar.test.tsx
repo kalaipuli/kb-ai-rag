@@ -14,7 +14,11 @@ function renderWithQuery(ui: React.ReactElement): ReturnType<typeof render> {
 
 describe("Sidebar", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    // Prevent EvalBaseline fetch from affecting sidebar tests
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ detail: "No evaluation baseline found." }), { status: 404 }),
+    );
   });
 
   it("renders collection name and counts", async () => {
@@ -79,6 +83,16 @@ describe("Sidebar", () => {
     await userEvent.click(screen.getByText(/Trigger Ingest/));
     await waitFor(() => {
       expect(screen.getByText(/Error: Ingest failed: 503/)).toBeInTheDocument();
+    });
+  });
+
+  it("renders the Evaluation Baseline section header", async () => {
+    vi.spyOn(api, "getCollections").mockResolvedValue({ collections: [] });
+
+    renderWithQuery(<Sidebar />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Evaluation Baseline")).toBeInTheDocument();
     });
   });
 });

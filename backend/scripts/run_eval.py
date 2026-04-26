@@ -69,6 +69,7 @@ async def main(dataset_path: Path, output_path: Path) -> int:
 
 def _build_results_doc(result: object, dataset_path: Path) -> str:
     from datetime import date
+
     from src.evaluation.ragas_eval import EvaluationResult
 
     assert isinstance(result, EvaluationResult)
@@ -89,8 +90,8 @@ def _build_results_doc(result: object, dataset_path: Path) -> str:
         "",
         "## Phase 1 Gate",
         "",
-        f"| Criterion | Required | Actual | Status |",
-        f"|-----------|----------|--------|--------|",
+        "| Criterion | Required | Actual | Status |",
+        "|-----------|----------|--------|--------|",
         f"| Faithfulness | ≥ 0.70 | {result.faithfulness:.4f} | {'✅ Pass' if result.faithfulness >= 0.70 else '❌ Fail'} |",
         "",
         "---",
