@@ -98,16 +98,14 @@ class TestSentenceWindowSplitterEdgeCases:
         """No chunk should exceed chunk_size tokens by more than one sentence's worth."""
         chunk_size = 60
         splitter = _make_splitter(chunk_size=chunk_size, chunk_overlap=5)
-        text = (
-            "The quick brown fox jumps over the lazy dog every single day. " * 8
-        )
+        text = "The quick brown fox jumps over the lazy dog every single day. " * 8
         chunks = splitter.split_text(text)
         for chunk in chunks:
             token_count = _token_count(chunk)
             # Allow headroom of one extra sentence (~20 tokens) for boundary cases.
-            assert token_count <= chunk_size + 20, (
-                f"Chunk has {token_count} tokens, exceeds limit of {chunk_size + 20}"
-            )
+            assert (
+                token_count <= chunk_size + 20
+            ), f"Chunk has {token_count} tokens, exceeds limit of {chunk_size + 20}"
 
 
 class TestSentenceWindowSplitterOverlap:
@@ -173,5 +171,8 @@ class TestSentenceWindowSplitterErrorPaths:
         import pytest
 
         splitter = _make_splitter()
-        with patch("nltk.sent_tokenize", side_effect=LookupError("punkt_tab not found")), pytest.raises(LookupError, match="punkt_tab"):
+        with (
+            patch("nltk.sent_tokenize", side_effect=LookupError("punkt_tab not found")),
+            pytest.raises(LookupError, match="punkt_tab"),
+        ):
             splitter.split_text("Some sentence here.")

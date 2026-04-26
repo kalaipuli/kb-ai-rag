@@ -107,9 +107,7 @@ class TestRunPipelineHappyPath:
             mock_embedder_cls.return_value = mock_embedder
 
             mock_vs = MagicMock()
-            mock_vs.ensure_collection = AsyncMock(
-                side_effect=lambda: call_order.append("ensure")
-            )
+            mock_vs.ensure_collection = AsyncMock(side_effect=lambda: call_order.append("ensure"))
             mock_vs.doc_exists = AsyncMock(return_value=False)
             mock_vs.upsert = AsyncMock(side_effect=lambda _: call_order.append("upsert"))
             mock_vs.close = AsyncMock()
@@ -126,8 +124,14 @@ class TestRunPipelineHappyPath:
         assert call_order == [
             "discover",
             "ensure",
-            "load_one", "split", "embed", "upsert",  # file A
-            "load_one", "split", "embed", "upsert",  # file B
+            "load_one",
+            "split",
+            "embed",
+            "upsert",  # file A
+            "load_one",
+            "split",
+            "embed",
+            "upsert",  # file B
             "bm25_build",
             "bm25_save",
         ]
@@ -235,9 +239,7 @@ class TestRunPipelineEdgeCases:
             mock_loader = MagicMock()
             mock_loader.discover_files = MagicMock(return_value=[FILE_A, FILE_B])
             mock_loader.doc_id_for = MagicMock(return_value="test-doc-id")
-            mock_loader.load_one = AsyncMock(
-                side_effect=lambda p: [_make_doc(p.name)]
-            )
+            mock_loader.load_one = AsyncMock(side_effect=lambda p: [_make_doc(p.name)])
             mock_loader_cls.return_value = mock_loader
 
             mock_splitter = MagicMock()
@@ -245,9 +247,7 @@ class TestRunPipelineEdgeCases:
             mock_splitter_cls.return_value = mock_splitter
 
             mock_embedder = MagicMock()
-            mock_embedder.embed_chunks = AsyncMock(
-                side_effect=[EmbeddingError("quota"), [chunk_b]]
-            )
+            mock_embedder.embed_chunks = AsyncMock(side_effect=[EmbeddingError("quota"), [chunk_b]])
             mock_embedder_cls.return_value = mock_embedder
 
             mock_vs = MagicMock()
@@ -293,17 +293,13 @@ class TestRunPipelineEdgeCases:
             mock_splitter_cls.return_value = mock_splitter
 
             mock_embedder = MagicMock()
-            mock_embedder.embed_chunks = AsyncMock(
-                side_effect=[[_make_chunk("c1")], [chunk_b]]
-            )
+            mock_embedder.embed_chunks = AsyncMock(side_effect=[[_make_chunk("c1")], [chunk_b]])
             mock_embedder_cls.return_value = mock_embedder
 
             mock_vs = MagicMock()
             mock_vs.ensure_collection = AsyncMock()
             mock_vs.doc_exists = AsyncMock(return_value=False)
-            mock_vs.upsert = AsyncMock(
-                side_effect=[IngestionError("upsert boom"), None]
-            )
+            mock_vs.upsert = AsyncMock(side_effect=[IngestionError("upsert boom"), None])
             mock_vs.close = AsyncMock()
             mock_vs_cls.return_value = mock_vs
 

@@ -29,12 +29,8 @@ async def list_collections(qdrant: QdrantClientDep) -> CollectionsResponse:
                     )
                 )
             except Exception as e:
-                logger.warning(
-                    "collection_detail_unavailable", name=col.name, error=str(e)
-                )
-                infos.append(
-                    CollectionInfo(name=col.name, document_count=0, vector_count=0)
-                )
+                logger.warning("collection_detail_unavailable", name=col.name, error=str(e))
+                infos.append(CollectionInfo(name=col.name, document_count=0, vector_count=0))
         logger.info("collections_listed", count=len(infos))
         return CollectionsResponse(collections=infos)
     except RetrievalError:

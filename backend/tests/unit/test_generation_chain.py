@@ -249,15 +249,11 @@ class TestGenerationChain:
         assert result.citations[0].chunk_id == "c2"
         assert result.citations[1].chunk_id == "c1"
 
-    async def test_generation_chain_confidence_in_unit_interval(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_generation_chain_confidence_in_unit_interval(self, mocker: MagicMock) -> None:
         """Confidence is clamped to [0.0, 1.0] regardless of raw cross-encoder scores."""
         settings = _make_settings()
         # Extremely high score — sigmoid output approaches 1.0 but must not exceed it.
-        hybrid = _make_hybrid_retriever(
-            [_make_retrieval_result("c1", score=1000.0)]
-        )
+        hybrid = _make_hybrid_retriever([_make_retrieval_result("c1", score=1000.0)])
 
         mocker.patch(
             "src.generation.chain.AzureChatOpenAI",
@@ -269,9 +265,7 @@ class TestGenerationChain:
 
         assert 0.0 <= result.confidence <= 1.0
 
-    async def test_generation_chain_page_number_none_for_sentinel(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_generation_chain_page_number_none_for_sentinel(self, mocker: MagicMock) -> None:
         """page_number -1 sentinel from ChunkMetadata maps to None in Citation."""
         settings = _make_settings()
         # Build a result whose page_number is -1 (TXT source, no pages)
@@ -318,9 +312,7 @@ class TestGenerationChain:
         with pytest.raises(GenerationError, match="LLM failed"):
             await gen_chain.generate("question")
 
-    async def test_generation_chain_negative_score_confidence_low(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_generation_chain_negative_score_confidence_low(self, mocker: MagicMock) -> None:
         """Strongly negative cross-encoder score yields confidence in [0.0, 1.0) and below 0.1.
 
         The ms-marco-MiniLM-L-6-v2 cross-encoder returns raw logits that are
@@ -329,9 +321,7 @@ class TestGenerationChain:
         to an invalid value.
         """
         settings = _make_settings()
-        hybrid = _make_hybrid_retriever(
-            [_make_retrieval_result("c1", score=-5.0)]
-        )
+        hybrid = _make_hybrid_retriever([_make_retrieval_result("c1", score=-5.0)])
 
         mocker.patch(
             "src.generation.chain.AzureChatOpenAI",
@@ -392,9 +382,7 @@ class TestGenerationChainStream:
         assert len(done_events) == 1
         assert events[-1].strip() == 'data: {"type": "done"}'
 
-    async def test_astream_generate_citations_event_has_confidence(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_astream_generate_citations_event_has_confidence(self, mocker: MagicMock) -> None:
         """The citations SSE event must include a numeric confidence field."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([_make_retrieval_result("c1", score=2.5)])
@@ -416,9 +404,7 @@ class TestGenerationChainStream:
         assert isinstance(payload["confidence"], float)
         assert 0.0 <= payload["confidence"] <= 1.0
 
-    async def test_astream_generate_error_raises_generation_error(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_astream_generate_error_raises_generation_error(self, mocker: MagicMock) -> None:
         """If retrieval fails, astream_generate raises GenerationError."""
         settings = _make_settings()
         hybrid = MagicMock()
@@ -435,9 +421,7 @@ class TestGenerationChainStream:
             async for _ in gen_chain.astream_generate("question"):
                 pass
 
-    async def test_astream_generate_no_docs_confidence_zero(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_astream_generate_no_docs_confidence_zero(self, mocker: MagicMock) -> None:
         """When retrieval returns no docs, the citations event has confidence 0.0."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([])
@@ -494,9 +478,7 @@ class TestGenerationChainStream:
 
 
 class TestBuildCitations:
-    async def test_retrieval_score_populated_when_score_present(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_retrieval_score_populated_when_score_present(self, mocker: MagicMock) -> None:
         """Citation has retrieval_score when doc.metadata['score'] is present."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([])
@@ -509,9 +491,7 @@ class TestBuildCitations:
         assert len(citations) == 1
         assert citations[0].retrieval_score == pytest.approx(1.75)
 
-    async def test_retrieval_score_is_none_when_score_absent(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_retrieval_score_is_none_when_score_absent(self, mocker: MagicMock) -> None:
         """Citation has retrieval_score=None when score key is absent from metadata."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([])

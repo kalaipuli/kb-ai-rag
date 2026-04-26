@@ -45,7 +45,9 @@ class TestSplitterFactoryRecursiveCharacter:
         assert callable(getattr(splitter, "split_text", None))
 
     def test_recursive_splitter_produces_output(self) -> None:
-        settings = _make_settings(chunk_strategy="recursive_character", chunk_size=100, chunk_overlap=10)
+        settings = _make_settings(
+            chunk_strategy="recursive_character", chunk_size=100, chunk_overlap=10
+        )
         splitter = SplitterFactory.build(settings)
         text = "word " * 200
         chunks = splitter.split_text(text)
@@ -62,7 +64,9 @@ class TestSplitterFactorySentenceWindow:
         assert callable(getattr(splitter, "split_text", None))
 
     def test_sentence_window_produces_output(self) -> None:
-        settings = _make_settings(chunk_strategy="sentence_window", chunk_size=100, chunk_overlap=10)
+        settings = _make_settings(
+            chunk_strategy="sentence_window", chunk_size=100, chunk_overlap=10
+        )
         splitter = SplitterFactory.build(settings)
         text = (
             "The quick brown fox jumps over the lazy dog. " * 10

@@ -30,9 +30,7 @@ async def query_endpoint(
 
     async def _stream() -> AsyncGenerator[str, None]:
         try:
-            async for event in chain.astream_generate(
-                body.query, k=body.k, filters=body.filters
-            ):
+            async for event in chain.astream_generate(body.query, k=body.k, filters=body.filters):
                 yield event
         except GenerationError as exc:
             logger.error("stream_error", error=str(exc), query_len=len(body.query))

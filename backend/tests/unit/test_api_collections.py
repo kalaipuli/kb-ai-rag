@@ -55,9 +55,7 @@ class TestCollectionsEndpoint:
         app.dependency_overrides[get_qdrant_client] = lambda: mock_qdrant
 
         try:
-            response = test_client_1d.get(
-                "/api/v1/collections", headers=authenticated_headers
-            )
+            response = test_client_1d.get("/api/v1/collections", headers=authenticated_headers)
             assert response.status_code == 200
             body = response.json()
             assert body["collections"] == []
@@ -80,9 +78,7 @@ class TestCollectionsEndpoint:
         app.dependency_overrides[get_qdrant_client] = lambda: mock_qdrant
 
         try:
-            response = test_client_1d.get(
-                "/api/v1/collections", headers=authenticated_headers
-            )
+            response = test_client_1d.get("/api/v1/collections", headers=authenticated_headers)
             assert response.status_code == 200
             body = response.json()
             assert len(body["collections"]) == 1
@@ -107,9 +103,7 @@ class TestCollectionsEndpoint:
         app.dependency_overrides[get_qdrant_client] = lambda: mock_qdrant
 
         try:
-            response = test_client_1d.get(
-                "/api/v1/collections", headers=authenticated_headers
-            )
+            response = test_client_1d.get("/api/v1/collections", headers=authenticated_headers)
             assert response.status_code == 200
             names = [c["name"] for c in response.json()["collections"]]
             assert set(names) == {"col_a", "col_b", "col_c"}
@@ -131,9 +125,7 @@ class TestCollectionsEndpoint:
         app.dependency_overrides[get_qdrant_client] = lambda: mock_qdrant
 
         try:
-            response = test_client_1d.get(
-                "/api/v1/collections", headers=authenticated_headers
-            )
+            response = test_client_1d.get("/api/v1/collections", headers=authenticated_headers)
             assert response.status_code == 503
         finally:
             app.dependency_overrides.pop(get_qdrant_client, None)

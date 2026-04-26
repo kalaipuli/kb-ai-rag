@@ -84,9 +84,7 @@ class KBRetriever(BaseRetriever):
                     "filename": r.metadata["filename"],
                     "source_path": r.metadata["source_path"],
                     "page_number": (
-                        r.metadata["page_number"]
-                        if r.metadata["page_number"] != -1
-                        else None
+                        r.metadata["page_number"] if r.metadata["page_number"] != -1 else None
                     ),
                     "score": r.score,
                 },
@@ -123,9 +121,7 @@ class GenerationChain:
             temperature=0,
         )
 
-    def _build_citations(
-        self, docs: list[Document]
-    ) -> tuple[list[Citation], float]:
+    def _build_citations(self, docs: list[Document]) -> tuple[list[Citation], float]:
         """Build deduplicated citations and compute sigmoid confidence.
 
         Extracts chunk metadata from each document, deduplicates by chunk_id,
@@ -153,13 +149,9 @@ class GenerationChain:
                         filename=str(doc.metadata.get("filename", "")),
                         source_path=str(doc.metadata.get("source_path", "")),
                         page_number=(
-                            int(raw_page)
-                            if raw_page is not None and int(raw_page) != -1
-                            else None
+                            int(raw_page) if raw_page is not None and int(raw_page) != -1 else None
                         ),
-                        retrieval_score=(
-                            float(raw_score) if raw_score is not None else None
-                        ),
+                        retrieval_score=(float(raw_score) if raw_score is not None else None),
                     )
                 )
 
@@ -205,9 +197,7 @@ class GenerationChain:
 
             # Build numbered context string matching the [N] citation convention
             # in the system prompt.
-            context = "\n\n".join(
-                f"[{i + 1}] {doc.page_content}" for i, doc in enumerate(docs)
-            )
+            context = "\n\n".join(f"[{i + 1}] {doc.page_content}" for i, doc in enumerate(docs))
 
             # LCEL pipeline: prompt → llm → string parser
             chain = QA_PROMPT | self._llm | StrOutputParser()
@@ -257,9 +247,7 @@ class GenerationChain:
         try:
             docs = await kb_retriever.ainvoke(query)
 
-            context = "\n\n".join(
-                f"[{i + 1}] {doc.page_content}" for i, doc in enumerate(docs)
-            )
+            context = "\n\n".join(f"[{i + 1}] {doc.page_content}" for i, doc in enumerate(docs))
 
             citations, confidence = self._build_citations(docs)
 

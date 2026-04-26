@@ -53,9 +53,7 @@ class TestIngestEndpoint:
         authenticated_headers: dict[str, str],
     ) -> None:
         """run_pipeline is called exactly once as a background task."""
-        with patch(
-            "src.api.routes.ingest.run_pipeline", new_callable=AsyncMock
-        ) as mock_pipeline:
+        with patch("src.api.routes.ingest.run_pipeline", new_callable=AsyncMock) as mock_pipeline:
             test_client_1d.post(
                 "/api/v1/ingest",
                 headers=authenticated_headers,
@@ -69,9 +67,7 @@ class TestIngestEndpoint:
         authenticated_headers: dict[str, str],
     ) -> None:
         """When body.data_dir is provided it is passed to run_pipeline, not settings.data_dir."""
-        with patch(
-            "src.api.routes.ingest.run_pipeline", new_callable=AsyncMock
-        ) as mock_pipeline:
+        with patch("src.api.routes.ingest.run_pipeline", new_callable=AsyncMock) as mock_pipeline:
             test_client_1d.post(
                 "/api/v1/ingest",
                 json={"data_dir": "/custom/path"},
@@ -87,9 +83,7 @@ class TestIngestEndpoint:
         authenticated_headers: dict[str, str],
     ) -> None:
         """When no body is provided, settings.data_dir is used."""
-        with patch(
-            "src.api.routes.ingest.run_pipeline", new_callable=AsyncMock
-        ) as mock_pipeline:
+        with patch("src.api.routes.ingest.run_pipeline", new_callable=AsyncMock) as mock_pipeline:
             test_client_1d.post(
                 "/api/v1/ingest",
                 headers=authenticated_headers,
@@ -103,9 +97,7 @@ class TestIngestEndpoint:
         authenticated_headers: dict[str, str],
     ) -> None:
         """An invalid data_dir path still returns 202 — validation happens in the background task."""
-        with patch(
-            "src.api.routes.ingest.run_pipeline", new_callable=AsyncMock
-        ) as mock_pipeline:
+        with patch("src.api.routes.ingest.run_pipeline", new_callable=AsyncMock) as mock_pipeline:
             response = test_client_1d.post(
                 "/api/v1/ingest",
                 json={"data_dir": "/completely/invalid/path/xyz"},
@@ -126,7 +118,9 @@ class TestIngestEndpoint:
         mock_embedder = MagicMock(spec=Embedder)
         app.dependency_overrides[get_embedder] = lambda: mock_embedder
         try:
-            with patch("src.api.routes.ingest.run_pipeline", new_callable=AsyncMock) as mock_pipeline:
+            with patch(
+                "src.api.routes.ingest.run_pipeline", new_callable=AsyncMock
+            ) as mock_pipeline:
                 test_client_1d.post(
                     "/api/v1/ingest",
                     headers=authenticated_headers,

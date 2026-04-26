@@ -69,9 +69,7 @@ class TestQueryEndpoint:
         from src.api.main import app
 
         mock_chain = MagicMock()
-        mock_chain.astream_generate = lambda *a, **kw: _make_fake_stream(
-            tokens=["Hello", " world"]
-        )
+        mock_chain.astream_generate = lambda *a, **kw: _make_fake_stream(tokens=["Hello", " world"])
         app.dependency_overrides[get_generation_chain] = lambda: mock_chain
 
         try:
@@ -83,7 +81,7 @@ class TestQueryEndpoint:
             ) as response:
                 lines = [line for line in response.iter_lines() if line.startswith("data: ")]
 
-            events = [json.loads(line[len("data: "):]) for line in lines]
+            events = [json.loads(line[len("data: ") :]) for line in lines]
             types = [e["type"] for e in events]
 
             assert "token" in types
@@ -120,7 +118,7 @@ class TestQueryEndpoint:
             ) as response:
                 lines = [line for line in response.iter_lines() if line.startswith("data: ")]
 
-            events = [json.loads(line[len("data: "):]) for line in lines]
+            events = [json.loads(line[len("data: ") :]) for line in lines]
             citations_event = next(e for e in events if e["type"] == "citations")
 
             assert "confidence" in citations_event
@@ -151,7 +149,7 @@ class TestQueryEndpoint:
             ) as response:
                 lines = [line for line in response.iter_lines() if line.startswith("data: ")]
 
-            events = [json.loads(line[len("data: "):]) for line in lines]
+            events = [json.loads(line[len("data: ") :]) for line in lines]
             assert events[-1]["type"] == "done"
         finally:
             app.dependency_overrides.pop(get_generation_chain, None)
@@ -184,7 +182,7 @@ class TestQueryEndpoint:
                 assert response.status_code == 200
                 lines = [line for line in response.iter_lines() if line.startswith("data: ")]
 
-            events = [json.loads(line[len("data: "):]) for line in lines]
+            events = [json.loads(line[len("data: ") :]) for line in lines]
             event_types = [e["type"] for e in events]
             assert "done" in event_types
             assert events[-1]["type"] == "done"

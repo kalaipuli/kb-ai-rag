@@ -31,9 +31,7 @@ async def ingest_endpoint(
     pipeline so that the running HybridRetriever's sparse index is refreshed
     in-place and the splitter factory receives the shared embedder instance.
     """
-    data_dir = (
-        Path(body.data_dir) if body and body.data_dir else Path(settings.data_dir)
-    )
+    data_dir = Path(body.data_dir) if body and body.data_dir else Path(settings.data_dir)
     bm25_store = getattr(request.app.state, "bm25_store", None)
     background_tasks.add_task(run_pipeline, data_dir, settings, bm25_store, embedder)
     logger.info("ingest_accepted", data_dir=str(data_dir))

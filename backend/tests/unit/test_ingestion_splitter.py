@@ -208,8 +208,10 @@ class TestTokenAwareChunking:
 
         enc = tiktoken.get_encoding("cl100k_base")
         # Build content that is clearly larger than chunk_size=100 tokens.
-        content = ("The quick brown fox jumps over the lazy dog. " * 20) + "\n\n" + (
-            "Pack my box with five dozen liquor jugs. " * 20
+        content = (
+            ("The quick brown fox jumps over the lazy dog. " * 20)
+            + "\n\n"
+            + ("Pack my box with five dozen liquor jugs. " * 20)
         )
         doc = _make_doc(content)
         chunk_size = 100
@@ -220,9 +222,9 @@ class TestTokenAwareChunking:
             token_count = len(enc.encode(chunk.text))
             # Allow a small margin because the splitter may include a partial
             # final token at a separator boundary.
-            assert token_count <= chunk_size + 20, (
-                f"Chunk has {token_count} tokens, exceeds limit of {chunk_size + 20}"
-            )
+            assert (
+                token_count <= chunk_size + 20
+            ), f"Chunk has {token_count} tokens, exceeds limit of {chunk_size + 20}"
 
 
 # ---------------------------------------------------------------------------

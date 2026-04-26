@@ -67,10 +67,12 @@ class TestDenseRetriever:
         with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
             mock_client = MagicMock()
             mock_client.query_points = AsyncMock(
-                return_value=_make_query_result([
-                    _make_scored_point("c1", 0.9, "First chunk"),
-                    _make_scored_point("c2", 0.7, "Second chunk"),
-                ])
+                return_value=_make_query_result(
+                    [
+                        _make_scored_point("c1", 0.9, "First chunk"),
+                        _make_scored_point("c2", 0.7, "Second chunk"),
+                    ]
+                )
             )
             mock_cls.return_value = mock_client
 
@@ -145,9 +147,13 @@ class TestDenseRetriever:
         with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
             mock_client = MagicMock()
             mock_client.query_points = AsyncMock(
-                return_value=_make_query_result([
-                    _make_scored_point("c1", 0.9, title="Short title", text="Full body text here"),
-                ])
+                return_value=_make_query_result(
+                    [
+                        _make_scored_point(
+                            "c1", 0.9, title="Short title", text="Full body text here"
+                        ),
+                    ]
+                )
             )
             mock_cls.return_value = mock_client
 

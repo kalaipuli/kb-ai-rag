@@ -137,7 +137,9 @@ class TestEmbedderBatching:
             mock_instance.aembed_documents = AsyncMock(side_effect=call_results)
             mock_cls.return_value = mock_instance
 
-            with patch("src.ingestion.embedder.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+            with patch(
+                "src.ingestion.embedder.asyncio.sleep", new_callable=AsyncMock
+            ) as mock_sleep:
                 embedder = Embedder(_make_settings(batch_size=2, inter_batch_delay=0.5))
                 await embedder.embed_chunks(chunks)
 

@@ -114,9 +114,7 @@ class EvaluationResult:
             lines.append("|--------|-----|-----|--------|")
             for m in _METRICS:
                 vals = [
-                    float(s[m])
-                    for s in self.per_sample
-                    if m in s and not math.isnan(float(s[m]))
+                    float(s[m]) for s in self.per_sample if m in s and not math.isnan(float(s[m]))
                 ]
                 if vals:
                     mn = min(vals)
@@ -133,9 +131,7 @@ class EvaluationResult:
             lines.append(header)
             lines.append(sep)
             for i, sample in enumerate(self.per_sample):
-                row_vals = " | ".join(
-                    f"{float(sample.get(m, float('nan'))):.4f}" for m in _METRICS
-                )
+                row_vals = " | ".join(f"{float(sample.get(m, float('nan'))):.4f}" for m in _METRICS)
                 lines.append(f"| {i + 1} | {row_vals} |")
 
             # Failure section

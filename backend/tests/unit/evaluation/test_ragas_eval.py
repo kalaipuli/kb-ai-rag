@@ -288,9 +288,7 @@ def test_distribution_stats_section_present_with_per_sample() -> None:
 
 def test_asdict_works_on_evaluation_result() -> None:
     """dataclasses.asdict() must work — used for JSON serialisation."""
-    result = _make_result(
-        per_sample=[{"faithfulness": 0.9, "answer_correctness": 0.85}]
-    )
+    result = _make_result(per_sample=[{"faithfulness": 0.9, "answer_correctness": 0.85}])
     d = dataclasses.asdict(result)
     assert d["faithfulness"] == pytest.approx(0.90)
     assert d["answer_correctness"] == pytest.approx(0.85)
@@ -305,8 +303,15 @@ def test_asdict_works_on_evaluation_result() -> None:
 def test_save_and_load_baseline_round_trip(tmp_path: Path) -> None:
     baseline_path = tmp_path / "eval_baseline.json"
     result = _make_result(
-        per_sample=[{"faithfulness": 0.9, "answer_relevancy": 0.8, "answer_correctness": 0.85,
-                     "context_recall": 0.75, "context_precision": 0.78}]
+        per_sample=[
+            {
+                "faithfulness": 0.9,
+                "answer_relevancy": 0.8,
+                "answer_correctness": 0.85,
+                "context_recall": 0.75,
+                "context_precision": 0.78,
+            }
+        ]
     )
     save_baseline(result, baseline_path)
     loaded = load_baseline(baseline_path)
