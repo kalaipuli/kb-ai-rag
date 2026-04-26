@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     azure_openai_api_key: SecretStr
     azure_openai_api_version: str = "2024-08-01-preview"
     azure_chat_deployment: str = "gpt-4o"
-    azure_embedding_deployment: str = "text-embedding-3-large"
+    azure_embedding_deployment: str = "text-embedding-ada-002"
 
     # Qdrant vector store
     qdrant_url: str = "http://qdrant:6333"
@@ -34,8 +34,12 @@ class Settings(BaseSettings):
     data_dir: str = "/app/data"
     chunk_size: int = 1000
     chunk_overlap: int = 200
-    embedding_vector_size: int = 3072
+    embedding_vector_size: int = 1536
     embedding_batch_size: int = 100
+    embedding_max_concurrency: int = 3
+    # Seconds to sleep inside the semaphore after each batch completes.
+    # Keeps per-slot throughput bounded so TPM/RPM limits are not exceeded.
+    embedding_inter_batch_delay: float = 1.0
     bm25_index_path: str = "/app/data/bm25_index.pkl"
 
     # Hybrid retrieval

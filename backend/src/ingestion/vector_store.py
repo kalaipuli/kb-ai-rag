@@ -4,7 +4,10 @@ import structlog
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http.models import (
     Distance,
+    FieldCondition,
+    Filter,
     HnswConfigDiff,
+    MatchValue,
     OptimizersConfigDiff,
     PayloadSchemaType,
     PointStruct,
@@ -72,6 +75,17 @@ class QdrantVectorStore:
             )
 
         logger.info("collection_created", collection=self._collection)
+
+    async def doc_exists(self, doc_id: str) -> bool:
+        """Return True if any point with this doc_id is already in the collection."""
+        result = await self._client.count(
+            collection_name=self._collection,
+            count_filter=Filter(
+                must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]
+            ),
+            exact=False,
+        )
+        return result.count > 0
 
     async def upsert(self, chunks: list[ChunkedDocument]) -> None:
         """Upsert a list of embedded chunks into Qdrant.

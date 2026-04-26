@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 
 import structlog
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from src.config import Settings
 from src.ingestion.models import ChunkedDocument, ChunkMetadata, Document

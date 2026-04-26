@@ -23,7 +23,7 @@ Enterprise Agentic RAG platform. Five LangGraph agents orchestrate hybrid retrie
 | [architecture-rules.md](.claude/docs/architecture-rules.md) | Before any design decision, new module, or cross-cutting change — connectors, AgentState, API versioning, SSE, ADR rules |
 | [python-rules.md](.claude/docs/python-rules.md) | Before writing or reviewing any Python — types, async, structlog, error handling, imports |
 | [frontend-rules.md](.claude/docs/frontend-rules.md) | Before touching `frontend/` — TypeScript strict mode, component conventions, fetch/SSE patterns |
-| [git-rules.md](.claude/docs/git-rules.md) | Before committing or opening a PR — branch strategy, Conventional Commits, PR checklist |
+| [git-rules.md](.claude/docs/git-rules.md) | For any development, enhancements and bug fixes. Also, Before committing or opening a PR — branch strategy, Conventional Commits, PR checklist |
 | [project-context.md](.claude/docs/project-context.md) | When setting up the environment or orienting to the repo — layout, local dev commands, env vars |
 | [anti-patterns.md](.claude/docs/anti-patterns.md) | When in doubt about an approach — prohibited patterns and correct alternatives |
 | [architect-review-checklist.md](.claude/docs/architect-review-checklist.md) | At the start of every architect review — 7 priority-ordered grep checks to run before reading implementation detail |

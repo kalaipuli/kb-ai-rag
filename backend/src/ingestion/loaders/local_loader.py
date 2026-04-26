@@ -33,31 +33,39 @@ class LocalFileLoader(BaseLoader):
     def __init__(self, data_dir: Path) -> None:
         self._data_dir = data_dir
 
+    @staticmethod
+    def doc_id_for(file_path: Path) -> str:
+        """Return the deterministic doc_id for a file path (same as ingestion time)."""
+        return _make_doc_id(str(file_path.resolve()))
+
+    def discover_files(self) -> list[Path]:
+        """Return sorted list of supported files under ``data_dir``."""
+        files: list[Path] = []
+        for path in sorted(self._data_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            ext = path.suffix.lower()
+            if ext not in _SUPPORTED_EXTENSIONS:
+                logger.warning("unsupported_file_extension", path=str(path), extension=ext)
+                continue
+            files.append(path)
+        return files
+
+    async def load_one(self, file_path: Path) -> list[Document]:
+        """Load a single file and return its ``Document`` objects."""
+        ext = file_path.suffix.lower()
+        if ext == ".pdf":
+            return await asyncio.to_thread(self._load_pdf, file_path)
+        if ext == ".txt":
+            return await asyncio.to_thread(self._load_txt, file_path)
+        logger.warning("unsupported_file_extension", path=str(file_path), extension=ext)
+        return []
+
     async def load(self) -> list[Document]:
         """Walk ``data_dir`` and return one ``Document`` per page/file."""
         documents: list[Document] = []
-
-        file_paths = sorted(self._data_dir.rglob("*"))
-        for file_path in file_paths:
-            if not file_path.is_file():
-                continue
-
-            ext = file_path.suffix.lower()
-            if ext not in _SUPPORTED_EXTENSIONS:
-                logger.warning(
-                    "unsupported_file_extension",
-                    path=str(file_path),
-                    extension=ext,
-                )
-                continue
-
-            if ext == ".pdf":
-                docs = await asyncio.to_thread(self._load_pdf, file_path)
-            else:
-                docs = await asyncio.to_thread(self._load_txt, file_path)
-
-            documents.extend(docs)
-
+        for file_path in self.discover_files():
+            documents.extend(await self.load_one(file_path))
         logger.info(
             "local_loader_complete",
             data_dir=str(self._data_dir),

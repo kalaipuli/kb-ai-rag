@@ -7,7 +7,7 @@ import structlog
 from pydantic import BaseModel
 
 from src.config import Settings
-from src.exceptions import IngestionError
+from src.exceptions import EmbeddingError, IngestionError
 from src.ingestion.bm25_store import BM25Store
 from src.ingestion.embedder import Embedder
 from src.ingestion.loaders.local_loader import LocalFileLoader
@@ -24,7 +24,7 @@ class PipelineResult(BaseModel):
     """Number of raw document pages/files successfully loaded."""
 
     chunks_created: int
-    """Total chunks produced after splitting and quality filtering."""
+    """Total chunks that were embedded and upserted successfully."""
 
     errors: list[str]
     """Per-file error messages; pipeline continues on individual failures."""
@@ -38,39 +38,35 @@ async def run_pipeline(
     settings: Settings,
     bm25_store: BM25Store | None = None,
 ) -> PipelineResult:
-    """Run the full document ingestion pipeline.
+    """Run the full document ingestion pipeline, processing one file at a time.
 
-    Stages:
-    1. Load files from ``data_dir`` with ``LocalFileLoader``.
+    Stages per file:
+    1. Load the file with ``LocalFileLoader``.
     2. Split into chunks with ``DocumentSplitter``.
     3. Embed with ``Embedder`` (async batched Azure OpenAI calls).
-    4. Ensure Qdrant collection and upsert all points.
-    5. Build BM25 index and persist to disk.
+    4. Upsert the file's points into Qdrant.
 
-    Per-file errors are collected in ``PipelineResult.errors`` rather than
-    aborting the run.
+    After all files:
+    5. Build BM25 index from all successfully upserted chunks and persist.
+
+    ``ensure_collection`` is called once before the file loop.
+    Per-file errors are collected in ``PipelineResult.errors`` and do not
+    abort the run — other files continue to be processed.
     """
     pipeline_start = time.monotonic()
     errors: list[str] = []
+    all_embedded_chunks: list = []
+    total_docs = 0
 
-    # --- Stage 1: Load -------------------------------------------------------
-    t0 = time.monotonic()
     loader = LocalFileLoader(data_dir=data_dir)
-    try:
-        documents = await loader.load()
-    except Exception as exc:
-        logger.error("pipeline_load_failed", error=str(exc))
-        errors.append(f"Load stage failed: {exc}")
-        documents = []
+    splitter = DocumentSplitter(settings=settings)
+    embedder = Embedder(settings=settings)
+    vector_store = QdrantVectorStore(settings=settings)
 
-    load_ms = (time.monotonic() - t0) * 1000
-    logger.info(
-        "pipeline_load_complete",
-        doc_count=len(documents),
-        duration_ms=round(load_ms, 1),
-    )
-
-    if not documents:
+    # Discover files before touching the network so an empty dir returns fast.
+    file_paths = loader.discover_files()
+    if not file_paths:
+        logger.info("pipeline_no_files_found", data_dir=str(data_dir))
         return PipelineResult(
             docs_processed=0,
             chunks_created=0,
@@ -78,114 +74,98 @@ async def run_pipeline(
             duration_ms=(time.monotonic() - pipeline_start) * 1000,
         )
 
-    # --- Stage 2: Split -------------------------------------------------------
-    t0 = time.monotonic()
-    splitter = DocumentSplitter(settings=settings)
-    chunks = splitter.split(documents)
-    split_ms = (time.monotonic() - t0) * 1000
-    logger.info(
-        "pipeline_split_complete",
-        chunk_count=len(chunks),
-        duration_ms=round(split_ms, 1),
-    )
-
-    if not chunks:
-        logger.warning("pipeline_no_chunks_after_split")
+    # Ensure collection exists once; a failure here aborts the whole run.
+    try:
+        await vector_store.ensure_collection()
+    except Exception as exc:
+        logger.error("pipeline_ensure_collection_failed", error=str(exc))
+        await vector_store.close()
         return PipelineResult(
-            docs_processed=len(documents),
+            docs_processed=0,
+            chunks_created=0,
+            errors=[f"Collection setup failed: {exc}"],
+            duration_ms=(time.monotonic() - pipeline_start) * 1000,
+        )
+
+    try:
+        for file_path in file_paths:
+            file_name = file_path.name
+            doc_id = loader.doc_id_for(file_path)
+
+            if await vector_store.doc_exists(doc_id):
+                logger.info("pipeline_file_skipped", file=file_name, doc_id=doc_id)
+                continue
+
+            # Stage 1: Load
+            file_docs = await loader.load_one(file_path)
+            if not file_docs:
+                logger.warning("pipeline_file_no_content", file=file_name)
+                continue
+            total_docs += len(file_docs)
+
+            # Stage 2: Split
+            chunks = splitter.split(file_docs)
+            if not chunks:
+                logger.warning("pipeline_file_no_chunks", file=file_name)
+                continue
+
+            # Stage 3: Embed
+            try:
+                embedded = await embedder.embed_chunks(chunks)
+            except (EmbeddingError, Exception) as exc:
+                logger.error("pipeline_file_embed_failed", file=file_name, error=str(exc))
+                errors.append(f"{file_name}: embedding failed: {exc}")
+                continue
+
+            # Stage 4: Upsert
+            try:
+                await vector_store.upsert(embedded)
+            except IngestionError as exc:
+                logger.error("pipeline_file_upsert_failed", file=file_name, error=str(exc))
+                errors.append(f"{file_name}: upsert failed: {exc}")
+                continue
+
+            all_embedded_chunks.extend(embedded)
+            logger.info(
+                "pipeline_file_complete",
+                file=file_name,
+                docs=len(file_docs),
+                chunks=len(embedded),
+            )
+    finally:
+        await vector_store.close()
+
+    if not all_embedded_chunks:
+        logger.warning("pipeline_no_chunks_upserted")
+        return PipelineResult(
+            docs_processed=total_docs,
             chunks_created=0,
             errors=errors,
             duration_ms=(time.monotonic() - pipeline_start) * 1000,
         )
 
-    # --- Stage 3: Embed -------------------------------------------------------
-    t0 = time.monotonic()
-    embedder = Embedder(settings=settings)
-    try:
-        embedded_chunks = await embedder.embed_chunks(chunks)
-    except Exception as exc:
-        logger.error("pipeline_embed_failed", error=str(exc))
-        errors.append(f"Embedding stage failed: {exc}")
-        return PipelineResult(
-            docs_processed=len(documents),
-            chunks_created=len(chunks),
-            errors=errors,
-            duration_ms=(time.monotonic() - pipeline_start) * 1000,
-        )
-
-    embed_ms = (time.monotonic() - t0) * 1000
-    logger.info(
-        "pipeline_embed_complete",
-        embedded_count=len(embedded_chunks),
-        duration_ms=round(embed_ms, 1),
-    )
-
-    # --- Stage 4: Qdrant upsert -----------------------------------------------
-    t0 = time.monotonic()
-    vector_store = QdrantVectorStore(settings=settings)
-    upsert_failed = False
-    try:
-        await vector_store.ensure_collection()
-        await vector_store.upsert(embedded_chunks)
-    except IngestionError as exc:
-        logger.error("pipeline_upsert_failed", error=str(exc))
-        errors.append(f"Upsert stage failed: {exc}")
-        upsert_failed = True
-    finally:
-        await vector_store.close()
-
-    upsert_ms = (time.monotonic() - t0) * 1000
-    logger.info(
-        "pipeline_upsert_complete",
-        duration_ms=round(upsert_ms, 1),
-    )
-
-    if upsert_failed:
-        # Qdrant is empty — skip BM25 to avoid inconsistent state.
-        return PipelineResult(
-            docs_processed=len(documents),
-            chunks_created=len(chunks),
-            errors=errors,
-            duration_ms=(time.monotonic() - pipeline_start) * 1000,
-        )
-
-    # --- Stage 5: BM25 index --------------------------------------------------
-    t0 = time.monotonic()
-    # Use the provided singleton store (lifespan-managed) so the running
-    # HybridRetriever's reference is updated in-place.  Fall back to a new
-    # store when called outside the app context (e.g. CLI / tests).
+    # Stage 5: BM25 — built once from all successfully upserted chunks.
     if bm25_store is None:
         bm25_store = BM25Store(index_path=Path(settings.bm25_index_path))
     try:
-        bm25_store.build(embedded_chunks)
+        bm25_store.build(all_embedded_chunks)
         bm25_store.save()
     except Exception as exc:
         logger.error("pipeline_bm25_failed", error=str(exc))
         errors.append(f"BM25 stage failed: {exc}")
-        return PipelineResult(
-            docs_processed=len(documents),
-            chunks_created=len(embedded_chunks),
-            errors=errors,
-            duration_ms=(time.monotonic() - pipeline_start) * 1000,
-        )
-    bm25_ms = (time.monotonic() - t0) * 1000
-    logger.info(
-        "pipeline_bm25_complete",
-        duration_ms=round(bm25_ms, 1),
-    )
 
     total_ms = (time.monotonic() - pipeline_start) * 1000
     logger.info(
         "pipeline_complete",
-        docs_processed=len(documents),
-        chunks_created=len(embedded_chunks),
+        docs_processed=total_docs,
+        chunks_created=len(all_embedded_chunks),
         error_count=len(errors),
         total_duration_ms=round(total_ms, 1),
     )
 
     return PipelineResult(
-        docs_processed=len(documents),
-        chunks_created=len(embedded_chunks),
+        docs_processed=total_docs,
+        chunks_created=len(all_embedded_chunks),
         errors=errors,
         duration_ms=total_ms,
     )

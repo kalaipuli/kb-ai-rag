@@ -5,9 +5,9 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - qdrant_storage:/qdrant/storage
+      - /Users/kalai/qdrant_storage:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:6333/readyz || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/6333 && echo -e \"GET /healthz HTTP/1.0\\r\\n\\r\\n\" >&3 && grep -q 200 <&3'"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -28,19 +28,23 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8000/api/v1/health || exit 1"]
-      interval: 15s
+      interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 30s
+      start_interval: 5s
 
   frontend:
     build:
       context: ../frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_API_URL: http://backend:8000
     ports:
       - "3000:3000"
+    environment:
+      BACKEND_URL: http://backend:8000
+      API_KEY: ${API_KEY}
     depends_on:
       backend:
         condition: service_healthy

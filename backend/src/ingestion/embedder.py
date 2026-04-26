@@ -4,6 +4,16 @@ import asyncio
 
 import structlog
 from langchain_openai import AzureOpenAIEmbeddings
+from openai import RateLimitError
+from tenacity import (
+    AsyncRetrying,
+    RetryCallState,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+    wait_random,
+)
+from tenacity.wait import wait_base
 
 from src.config import Settings
 from src.exceptions import EmbeddingError
@@ -11,16 +21,49 @@ from src.ingestion.models import ChunkedDocument
 
 logger = structlog.get_logger(__name__)
 
+_FALLBACK_WAIT = wait_exponential(multiplier=1, min=4, max=60) + wait_random(0, 2)
+
+
+class _RetryAfterWait(wait_base):
+    """Tenacity wait strategy that honours Azure's Retry-After response header.
+
+    Falls back to exponential + jitter when the header is absent so that
+    concurrent batches don't all wake up at the same instant.
+    """
+
+    def __call__(self, retry_state: RetryCallState) -> float:
+        exc = retry_state.outcome.exception() if retry_state.outcome else None
+        if isinstance(exc, RateLimitError) and exc.response is not None:
+            retry_after = exc.response.headers.get("retry-after")
+            if retry_after:
+                try:
+                    return float(retry_after)
+                except ValueError:
+                    pass
+        return _FALLBACK_WAIT(retry_state)
+
+
+_RETRY_POLICY = dict(
+    retry=retry_if_exception_type(RateLimitError),
+    wait=_RetryAfterWait(),
+    stop=stop_after_attempt(5),
+    reraise=True,
+)
+
 
 class Embedder:
     """Embed chunks using Azure OpenAI, batching to respect rate limits.
 
-    Chunks are split into batches of ``settings.embedding_batch_size`` and
-    all batches are embedded concurrently via ``asyncio.gather``.
+    Chunks are split into batches of ``settings.embedding_batch_size``.
+    Concurrent batch requests are capped by ``settings.embedding_max_concurrency``
+    and each batch retries up to 5 times on HTTP 429, honouring the
+    ``Retry-After`` header when present and falling back to exponential+jitter.
     """
 
     def __init__(self, settings: Settings) -> None:
         self._batch_size = settings.embedding_batch_size
+        self._inter_batch_delay = settings.embedding_inter_batch_delay
+        self._semaphore = asyncio.Semaphore(settings.embedding_max_concurrency)
         self._embeddings = AzureOpenAIEmbeddings(
             azure_endpoint=settings.azure_openai_endpoint,
             api_key=settings.azure_openai_api_key,
@@ -28,10 +71,20 @@ class Embedder:
             azure_deployment=settings.azure_embedding_deployment,
         )
 
+    async def _embed_batch(self, batch: list[str]) -> list[list[float]]:
+        """Embed one batch, honouring the concurrency semaphore and retrying on 429."""
+        async for attempt in AsyncRetrying(**_RETRY_POLICY):
+            with attempt:
+                async with self._semaphore:
+                    vectors = await self._embeddings.aembed_documents(batch)
+                    await asyncio.sleep(self._inter_batch_delay)
+                    return vectors
+        return []  # unreachable; satisfies type checker
+
     async def embed_chunks(self, chunks: list[ChunkedDocument]) -> list[ChunkedDocument]:
         """Embed all chunks and return them with the ``vector`` field populated.
 
-        Raises ``EmbeddingError`` if the Azure call fails.
+        Raises ``EmbeddingError`` if the Azure call fails after all retries.
         """
         if not chunks:
             return chunks
@@ -47,9 +100,7 @@ class Embedder:
         )
 
         try:
-            results = await asyncio.gather(
-                *[self._embeddings.aembed_documents(batch) for batch in batches]
-            )
+            results = await asyncio.gather(*[self._embed_batch(batch) for batch in batches])
         except Exception as exc:
             logger.error("embedding_failed", error=str(exc))
             raise EmbeddingError(f"Azure OpenAI embedding request failed: {exc}") from exc
@@ -71,7 +122,13 @@ class Embedder:
     async def embed_query(self, query: str) -> list[float]:
         """Embed a single query string for retrieval."""
         try:
-            return await self._embeddings.aembed_query(query)
+            async for attempt in AsyncRetrying(**_RETRY_POLICY):
+                with attempt:
+                    return await self._embeddings.aembed_query(query)
+            return []  # unreachable; satisfies type checker
+        except RateLimitError as exc:
+            logger.error("query_embedding_failed", error=str(exc))
+            raise EmbeddingError(f"Azure OpenAI query embedding failed: {exc}") from exc
         except Exception as exc:
             logger.error("query_embedding_failed", error=str(exc))
             raise EmbeddingError(f"Azure OpenAI query embedding failed: {exc}") from exc

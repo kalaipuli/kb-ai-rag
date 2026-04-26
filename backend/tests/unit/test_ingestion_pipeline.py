@@ -16,6 +16,9 @@ from src.ingestion.pipeline import PipelineResult, run_pipeline
 
 pytestmark = pytest.mark.asyncio
 
+FILE_A = Path("/tmp/data/a.txt")
+FILE_B = Path("/tmp/data/b.txt")
+
 
 def _make_settings() -> Settings:
     return Settings(
@@ -71,10 +74,7 @@ def _make_chunk(chunk_id: str) -> ChunkedDocument:
 class TestRunPipelineHappyPath:
     async def test_all_stages_called_in_order(self) -> None:
         settings = _make_settings()
-        docs = [_make_doc("a.txt"), _make_doc("b.txt")]
-        chunks = [_make_chunk("c1"), _make_chunk("c2")]
-        embedded = [_make_chunk("c1"), _make_chunk("c2")]
-
+        chunk_a = _make_chunk("c1")
         call_order: list[str] = []
 
         with (
@@ -84,46 +84,50 @@ class TestRunPipelineHappyPath:
             patch("src.ingestion.pipeline.QdrantVectorStore") as mock_vs_cls,
             patch("src.ingestion.pipeline.BM25Store") as mock_bm25_cls,
         ):
-            # Loader
             mock_loader = MagicMock()
-            mock_loader.load = AsyncMock(side_effect=lambda: call_order.append("load") or docs)
+            mock_loader.discover_files = MagicMock(
+                side_effect=lambda: call_order.append("discover") or [FILE_A, FILE_B]
+            )
+            mock_loader.doc_id_for = MagicMock(return_value="test-doc-id")
+            mock_loader.load_one = AsyncMock(
+                side_effect=lambda p: call_order.append("load_one") or [_make_doc(p.name)]
+            )
             mock_loader_cls.return_value = mock_loader
 
-            # Splitter
             mock_splitter = MagicMock()
             mock_splitter.split = MagicMock(
-                side_effect=lambda d: call_order.append("split") or chunks
+                side_effect=lambda _: call_order.append("split") or [chunk_a]
             )
             mock_splitter_cls.return_value = mock_splitter
 
-            # Embedder
             mock_embedder = MagicMock()
             mock_embedder.embed_chunks = AsyncMock(
-                side_effect=lambda c: call_order.append("embed") or embedded
+                side_effect=lambda _: call_order.append("embed") or [chunk_a]
             )
             mock_embedder_cls.return_value = mock_embedder
 
-            # VectorStore
             mock_vs = MagicMock()
-            mock_vs.ensure_collection = AsyncMock(side_effect=lambda: call_order.append("ensure"))
-            mock_vs.upsert = AsyncMock(side_effect=lambda c: call_order.append("upsert"))
+            mock_vs.ensure_collection = AsyncMock(
+                side_effect=lambda: call_order.append("ensure")
+            )
+            mock_vs.doc_exists = AsyncMock(return_value=False)
+            mock_vs.upsert = AsyncMock(side_effect=lambda _: call_order.append("upsert"))
             mock_vs.close = AsyncMock()
             mock_vs_cls.return_value = mock_vs
 
-            # BM25Store
             mock_bm25 = MagicMock()
-            mock_bm25.build = MagicMock(side_effect=lambda c: call_order.append("bm25_build"))
+            mock_bm25.build = MagicMock(side_effect=lambda _: call_order.append("bm25_build"))
             mock_bm25.save = MagicMock(side_effect=lambda: call_order.append("bm25_save"))
             mock_bm25_cls.return_value = mock_bm25
 
             result = await run_pipeline(Path("/tmp/data"), settings)
 
+        # ensure_collection once, then per-file loop, then BM25
         assert call_order == [
-            "load",
-            "split",
-            "embed",
+            "discover",
             "ensure",
-            "upsert",
+            "load_one", "split", "embed", "upsert",  # file A
+            "load_one", "split", "embed", "upsert",  # file B
             "bm25_build",
             "bm25_save",
         ]
@@ -134,8 +138,7 @@ class TestRunPipelineHappyPath:
 
     async def test_pipeline_result_has_positive_duration(self) -> None:
         settings = _make_settings()
-        docs = [_make_doc("doc.txt")]
-        chunks = [_make_chunk("c1")]
+        chunk = _make_chunk("c1")
 
         with (
             patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls,
@@ -145,19 +148,22 @@ class TestRunPipelineHappyPath:
             patch("src.ingestion.pipeline.BM25Store") as mock_bm25_cls,
         ):
             mock_loader = MagicMock()
-            mock_loader.load = AsyncMock(return_value=docs)
+            mock_loader.discover_files = MagicMock(return_value=[FILE_A])
+            mock_loader.doc_id_for = MagicMock(return_value="test-doc-id")
+            mock_loader.load_one = AsyncMock(return_value=[_make_doc("a.txt")])
             mock_loader_cls.return_value = mock_loader
 
             mock_splitter = MagicMock()
-            mock_splitter.split = MagicMock(return_value=chunks)
+            mock_splitter.split = MagicMock(return_value=[chunk])
             mock_splitter_cls.return_value = mock_splitter
 
             mock_embedder = MagicMock()
-            mock_embedder.embed_chunks = AsyncMock(return_value=chunks)
+            mock_embedder.embed_chunks = AsyncMock(return_value=[chunk])
             mock_embedder_cls.return_value = mock_embedder
 
             mock_vs = MagicMock()
             mock_vs.ensure_collection = AsyncMock()
+            mock_vs.doc_exists = AsyncMock(return_value=False)
             mock_vs.upsert = AsyncMock()
             mock_vs.close = AsyncMock()
             mock_vs_cls.return_value = mock_vs
@@ -183,7 +189,7 @@ class TestRunPipelineEdgeCases:
 
         with patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls:
             mock_loader = MagicMock()
-            mock_loader.load = AsyncMock(return_value=[])
+            mock_loader.discover_files = MagicMock(return_value=[])
             mock_loader_cls.return_value = mock_loader
 
             result = await run_pipeline(Path("/tmp/empty"), settings)
@@ -192,56 +198,32 @@ class TestRunPipelineEdgeCases:
         assert result.chunks_created == 0
         assert result.errors == []
 
-    async def test_load_failure_adds_error_and_returns(self) -> None:
+    async def test_ensure_collection_failure_aborts_run(self) -> None:
         settings = _make_settings()
 
-        with patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls:
+        with (
+            patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls,
+            patch("src.ingestion.pipeline.QdrantVectorStore") as mock_vs_cls,
+        ):
             mock_loader = MagicMock()
-            mock_loader.load = AsyncMock(side_effect=RuntimeError("disk error"))
+            mock_loader.discover_files = MagicMock(return_value=[FILE_A])
             mock_loader_cls.return_value = mock_loader
+
+            mock_vs = MagicMock()
+            mock_vs.ensure_collection = AsyncMock(side_effect=RuntimeError("qdrant down"))
+            mock_vs.close = AsyncMock()
+            mock_vs_cls.return_value = mock_vs
 
             result = await run_pipeline(Path("/tmp/data"), settings)
 
         assert result.docs_processed == 0
         assert len(result.errors) == 1
-        assert "disk error" in result.errors[0]
+        assert "qdrant down" in result.errors[0]
 
-    async def test_embed_failure_adds_error(self) -> None:
+    async def test_one_file_embed_failure_continues_other_files(self) -> None:
+        """Embedding failure on file A should not block file B from being processed."""
         settings = _make_settings()
-        docs = [_make_doc("doc.txt")]
-        chunks = [_make_chunk("c1")]
-
-        with (
-            patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls,
-            patch("src.ingestion.pipeline.DocumentSplitter") as mock_splitter_cls,
-            patch("src.ingestion.pipeline.Embedder") as mock_embedder_cls,
-        ):
-            mock_loader = MagicMock()
-            mock_loader.load = AsyncMock(return_value=docs)
-            mock_loader_cls.return_value = mock_loader
-
-            mock_splitter = MagicMock()
-            mock_splitter.split = MagicMock(return_value=chunks)
-            mock_splitter_cls.return_value = mock_splitter
-
-            mock_embedder = MagicMock()
-            mock_embedder.embed_chunks = AsyncMock(
-                side_effect=EmbeddingError("Azure quota exceeded")
-            )
-            mock_embedder_cls.return_value = mock_embedder
-
-            result = await run_pipeline(Path("/tmp/data"), settings)
-
-        assert len(result.errors) == 1
-        assert "Azure quota exceeded" in result.errors[0]
-        # docs were loaded and chunks created even though embedding failed
-        assert result.docs_processed == 1
-        assert result.chunks_created == 1
-
-    async def test_upsert_failure_adds_error_and_skips_bm25(self) -> None:
-        settings = _make_settings()
-        docs = [_make_doc("a.txt")]
-        chunks = [_make_chunk("c1")]
+        chunk_b = _make_chunk("c2")
 
         with (
             patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls,
@@ -251,19 +233,119 @@ class TestRunPipelineEdgeCases:
             patch("src.ingestion.pipeline.BM25Store") as mock_bm25_cls,
         ):
             mock_loader = MagicMock()
-            mock_loader.load = AsyncMock(return_value=docs)
+            mock_loader.discover_files = MagicMock(return_value=[FILE_A, FILE_B])
+            mock_loader.doc_id_for = MagicMock(return_value="test-doc-id")
+            mock_loader.load_one = AsyncMock(
+                side_effect=lambda p: [_make_doc(p.name)]
+            )
             mock_loader_cls.return_value = mock_loader
 
             mock_splitter = MagicMock()
-            mock_splitter.split = MagicMock(return_value=chunks)
+            mock_splitter.split = MagicMock(return_value=[_make_chunk("c1")])
             mock_splitter_cls.return_value = mock_splitter
 
             mock_embedder = MagicMock()
-            mock_embedder.embed_chunks = AsyncMock(return_value=chunks)
+            mock_embedder.embed_chunks = AsyncMock(
+                side_effect=[EmbeddingError("quota"), [chunk_b]]
+            )
             mock_embedder_cls.return_value = mock_embedder
 
             mock_vs = MagicMock()
             mock_vs.ensure_collection = AsyncMock()
+            mock_vs.doc_exists = AsyncMock(return_value=False)
+            mock_vs.upsert = AsyncMock()
+            mock_vs.close = AsyncMock()
+            mock_vs_cls.return_value = mock_vs
+
+            mock_bm25 = MagicMock()
+            mock_bm25.build = MagicMock()
+            mock_bm25.save = MagicMock()
+            mock_bm25_cls.return_value = mock_bm25
+
+            result = await run_pipeline(Path("/tmp/data"), settings)
+
+        assert len(result.errors) == 1
+        assert "quota" in result.errors[0]
+        assert result.chunks_created == 1  # file B succeeded
+        assert mock_vs.upsert.call_count == 1
+        assert mock_bm25.build.call_count == 1
+
+    async def test_upsert_failure_skips_file_continues_others(self) -> None:
+        """Upsert failure on file A should not block file B; BM25 built from file B only."""
+        settings = _make_settings()
+        chunk_b = _make_chunk("c2")
+
+        with (
+            patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls,
+            patch("src.ingestion.pipeline.DocumentSplitter") as mock_splitter_cls,
+            patch("src.ingestion.pipeline.Embedder") as mock_embedder_cls,
+            patch("src.ingestion.pipeline.QdrantVectorStore") as mock_vs_cls,
+            patch("src.ingestion.pipeline.BM25Store") as mock_bm25_cls,
+        ):
+            mock_loader = MagicMock()
+            mock_loader.discover_files = MagicMock(return_value=[FILE_A, FILE_B])
+            mock_loader.doc_id_for = MagicMock(return_value="test-doc-id")
+            mock_loader.load_one = AsyncMock(side_effect=lambda p: [_make_doc(p.name)])
+            mock_loader_cls.return_value = mock_loader
+
+            mock_splitter = MagicMock()
+            mock_splitter.split = MagicMock(return_value=[_make_chunk("c1")])
+            mock_splitter_cls.return_value = mock_splitter
+
+            mock_embedder = MagicMock()
+            mock_embedder.embed_chunks = AsyncMock(
+                side_effect=[[_make_chunk("c1")], [chunk_b]]
+            )
+            mock_embedder_cls.return_value = mock_embedder
+
+            mock_vs = MagicMock()
+            mock_vs.ensure_collection = AsyncMock()
+            mock_vs.doc_exists = AsyncMock(return_value=False)
+            mock_vs.upsert = AsyncMock(
+                side_effect=[IngestionError("upsert boom"), None]
+            )
+            mock_vs.close = AsyncMock()
+            mock_vs_cls.return_value = mock_vs
+
+            mock_bm25 = MagicMock()
+            mock_bm25.build = MagicMock()
+            mock_bm25.save = MagicMock()
+            mock_bm25_cls.return_value = mock_bm25
+
+            result = await run_pipeline(Path("/tmp/data"), settings)
+
+        assert len(result.errors) == 1
+        assert "upsert boom" in result.errors[0]
+        assert result.chunks_created == 1
+        assert mock_bm25.build.call_count == 1  # built from file B
+
+    async def test_all_upserts_fail_skips_bm25(self) -> None:
+        settings = _make_settings()
+
+        with (
+            patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls,
+            patch("src.ingestion.pipeline.DocumentSplitter") as mock_splitter_cls,
+            patch("src.ingestion.pipeline.Embedder") as mock_embedder_cls,
+            patch("src.ingestion.pipeline.QdrantVectorStore") as mock_vs_cls,
+            patch("src.ingestion.pipeline.BM25Store") as mock_bm25_cls,
+        ):
+            mock_loader = MagicMock()
+            mock_loader.discover_files = MagicMock(return_value=[FILE_A])
+            mock_loader.doc_id_for = MagicMock(return_value="test-doc-id")
+            mock_loader.load_one = AsyncMock(return_value=[_make_doc("a.txt")])
+            mock_loader_cls.return_value = mock_loader
+
+            mock_splitter = MagicMock()
+            mock_splitter.split = MagicMock(return_value=[_make_chunk("c1")])
+            mock_splitter_cls.return_value = mock_splitter
+
+            mock_embedder = MagicMock()
+            mock_embedder.embed_chunks = AsyncMock(return_value=[_make_chunk("c1")])
+            mock_embedder_cls.return_value = mock_embedder
+
+            mock_vs = MagicMock()
+            mock_vs.ensure_collection = AsyncMock()
+            mock_vs.doc_exists = AsyncMock(return_value=False)
             mock_vs.upsert = AsyncMock(side_effect=IngestionError("upsert boom"))
             mock_vs.close = AsyncMock()
             mock_vs_cls.return_value = mock_vs
@@ -280,10 +362,10 @@ class TestRunPipelineEdgeCases:
         assert mock_bm25.build.call_count == 0
         assert mock_bm25.save.call_count == 0
 
-    async def test_bm25_save_failure_adds_error(self) -> None:
+    async def test_already_ingested_file_is_skipped(self) -> None:
+        """Files whose doc_id already exists in Qdrant must not be re-embedded or re-upserted."""
         settings = _make_settings()
-        docs = [_make_doc("a.txt")]
-        chunks = [_make_chunk("c1")]
+        chunk = _make_chunk("c1")
 
         with (
             patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls,
@@ -293,19 +375,69 @@ class TestRunPipelineEdgeCases:
             patch("src.ingestion.pipeline.BM25Store") as mock_bm25_cls,
         ):
             mock_loader = MagicMock()
-            mock_loader.load = AsyncMock(return_value=docs)
+            mock_loader.discover_files = MagicMock(return_value=[FILE_A, FILE_B])
+            mock_loader.doc_id_for = MagicMock(side_effect=lambda p: f"doc-{p.name}")
+            mock_loader.load_one = AsyncMock(side_effect=lambda p: [_make_doc(p.name)])
             mock_loader_cls.return_value = mock_loader
 
             mock_splitter = MagicMock()
-            mock_splitter.split = MagicMock(return_value=chunks)
+            mock_splitter.split = MagicMock(return_value=[chunk])
             mock_splitter_cls.return_value = mock_splitter
 
             mock_embedder = MagicMock()
-            mock_embedder.embed_chunks = AsyncMock(return_value=chunks)
+            mock_embedder.embed_chunks = AsyncMock(return_value=[chunk])
             mock_embedder_cls.return_value = mock_embedder
 
             mock_vs = MagicMock()
             mock_vs.ensure_collection = AsyncMock()
+            # FILE_A already exists; FILE_B does not
+            mock_vs.doc_exists = AsyncMock(side_effect=[True, False])
+            mock_vs.upsert = AsyncMock()
+            mock_vs.close = AsyncMock()
+            mock_vs_cls.return_value = mock_vs
+
+            mock_bm25 = MagicMock()
+            mock_bm25.build = MagicMock()
+            mock_bm25.save = MagicMock()
+            mock_bm25_cls.return_value = mock_bm25
+
+            result = await run_pipeline(Path("/tmp/data"), settings)
+
+        # Only FILE_B should have been loaded, embedded, and upserted
+        assert mock_loader.load_one.await_count == 1
+        assert mock_embedder.embed_chunks.await_count == 1
+        assert mock_vs.upsert.await_count == 1
+        assert result.chunks_created == 1
+        assert result.errors == []
+
+    async def test_bm25_save_failure_adds_error(self) -> None:
+        settings = _make_settings()
+        chunk = _make_chunk("c1")
+
+        with (
+            patch("src.ingestion.pipeline.LocalFileLoader") as mock_loader_cls,
+            patch("src.ingestion.pipeline.DocumentSplitter") as mock_splitter_cls,
+            patch("src.ingestion.pipeline.Embedder") as mock_embedder_cls,
+            patch("src.ingestion.pipeline.QdrantVectorStore") as mock_vs_cls,
+            patch("src.ingestion.pipeline.BM25Store") as mock_bm25_cls,
+        ):
+            mock_loader = MagicMock()
+            mock_loader.discover_files = MagicMock(return_value=[FILE_A])
+            mock_loader.doc_id_for = MagicMock(return_value="test-doc-id")
+            mock_loader.load_one = AsyncMock(return_value=[_make_doc("a.txt")])
+            mock_loader_cls.return_value = mock_loader
+
+            mock_splitter = MagicMock()
+            mock_splitter.split = MagicMock(return_value=[chunk])
+            mock_splitter_cls.return_value = mock_splitter
+
+            mock_embedder = MagicMock()
+            mock_embedder.embed_chunks = AsyncMock(return_value=[chunk])
+            mock_embedder_cls.return_value = mock_embedder
+
+            mock_vs = MagicMock()
+            mock_vs.ensure_collection = AsyncMock()
+            mock_vs.doc_exists = AsyncMock(return_value=False)
             mock_vs.upsert = AsyncMock()
             mock_vs.close = AsyncMock()
             mock_vs_cls.return_value = mock_vs

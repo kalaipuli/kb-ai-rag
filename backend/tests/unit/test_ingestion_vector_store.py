@@ -193,3 +193,43 @@ class TestUpsert:
             store = QdrantVectorStore(settings=settings)
             with pytest.raises(IngestionError, match="no vector"):
                 await store.upsert([chunk])
+
+
+# ---------------------------------------------------------------------------
+# doc_exists
+# ---------------------------------------------------------------------------
+
+
+class TestDocExists:
+    async def test_returns_true_when_doc_found(self) -> None:
+        settings = _make_settings()
+
+        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
+            mock_client = MagicMock()
+            count_result = MagicMock()
+            count_result.count = 3
+            mock_client.count = AsyncMock(return_value=count_result)
+            mock_cls.return_value = mock_client
+
+            store = QdrantVectorStore(settings=settings)
+            result = await store.doc_exists("doc-abc")
+
+        assert result is True
+        mock_client.count.assert_awaited_once()
+        call_kwargs = mock_client.count.call_args.kwargs
+        assert call_kwargs["collection_name"] == "test_col"
+
+    async def test_returns_false_when_doc_not_found(self) -> None:
+        settings = _make_settings()
+
+        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
+            mock_client = MagicMock()
+            count_result = MagicMock()
+            count_result.count = 0
+            mock_client.count = AsyncMock(return_value=count_result)
+            mock_cls.return_value = mock_client
+
+            store = QdrantVectorStore(settings=settings)
+            result = await store.doc_exists("doc-xyz")
+
+        assert result is False
