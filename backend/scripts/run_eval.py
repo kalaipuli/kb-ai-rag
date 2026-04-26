@@ -26,16 +26,22 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.config import Settings
 from src.evaluation.ragas_eval import RagasEvaluator
 from src.generation.chain import GenerationChain
+from src.ingestion.bm25_store import BM25Store
+from src.ingestion.embedder import Embedder
 from src.retrieval.retriever import HybridRetriever
 
 DEFAULT_DATASET = Path(__file__).parent.parent / "src" / "evaluation" / "golden_dataset.json"
 DEFAULT_OUTPUT = Path(__file__).parent.parent.parent / "docs" / "evaluation_results.md"
 
 
-async def main(dataset_path: Path, output_path: Path) -> None:
+async def main(dataset_path: Path, output_path: Path) -> int:
     settings = Settings()  # type: ignore[call-arg]
 
-    retriever = HybridRetriever(settings=settings)
+    bm25_store = BM25Store(index_path=Path(settings.bm25_index_path))
+    if Path(settings.bm25_index_path).exists():
+        bm25_store.load()
+    embedder = Embedder(settings=settings)
+    retriever = HybridRetriever(settings=settings, bm25_store=bm25_store, embedder=embedder)
     chain = GenerationChain(settings=settings, hybrid_retriever=retriever)
 
     evaluator = RagasEvaluator(
@@ -57,7 +63,8 @@ async def main(dataset_path: Path, output_path: Path) -> None:
 
     if result.faithfulness < 0.70:
         print("WARNING: faithfulness below Phase 1 gate threshold of 0.70")
-        sys.exit(1)
+        return 1
+    return 0
 
 
 def _build_results_doc(result: object, dataset_path: Path) -> str:
@@ -119,4 +126,4 @@ if __name__ == "__main__":
         help="Output path for evaluation_results.md",
     )
     args = parser.parse_args()
-    asyncio.run(main(args.dataset, args.output))
+    sys.exit(asyncio.run(main(args.dataset, args.output)))

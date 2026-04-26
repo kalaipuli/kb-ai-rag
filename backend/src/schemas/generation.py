@@ -23,3 +23,4 @@ class GenerationResult(BaseModel):
     answer: str
     citations: list[Citation]
     confidence: float
+    retrieved_contexts: list[str] = []

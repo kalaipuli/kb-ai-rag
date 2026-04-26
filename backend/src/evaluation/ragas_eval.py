@@ -28,7 +28,7 @@ from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Fait
 from src.config import Settings
 from src.exceptions import GenerationError
 from src.generation.chain import GenerationChain
-from src.schemas.generation import Citation
+from src.schemas.generation import Citation, GenerationResult
 
 logger = structlog.get_logger(__name__)
 
@@ -58,6 +58,12 @@ class EvaluationResult:
 
 def _default_context_fetcher(citations: list[Citation]) -> list[str]:
     return [f"{c.filename} p.{c.page_number}" for c in citations]
+
+
+def _get_contexts(result: GenerationResult, context_fetcher: Callable[[list[Citation]], list[str]]) -> list[str]:
+    if result.retrieved_contexts:
+        return result.retrieved_contexts
+    return context_fetcher(result.citations)
 
 
 def _nanmean(values: list[float]) -> float:
@@ -130,7 +136,7 @@ class RagasEvaluator:
                 logger.error("evaluation_generate_failed", question=question, error=str(exc))
                 raise GenerationError(f"Evaluation generate failed: {exc}") from exc
 
-            contexts = self._context_fetcher(result.citations)
+            contexts = _get_contexts(result, self._context_fetcher)
             samples.append(
                 SingleTurnSample(
                     user_input=question,

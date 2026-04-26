@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     azure_embedding_deployment: str = "text-embedding-ada-002"
 
     # Qdrant vector store
-    qdrant_url: str = "http://qdrant:6333"
+    qdrant_url: str = "http://localhost:6333"
     qdrant_collection: str = "kb_documents"
 
     # Service authentication
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["*"]
 
     # Document ingestion
-    data_dir: str = "/app/data"
+    data_dir: str = "data"
     chunk_size: int = 1000
     chunk_overlap: int = 200
     embedding_vector_size: int = 1536
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     # Seconds to sleep inside the semaphore after each batch completes.
     # Keeps per-slot throughput bounded so TPM/RPM limits are not exceeded.
     embedding_inter_batch_delay: float = 1.0
-    bm25_index_path: str = "/app/data/bm25_index.pkl"
+    bm25_index_path: str = "data/bm25_index.pkl"
 
     # Hybrid retrieval
     retrieval_top_k: int = 10

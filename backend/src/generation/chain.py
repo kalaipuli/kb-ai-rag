@@ -210,6 +210,7 @@ class GenerationChain:
             answer=answer,
             citations=citations,
             confidence=confidence,
+            retrieved_contexts=[doc.page_content for doc in docs],
         )
 
     async def astream_generate(
