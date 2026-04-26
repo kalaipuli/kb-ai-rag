@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { ChatMessage } from "./ChatMessage";
 import type { Message } from "@/types";
 
@@ -75,5 +76,64 @@ describe("ChatMessage", () => {
     );
     expect(screen.queryByText("guide.pdf")).not.toBeInTheDocument();
     expect(screen.queryByText(/High/)).not.toBeInTheDocument();
+  });
+
+  it("renders collapsible Sources panel for assistant messages with citations", () => {
+    const citations = [
+      { chunk_id: "c1", filename: "guide.pdf", source_path: "/docs/guide.pdf", page_number: 2 },
+      { chunk_id: "c2", filename: "guide.pdf", source_path: "/docs/guide.pdf", page_number: 5 },
+    ];
+    render(
+      <ChatMessage
+        message={makeMessage({ role: "assistant", content: "Answer", citations })}
+      />,
+    );
+    expect(screen.getByText("Sources (2)")).toBeInTheDocument();
+  });
+
+  it("shows chunks retrieved count after opening the panel", async () => {
+    const citations = [
+      { chunk_id: "c1", filename: "a.pdf", source_path: "/a.pdf", page_number: 1 },
+    ];
+    render(
+      <ChatMessage
+        message={makeMessage({
+          role: "assistant",
+          content: "Answer",
+          citations,
+          chunksRetrieved: 8,
+        })}
+      />,
+    );
+    await userEvent.click(screen.getByText("Sources (1)"));
+    expect(screen.getByText("8 chunks retrieved")).toBeInTheDocument();
+  });
+
+  it("renders without crashing when chunksRetrieved is undefined", () => {
+    const citations = [
+      { chunk_id: "c1", filename: "a.pdf", source_path: "/a.pdf", page_number: 1 },
+    ];
+    render(
+      <ChatMessage
+        message={makeMessage({ role: "assistant", content: "Answer", citations })}
+      />,
+    );
+    expect(screen.getByText("Sources (1)")).toBeInTheDocument();
+    expect(screen.queryByText(/chunks retrieved/)).not.toBeInTheDocument();
+  });
+
+  it("shows distinct source count in expanded panel", async () => {
+    const citations = [
+      { chunk_id: "c1", filename: "a.pdf", source_path: "/a.pdf", page_number: 1 },
+      { chunk_id: "c2", filename: "a.pdf", source_path: "/a.pdf", page_number: 2 },
+      { chunk_id: "c3", filename: "b.pdf", source_path: "/b.pdf", page_number: 1 },
+    ];
+    render(
+      <ChatMessage
+        message={makeMessage({ role: "assistant", content: "Answer", citations })}
+      />,
+    );
+    await userEvent.click(screen.getByText("Sources (3)"));
+    expect(screen.getByText("2 distinct sources")).toBeInTheDocument();
   });
 });

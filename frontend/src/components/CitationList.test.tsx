@@ -37,4 +37,25 @@ describe("CitationList", () => {
     expect(screen.getByText("doc1.pdf")).toBeInTheDocument();
     expect(screen.getByText("doc2.pdf")).toBeInTheDocument();
   });
+
+  it("renders relevance score bar when retrieval_score is defined", () => {
+    render(<CitationList citations={[makeCitation({ retrieval_score: 0.75 })]} />);
+    expect(screen.getByText("Relevance")).toBeInTheDocument();
+    expect(screen.getByText("75%")).toBeInTheDocument();
+  });
+
+  it("does not render score bar when retrieval_score is undefined", () => {
+    render(<CitationList citations={[makeCitation({ retrieval_score: undefined })]} />);
+    expect(screen.queryByText("Relevance")).not.toBeInTheDocument();
+  });
+
+  it("clamps score bar to 100% for values above 1", () => {
+    render(<CitationList citations={[makeCitation({ retrieval_score: 5.0 })]} />);
+    expect(screen.getByText("100%")).toBeInTheDocument();
+  });
+
+  it("clamps score bar to 0% for negative values", () => {
+    render(<CitationList citations={[makeCitation({ retrieval_score: -2.0 })]} />);
+    expect(screen.getByText("0%")).toBeInTheDocument();
+  });
 });

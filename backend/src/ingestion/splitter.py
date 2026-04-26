@@ -5,32 +5,27 @@ from collections import defaultdict
 from datetime import UTC, datetime
 
 import structlog
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from src.config import Settings
 from src.ingestion.models import ChunkedDocument, ChunkMetadata, Document
+from src.ingestion.splitter_factory import SplitterFactory
 
 logger = structlog.get_logger(__name__)
 
 _MIN_CHUNK_CHARS = 100
 _TITLE_MAX_CHARS = 80
-_SPLITTER_SEPARATORS = ["\n\n", "\n", ". ", " ", ""]
 
 
 class DocumentSplitter:
     """Split ``Document`` objects into fixed-size text chunks with full metadata.
 
-    Uses ``RecursiveCharacterTextSplitter`` with the canonical separators and
-    discards any chunk shorter than 100 characters (header/footer noise).
+    Delegates splitter construction to ``SplitterFactory`` so that the active
+    ``chunk_strategy`` in Settings controls which algorithm is used.  Discards
+    any chunk shorter than 100 characters (header/footer noise).
     """
 
-    def __init__(self, settings: Settings) -> None:
-        self._splitter = RecursiveCharacterTextSplitter(
-            chunk_size=settings.chunk_size,
-            chunk_overlap=settings.chunk_overlap,
-            separators=_SPLITTER_SEPARATORS,
-            length_function=len,
-        )
+    def __init__(self, settings: Settings, embedder: object | None = None) -> None:
+        self._splitter = SplitterFactory.build(settings, embedder)
 
     def split(self, docs: list[Document]) -> list[ChunkedDocument]:
         """Split all documents and return a flat list of ``ChunkedDocument`` objects.

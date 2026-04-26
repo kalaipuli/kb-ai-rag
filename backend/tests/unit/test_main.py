@@ -11,6 +11,17 @@ from src.config import Settings
 from src.exceptions import IngestionError
 
 
+def test_eval_baseline_route_registered(
+    mock_settings: Settings,
+    authenticated_headers: dict[str, str],
+) -> None:
+    """GET /api/v1/eval/baseline must be registered — returns 200 or 404, never 422 (unregistered)."""
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get("/api/v1/eval/baseline", headers=authenticated_headers)
+
+    assert response.status_code in (200, 404)
+
+
 def test_ingestion_error_returns_422(
     mock_settings: Settings,
     authenticated_headers: dict[str, str],

@@ -49,5 +49,8 @@ backend/data/knowledge/*.pdf
 # BM25 index — rebuilt at runtime
 *.pkl
 
+# Evaluation baseline (runtime-generated, not source-controlled)
+backend/data/eval_baseline.json
+
 # Qdrant — managed via Docker volume
 infra/qdrant_storage/

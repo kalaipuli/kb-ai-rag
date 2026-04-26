@@ -19,6 +19,7 @@ from qdrant_client import AsyncQdrantClient
 
 from src.api.middleware.auth import api_key_middleware
 from src.api.routes.collections import router as collections_router
+from src.api.routes.eval import router as eval_router
 from src.api.routes.health import router as health_router
 from src.api.routes.ingest import router as ingest_router
 from src.api.routes.query import router as query_router
@@ -56,6 +57,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         bm25_store.load()
 
     embedder = Embedder(settings=settings)
+    app.state.embedder = embedder
     retriever = HybridRetriever(settings=settings, bm25_store=bm25_store, embedder=embedder)
     app.state.generation_chain = GenerationChain(settings=settings, hybrid_retriever=retriever)
     app.state.bm25_store = bm25_store
@@ -97,6 +99,7 @@ app.include_router(health_router, prefix="/api/v1")
 app.include_router(ingest_router, prefix="/api/v1")
 app.include_router(query_router, prefix="/api/v1")
 app.include_router(collections_router, prefix="/api/v1")
+app.include_router(eval_router, prefix="/api/v1")
 
 # ---------------------------------------------------------------------------
 # Exception handlers

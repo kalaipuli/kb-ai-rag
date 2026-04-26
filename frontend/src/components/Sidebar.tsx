@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Database, RefreshCw, AlertCircle } from "lucide-react";
 import { clsx } from "clsx";
 import { getCollections, triggerIngest } from "@/lib/api";
+import { EvalBaseline } from "./EvalBaseline";
 
 export function Sidebar(): React.JSX.Element {
   const [ingestMessage, setIngestMessage] = useState<string | null>(null);
@@ -56,6 +57,13 @@ export function Sidebar(): React.JSX.Element {
             )}
           </ul>
         )}
+      </div>
+
+      <div>
+        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Evaluation Baseline
+        </h2>
+        <EvalBaseline />
       </div>
 
       <div className="mt-auto">

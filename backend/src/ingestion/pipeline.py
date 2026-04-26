@@ -38,6 +38,7 @@ async def run_pipeline(
     data_dir: Path,
     settings: Settings,
     bm25_store: BM25Store | None = None,
+    embedder: Embedder | None = None,
 ) -> PipelineResult:
     """Run the full document ingestion pipeline, processing one file at a time.
 
@@ -60,8 +61,15 @@ async def run_pipeline(
     total_docs = 0
 
     loader = LocalFileLoader(data_dir=data_dir)
-    splitter = DocumentSplitter(settings=settings)
-    embedder = Embedder(settings=settings)
+    splitter = DocumentSplitter(settings=settings, embedder=embedder)
+    # Use the injected lifespan singleton; fall back to a local instance only
+    # for the __main__ entry-point or direct test calls (ADR-009 §4).
+    _embed_client: Embedder
+    if embedder is not None:
+        _embed_client = embedder
+    else:
+        logger.warning("pipeline_embedder_not_injected_using_local")
+        _embed_client = Embedder(settings=settings)
     vector_store = QdrantVectorStore(settings=settings)
 
     # Discover files before touching the network so an empty dir returns fast.
@@ -112,7 +120,7 @@ async def run_pipeline(
 
             # Stage 3: Embed
             try:
-                embedded = await embedder.embed_chunks(chunks)
+                embedded = await _embed_client.embed_chunks(chunks)
             except (EmbeddingError, Exception) as exc:
                 logger.error("pipeline_file_embed_failed", file=file_name, error=str(exc))
                 errors.append(f"{file_name}: embedding failed: {exc}")

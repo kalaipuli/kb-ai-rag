@@ -14,7 +14,7 @@ interface StreamState {
 type StreamAction =
   | { type: "SUBMIT"; userMessage: Message; assistantMessage: Message }
   | { type: "TOKEN"; token: string }
-  | { type: "CITATIONS"; citations: Citation[] }
+  | { type: "CITATIONS"; citations: Citation[]; chunksRetrieved: number }
   | { type: "DONE"; confidence: number }
   | { type: "STREAM_END" }
   | { type: "ERROR"; error: Error }
@@ -44,7 +44,11 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
       const messages = [...state.messages];
       const last = messages[messages.length - 1];
       if (last?.role === "assistant") {
-        messages[messages.length - 1] = { ...last, citations: action.citations };
+        messages[messages.length - 1] = {
+          ...last,
+          citations: action.citations,
+          chunksRetrieved: action.chunksRetrieved,
+        };
       }
       return { ...state, messages };
     }
@@ -123,7 +127,7 @@ function handleEvent(
   if (event.type === "token") {
     dispatch({ type: "TOKEN", token: event.content });
   } else if (event.type === "citations") {
-    dispatch({ type: "CITATIONS", citations: event.citations });
+    dispatch({ type: "CITATIONS", citations: event.citations, chunksRetrieved: event.chunks_retrieved });
     dispatch({ type: "DONE", confidence: event.confidence });
   }
   // event.type === "done" — STREAM_END fires unconditionally after the loop

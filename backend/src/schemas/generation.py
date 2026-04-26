@@ -14,6 +14,7 @@ class Citation(BaseModel):
     filename: str
     source_path: str
     page_number: int | None = None
+    retrieval_score: float | None = None
 
 
 class GenerationResult(BaseModel):
