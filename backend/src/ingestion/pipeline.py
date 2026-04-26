@@ -11,6 +11,7 @@ from src.exceptions import EmbeddingError, IngestionError
 from src.ingestion.bm25_store import BM25Store
 from src.ingestion.embedder import Embedder
 from src.ingestion.loaders.local_loader import LocalFileLoader
+from src.ingestion.models import ChunkedDocument
 from src.ingestion.splitter import DocumentSplitter
 from src.ingestion.vector_store import QdrantVectorStore
 
@@ -55,7 +56,7 @@ async def run_pipeline(
     """
     pipeline_start = time.monotonic()
     errors: list[str] = []
-    all_embedded_chunks: list = []
+    all_embedded_chunks: list[ChunkedDocument] = []
     total_docs = 0
 
     loader = LocalFileLoader(data_dir=data_dir)

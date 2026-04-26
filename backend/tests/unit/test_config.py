@@ -7,8 +7,13 @@ from src.config import Settings, get_settings
 
 
 def _minimal_settings(**overrides: object) -> Settings:
-    """Return a Settings with all required fields populated."""
+    """Return a Settings with all required fields populated.
+
+    ``_env_file=None`` prevents pydantic-settings from reading the local .env
+    so unit tests exercise the Python-level defaults, not deployment values.
+    """
     defaults: dict[str, object] = {
+        "_env_file": None,
         "azure_openai_endpoint": "https://example.openai.azure.com/",
         "azure_openai_api_key": "sk-test",
         "api_key": "my-api-key",
@@ -28,10 +33,10 @@ def test_default_values() -> None:
     s = _minimal_settings()
     assert s.azure_openai_api_version == "2024-08-01-preview"
     assert s.azure_chat_deployment == "gpt-4o"
-    assert s.azure_embedding_deployment == "text-embedding-3-large"
-    assert s.qdrant_url == "http://qdrant:6333"
+    assert s.azure_embedding_deployment == "text-embedding-ada-002"
+    assert s.qdrant_url == "http://localhost:6333"
     assert s.qdrant_collection == "kb_documents"
-    assert s.data_dir == "/app/data"
+    assert s.data_dir == "data"
     assert s.chunk_size == 1000
     assert s.chunk_overlap == 200
     assert s.langsmith_api_key == ""
@@ -68,13 +73,12 @@ def test_cors_origins_default_is_wildcard() -> None:
 def test_missing_required_field_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     """Settings must raise ValidationError when required env vars are absent.
 
-    The conftest seeds AZURE_OPENAI_ENDPOINT and API_KEY into os.environ so
-    the module-level singleton doesn't fail.  We delete them here so that
-    pydantic-settings can't fall back to the environment and is forced to
-    validate against only the keyword arguments supplied.
+    ``_env_file=None`` isolates the test from the local .env file so that only
+    the explicitly supplied kwargs are considered — env var presence in the
+    process environment is also cleared via monkeypatch.
     """
     monkeypatch.delenv("AZURE_OPENAI_ENDPOINT", raising=False)
     monkeypatch.delenv("API_KEY", raising=False)
     # Only azure_openai_api_key is supplied — endpoint and api_key are missing.
     with pytest.raises(ValidationError):
-        Settings(azure_openai_api_key="k")  # type: ignore[call-arg]
+        Settings(_env_file=None, azure_openai_api_key="k")  # type: ignore[call-arg]

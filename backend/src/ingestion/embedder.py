@@ -43,12 +43,9 @@ class _RetryAfterWait(wait_base):
         return _FALLBACK_WAIT(retry_state)
 
 
-_RETRY_POLICY = dict(
-    retry=retry_if_exception_type(RateLimitError),
-    wait=_RetryAfterWait(),
-    stop=stop_after_attempt(5),
-    reraise=True,
-)
+_RETRY_WAIT = _RetryAfterWait()
+_RETRY_STOP = stop_after_attempt(5)
+_RETRY_CONDITION = retry_if_exception_type(RateLimitError)
 
 
 class Embedder:
@@ -73,7 +70,12 @@ class Embedder:
 
     async def _embed_batch(self, batch: list[str]) -> list[list[float]]:
         """Embed one batch, honouring the concurrency semaphore and retrying on 429."""
-        async for attempt in AsyncRetrying(**_RETRY_POLICY):
+        async for attempt in AsyncRetrying(
+            retry=_RETRY_CONDITION,
+            wait=_RETRY_WAIT,
+            stop=_RETRY_STOP,
+            reraise=True,
+        ):
             with attempt:
                 async with self._semaphore:
                     vectors = await self._embeddings.aembed_documents(batch)
@@ -122,7 +124,12 @@ class Embedder:
     async def embed_query(self, query: str) -> list[float]:
         """Embed a single query string for retrieval."""
         try:
-            async for attempt in AsyncRetrying(**_RETRY_POLICY):
+            async for attempt in AsyncRetrying(
+                retry=_RETRY_CONDITION,
+                wait=_RETRY_WAIT,
+                stop=_RETRY_STOP,
+                reraise=True,
+            ):
                 with attempt:
                     return await self._embeddings.aembed_query(query)
             return []  # unreachable; satisfies type checker
