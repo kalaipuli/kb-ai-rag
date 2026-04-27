@@ -344,3 +344,68 @@ async def test_max_retry_guard_terminates(tmp_path: Path) -> None:
     # Retriever not called more than MAX_RETRIES + 1 times
     # (1 initial + at most MAX_RETRIES re-routes)
     assert call_count[0] <= MAX_RETRIES + 1
+
+
+# ---------------------------------------------------------------------------
+# Test 5: Generator LLM failure — graph swallows exception, returns fallback
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_generator_llm_failure_produces_fallback_answer(tmp_path: Path) -> None:
+    """When the Generator node's LLM raises, the graph must NOT propagate the
+    exception — it returns the error-fallback answer with confidence 0.0 and
+    a steps_taken entry starting with 'generator:error:'.
+    """
+    settings = _mock_settings(tmp_path)
+    doc = _make_doc()
+    retriever_mock, _ = _make_retriever_node_mock(doc)
+
+    # Router and grader succeed normally; only the generator LLM call raises.
+    router_chain = MagicMock()
+    router_chain.ainvoke = AsyncMock(
+        return_value=_RouterOutput(
+            query_type="factual", retrieval_strategy="hybrid", reasoning="ok"
+        )
+    )
+
+    grader_chain = MagicMock()
+    grader_chain.batch = MagicMock(
+        return_value=[_GradeDoc(score=0.9, reasoning="relevant")]
+    )
+
+    # Generator chain raises to simulate Azure throttling
+    gen_chain = MagicMock()
+    gen_chain.ainvoke = AsyncMock(side_effect=Exception("Azure throttled"))
+
+    critic_chain = MagicMock()
+    critic_chain.ainvoke = AsyncMock(
+        return_value=_CriticOutput(
+            hallucination_risk=0.1, unsupported_claims=[], reasoning="grounded"
+        )
+    )
+
+    schema_map: dict[str, MagicMock] = {
+        "_RouterOutput": router_chain,
+        "_GradeDoc": grader_chain,
+        "_GeneratorOutput": gen_chain,
+        "_CriticOutput": critic_chain,
+    }
+
+    llm_mock = MagicMock()
+    llm_mock.with_structured_output.side_effect = (
+        lambda schema: schema_map.get(schema.__name__, MagicMock())
+    )
+
+    with (
+        patch("src.graph.builder.AzureChatOpenAI", return_value=llm_mock),
+        patch("src.graph.builder.retriever_node", retriever_mock),
+    ):
+        compiled = await build_graph(settings=settings, retriever=MagicMock())
+        # Must not raise — generator error handler swallows the exception
+        terminal = await _collect_terminal_state(compiled, _initial_state())
+
+    assert terminal["answer"] == "I encountered an error generating a response."
+    assert terminal["confidence"] == pytest.approx(0.0)
+    steps: list[str] = terminal.get("steps_taken", [])
+    assert any(s.startswith("generator:error:") for s in steps)
