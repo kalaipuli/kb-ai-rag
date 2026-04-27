@@ -43,7 +43,7 @@ Each node is implemented and tested in isolation before being wired together. Th
 | ID | Status | Task | Agent | Depends On |
 |----|--------|------|-------|------------|
 | T01 | ✅ Done | Implement Router node (query classification + HyDE + step-back) | backend-developer | 2b all |
-| T02 | ⏳ Pending | Implement Retriever node (HybridRetriever + Tavily web fallback) | backend-developer | T01 |
+| T02 | ✅ Done | Implement Retriever node (HybridRetriever + Tavily web fallback) | backend-developer | T01 |
 | T03 | ⏳ Pending | Implement Grader node (chunk relevance scoring + `all_below_threshold` flag) | backend-developer | T02 |
 | T04 | ⏳ Pending | Implement Generator node (GPT-4o cited answer) | backend-developer | T03 |
 | T05 | ⏳ Pending | Implement Critic node (hallucination risk scoring) | backend-developer | T04 |

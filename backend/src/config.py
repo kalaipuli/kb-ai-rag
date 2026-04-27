@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     langchain_tracing_v2: bool = False
 
     # Tavily web-search fallback (Phase 2+; leave blank until then)
-    tavily_api_key: str = ""
+    tavily_api_key: SecretStr = SecretStr("")
 
     # Chunking strategy
     chunk_strategy: str = "recursive_character"

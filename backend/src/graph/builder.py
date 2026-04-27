@@ -53,9 +53,7 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
         return await router_node(state, llm=llm)
 
     async def _retriever_node(state: AgentState) -> dict[str, Any]:
-        """Closure wrapping retriever_node; will receive the real retriever in 2c."""
-        _ = retriever  # injected; used in Phase 2c implementation
-        return await retriever_node(state)
+        return await retriever_node(state, retriever=retriever)
 
     graph: StateGraph = StateGraph(AgentState)
 
