@@ -163,7 +163,56 @@ docs/registry/
 - **Before a phase starts:** copy `_template/tasks.md` → `registry/phaseN/tasks.md`; list all tasks as `⏳ Pending`; update `DASHBOARD.md` to mark the phase active.
 - **During work:** update each task's status as it progresses. Never leave a stale status.
 - **After a gate passes:** update `DASHBOARD.md` with the gate result and completion date; link the new phase registry.
-- **When architect review produces fixes:** create `registry/phaseN/fixes.md`; all critical fixes must clear before Phase N+1 starts.
+- **When architect review produces fixes:** create `registry/phaseN/fixes.md` using the standard format below; all Critical and High findings must clear before Phase N+1 starts.
+
+### fixes.md standard format
+
+Every `fixes.md` must follow this structure exactly (see `docs/registry/phase1/1d-api/fixes.md` as the canonical example):
+
+```markdown
+# Phase Xn — Architect Review Fixes
+
+> Created: YYYY-MM-DD | Source: Architect review of Phase Xn implementation
+> Rule: development-process.md §9 — all [severity] fixes must clear before Phase Y starts.
+> Status key: ⏳ Pending · 🔄 In Progress · ✅ Fixed · ⚠️ Deferred
+
+---
+
+## Fix Registry
+
+| ID | Severity | Status | Category | Summary | Depends On |
+
+---
+
+## Detailed Fix Specifications
+
+### F01 — <short title> (<Severity>)
+
+**File:** `path/to/file.py:line`
+**Issue:** What is wrong and why it matters.
+**Fix:** Exactly what must change.
+**Rule:** Which rule from architecture-rules.md / python-rules.md / anti-patterns.md this violates.
+
+---
+
+## Clearance Order
+
+[Batch plan showing which fixes are parallel and which have dependencies]
+
+---
+
+## Verification Checklist
+
+[Unchecked boxes — filled in when fixes are applied]
+```
+
+**Format rules:**
+- Use `### F01 — title (Severity)` — NOT `### F01 [High] — title`
+- Use `**Issue:**` — NOT `**Problem:**` or `**Evidence:**`
+- Severity labels in the registry table: `Critical | High | Major | Minor | Advisory`
+- Status in the registry table uses emoji keys from the frontmatter
+- `## Priority Grep Check Results` sections do not belong in fixes.md — grep output belongs in the architect's internal review process only; only actionable findings go in fixes.md
+- `## Summary` sections do not belong in fixes.md — the Fix Registry table is the summary
 
 ### Task status lifecycle
 
