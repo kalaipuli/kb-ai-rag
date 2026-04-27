@@ -1,8 +1,8 @@
 # Phase 2c — Agent Nodes (Router, Retriever, Grader, Generator, Critic)
 
-> Status: ⏳ Not Started | Phase: 2c | Estimated Days: 3–4
+> Status: ✅ Complete | Phase: 2c | Gate passed: 2026-04-27
 > Governed by: CLAUDE.md §9 — all tasks follow the Definition of Done checklist (§7)
-> Last updated: 2026-04-26
+> Last updated: 2026-04-27
 >
 > **Prerequisite:** Phase 2b gate must pass before any task here starts.
 > **Goal:** Replace all stub node functions with real implementations. Each node is a standalone, fully tested async function. No node begins implementation until the preceding node's tests are green.
@@ -44,10 +44,10 @@ Each node is implemented and tested in isolation before being wired together. Th
 |----|--------|------|-------|------------|
 | T01 | ✅ Done | Implement Router node (query classification + HyDE + step-back) | backend-developer | 2b all |
 | T02 | ✅ Done | Implement Retriever node (HybridRetriever + Tavily web fallback) | backend-developer | T01 |
-| T03 | ⏳ Pending | Implement Grader node (chunk relevance scoring + `all_below_threshold` flag) | backend-developer | T02 |
-| T04 | ⏳ Pending | Implement Generator node (GPT-4o cited answer) | backend-developer | T03 |
-| T05 | ⏳ Pending | Implement Critic node (hallucination risk scoring) | backend-developer | T04 |
-| T06 | ⏳ Pending | Integration smoke test: full graph end-to-end with mocked LLMs | backend-developer | T01–T05 |
+| T03 | ✅ Done | Implement Grader node (chunk relevance scoring + `all_below_threshold` flag) | backend-developer | T02 |
+| T04 | ✅ Done | Implement Generator node (GPT-4o cited answer) | backend-developer | T03 |
+| T05 | ✅ Done | Implement Critic node (hallucination risk scoring) | backend-developer | T04 |
+| T06 | ✅ Done | Integration smoke test: full graph end-to-end with mocked LLMs | backend-developer | T01–T05 |
 
 ---
 

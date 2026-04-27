@@ -41,7 +41,7 @@ def test_default_values() -> None:
     assert s.chunk_overlap == 200
     assert s.langsmith_api_key == ""
     assert s.langchain_tracing_v2 is False
-    assert s.tavily_api_key == ""
+    assert s.tavily_api_key.get_secret_value() == ""
     assert s.chunk_strategy == "recursive_character"
     assert s.chunk_tokenizer_model == "cl100k_base"
     assert s.eval_baseline_path == "data/eval_baseline.json"

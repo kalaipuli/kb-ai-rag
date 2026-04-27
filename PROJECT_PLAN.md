@@ -186,6 +186,14 @@ All stub nodes first — proves topology and wiring before any LLM logic:
 
 #### 2c — Agent Nodes
 
+> **Pre-conditions — must be done before any 2c code is written:**
+> - **2b-F01 cleared:** add error-path test in `backend/tests/unit/graph/test_builder.py` for `aiosqlite.connect` failure
+> - **2b-F02 cleared:** move `type: ignore[attr-defined]` justification inline on `backend/src/graph/builder.py:80`
+>
+> **Carry-forward from 2b architect review:**
+> - **2b-F04 (High):** Every node that emits an `agent_step` SSE event must include `duration_ms: int` in its return dict from the first implementation — add `duration_ms: int` to `AgentState` if not already present. Do not implement nodes without this field; retrofitting all nodes simultaneously creates high coordination cost and a wire format version bump.
+> - **2b-F05 (Minor):** Add removal-reminder comments to `langgraph-checkpoint-sqlite` and `aiosqlite` pins in `pyproject.toml` (see [2b fixes.md F05](docs/registry/phase2/2b-graph-skeleton/fixes.md)).
+
 ```
 AgentState flow:
 START → Router → Retriever → Grader → Generator → Critic → END
@@ -314,6 +322,15 @@ Implementations: `QdrantRetriever`, `AzureSearchRetriever`
 **Goal:** Every agent step is visible. Quality is continuously measured.
 
 > **Stack pre-requisite:** Before setting up RAGAS automation, move `ragas` out of the main dependencies into a separate Poetry eval group (`[tool.poetry.group.eval.dependencies]`). This prevents RAGAS from constraining the API runtime's solver. See [RAGAS isolation](docs/stack-upgrade-proposal.md#hold--do-not-upgrade-yet).
+>
+> **Carry-forward from 2b architect review (2b-F06 · High):** Wrap all blocking I/O in `asyncio.to_thread` before load testing begins. Affected files:
+> - `backend/src/ingestion/pipeline.py` — `pickle.dump` (BM25 persistence)
+> - `backend/src/ingestion/local_loader.py:95` — `PdfReader` (blocking PDF parse)
+> - `backend/src/ingestion/local_loader.py:137` — `.read_text()`
+> - `backend/src/api/routes/eval.py:39` — `.read_text()`
+> - `backend/src/evaluation/ragas_eval.py:165,238` — `.read_text()`
+>
+> See [2b fixes.md F06](docs/registry/phase2/2b-graph-skeleton/fixes.md).
 
 #### LangSmith Integration
 - Every graph execution traced end-to-end
@@ -355,6 +372,15 @@ Implementations: `QdrantRetriever`, `AzureSearchRetriever`
 
 ### Phase 7 — Azure Deployment & CI/CD (Days 37–42)
 **Goal:** One-command deploy to Azure. Automated pipeline from commit to production.
+
+> **Carry-forward from 2b architect review (2b-F03 · High):** Before multi-replica deployment, migrate all per-call client constructions to lifespan singletons with `app.state` + `deps.py` aliases. Affected files and violations:
+> - `backend/src/ingestion/vector_store.py:33` — `AsyncQdrantClient(` per call
+> - `backend/src/ingestion/embedder.py:64` — `AzureOpenAIEmbeddings(` per call
+> - `backend/src/retrieval/dense.py:24` — `AsyncQdrantClient(` per call
+> - `backend/src/generation/chain.py:116` — `AzureChatOpenAI(` per call
+> - `backend/src/evaluation/ragas_eval.py:220,229` — `AzureChatOpenAI(` and `AzureOpenAIEmbeddings(` on every eval call
+>
+> Each must follow the `QdrantClientDep` pattern: singleton on `app.state` in lifespan, injected via `Annotated[..., Depends(...)]` alias in `deps.py`. See [2b fixes.md F03](docs/registry/phase2/2b-graph-skeleton/fixes.md).
 
 #### Infrastructure as Code (Terraform)
 - `main.tf`: provider config, remote backend (Azure Blob Storage)
