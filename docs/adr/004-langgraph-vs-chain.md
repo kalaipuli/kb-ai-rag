@@ -140,14 +140,28 @@ duration_ms = int((time.monotonic() - start) * 1000)
 
 # SSE payload structure (minimum required fields)
 {
-    "event": "agent_step",
+    "type": "agent_step",
     "node": "<node_name>",
-    "delta": state_delta,
-    "duration_ms": duration_ms
+    "payload": {
+        # node-specific fields (e.g. query_type, strategy for router; scores, web_fallback for grader; hallucination_risk, reruns for critic)
+        "duration_ms": duration_ms
+    }
 }
 ```
 
 `duration_ms` is a required field. SSE consumers must not treat it as optional. Any future removal or rename is a breaking wire format change.
+
+#### Nodes that emit agent_step SSE events
+
+| Node | Emits agent_step | Reason |
+|------|-----------------|--------|
+| Router | Yes | Strategic decision (query_type, strategy) has no other SSE representation |
+| Retriever | No | Output surfaces as `citations` event; no diagnostic UI value from a separate step event |
+| Grader | Yes | Per-chunk scores and CRAG trigger are diagnostic signals the UI must display |
+| Generator | No | Output surfaces as `token` + `citations` + `done` events |
+| Critic | Yes | Hallucination risk score and reruns are diagnostic signals the UI must display |
+
+`AgentStepNode` TypeScript union therefore covers `"router" | "grader" | "critic"` only. The `retriever` and `generator` nodes update `steps_taken` for internal observability but do not emit `agent_step` SSE events.
 
 ### Confirmed public API surface (as of langgraph 0.2.76)
 

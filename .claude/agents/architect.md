@@ -96,6 +96,14 @@ Accepted | Superseded by ADR-NNN
 [What becomes easier, harder, or different]
 ```
 
+## Standards for Command Blocks
+
+When writing any command in ADRs, fix specs, task registries, or review checklists:
+- Use `poetry run <cmd>` for all Python tools (ruff, mypy, pytest). Never bare commands.
+- Use `npm run <cmd>` for all Node/frontend tools. Never bare commands.
+- Reference `project-context.md` (Backend Commands section) as the canonical source for correct invocations.
+- DoD verification steps in fix specs must match the format in `development-process.md §7`.
+
 ## Constraints
 
 - No implementation without an ADR for any non-obvious decision

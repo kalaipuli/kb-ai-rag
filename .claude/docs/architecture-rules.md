@@ -38,21 +38,36 @@ No agent returns a value directly to another agent. No global variables.
 
 ```python
 class AgentState(TypedDict):
+    # --- Input ---
     session_id: str
     query: str
-    query_rewritten: str | None
+    filters: dict[str, str] | None
+    k: int | None
+    # --- Router ---
     query_type: Literal["factual", "analytical", "multi_hop", "ambiguous"]
     retrieval_strategy: Literal["dense", "hybrid", "web"]
-    retrieved_docs: list[Document]
+    query_rewritten: str | None
+    # --- Retriever (reducer: operator.add — append across retries) ---
+    retrieved_docs: Annotated[list[Document], operator.add]
+    web_fallback_used: bool          # replaces fallback_triggered
+    # --- Grader ---
+    grader_scores: list[float]
     graded_docs: list[Document]
+    all_below_threshold: bool
+    retry_count: int
+    # --- Generator ---
     answer: str | None
     citations: list[Citation]
-    confidence: float
-    hallucination_risk: float
-    fallback_triggered: bool
-    steps_taken: list[str]
-    user_id: str
+    confidence: float | None         # None until Generator populates it (F06)
+    # --- Critic ---
+    critic_score: float | None       # replaces hallucination_risk
+    # --- Conversation history (reducer: add_messages — deduplicates by ID) ---
+    messages: Annotated[list[BaseMessage], add_messages]
+    # --- Observability (reducer: operator.add — append-only) ---
+    steps_taken: Annotated[list[str], operator.add]
 ```
+
+> **Schema status (2026-04-27):** 19-field canonical schema. Changes from original 14-field spec: `critic_score` replaces `hallucination_risk` (aligns with Critic node output semantics); `web_fallback_used` replaces `fallback_triggered` (more descriptive for Tavily CRAG pattern); `user_id` deferred to Phase 4 multi-tenant work (stateless for Phase 2); `filters`, `k`, `grader_scores`, `all_below_threshold`, `retry_count` added for CRAG control flow; `confidence` is `float | None` (None until Generator node populates it). Architect-approved 2026-04-27.
 
 ## API Versioning
 All routes are prefixed `/api/v1/`. Never change an existing route signature — add a new version instead.
@@ -60,7 +75,8 @@ All routes are prefixed `/api/v1/`. Never change an existing route signature —
 ## Streaming — SSE for Query Responses
 `POST /api/v1/query` streams via Server-Sent Events (SSE) using FastAPI `StreamingResponse`.
 The frontend consumes with `fetch` + `ReadableStream`, not `EventSource` (to support POST).
-Three event types only: `token`, `citations`, `done`.
+Static pipeline (`POST /api/v1/query`): three event types: `token`, `citations`, `done`.
+Agentic pipeline (`POST /api/v1/query/agentic`): additionally `agent_step` — see ADR-004 §6 for payload contract. The two endpoint contracts are separate and must not be merged.
 
 ## Schema Ownership — Single Definition Rule
 

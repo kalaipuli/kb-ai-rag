@@ -4,8 +4,6 @@ Every field in this module is Architect-approved. Do not modify this schema
 without a corresponding ADR and Architect sign-off.
 """
 
-from __future__ import annotations
-
 import operator
 from typing import Annotated, Literal
 

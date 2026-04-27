@@ -2,6 +2,8 @@
 
 Read this at the start of every architect review, before reading any implementation detail. Run each command first — findings from grep results are cheaper to fix than ones discovered mid-review.
 
+> **Environment rule:** `grep`/`find`/`awk` may be run bare. All Python tool commands (`ruff`, `mypy`, `pytest`) must use `poetry run`. All Node tool commands must use `npm run`. See `project-context.md` Backend Commands for canonical forms. Any command block you write in an ADR, fix spec, or task registry must follow this convention.
+
 ## Priority 1 — Schema uniqueness (most expensive to fix late)
 
 Duplicated types across modules propagate silently and require forced consolidation later (Phase 1c issue #4).
@@ -59,6 +61,7 @@ Any synchronous I/O call not wrapped in `asyncio.to_thread` inside an `async def
 For every module introduced in the phase, verify at least one error-path test per external call exists.
 
 ```bash
+# grep is fine bare; for running tests use poetry run pytest
 grep -c "pytest.raises\|side_effect.*Error\|side_effect.*Exception" \
   backend/tests/unit/test_<module_name>.py
 ```
