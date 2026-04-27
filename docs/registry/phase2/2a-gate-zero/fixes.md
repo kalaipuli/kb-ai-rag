@@ -1,6 +1,7 @@
 # Phase 2a — Architect Review Fixes
 
 > Created: 2026-04-27 | Source: Architect review of Phase 2a Gate Zero implementation
+> Cleared: 2026-04-27 | All 6 findings resolved — High findings cleared, Phase 2b may proceed.
 > Rule: development-process.md §9 — all High findings must clear before Phase 2b starts.
 > Status key: ⏳ Pending · 🔄 In Progress · ✅ Fixed · ⚠️ Deferred
 
@@ -10,12 +11,12 @@
 
 | ID | Severity | Status | Category | Summary | Depends On |
 |----|----------|--------|----------|---------|------------|
-| F01 | High | ⏳ Pending | Docs | ADR-004 §6 wire format uses `"event"` discriminant + top-level `duration_ms` + raw `"delta"` — conflicts with TypeScript `AgentStepEvent` which uses `"type"`, structured `"payload"`, and `duration_ms` inside payload. One artifact must be corrected before Phase 2b writes any streaming code. | — |
-| F02 | High | ⏳ Pending | Architecture | `AgentState` 19-field implementation diverges from the canonical schema in `architecture-rules.md` with no covering ADR: 3 fields renamed/absent (`hallucination_risk`, `fallback_triggered`, `user_id`), 5 new fields added (`filters`, `k`, `grader_scores`, `all_below_threshold`, `retry_count`). Two sources of truth exist. | — |
-| F03 | Major | ⏳ Pending | Docs | `architecture-rules.md` SSE rule still reads "Three event types only: token, citations, done" — `agent_step` not mentioned. A Phase 2b reviewer running the checklist will flag `agent_step` as a rule violation. | F01 |
-| F04 | Major | ⏳ Pending | Types | `AgentStepNode` union is `"router" \| "grader" \| "critic"` — omits `"retriever"` and `"generator"`. Events from those nodes will fail TypeScript discriminated union narrowing. | F01 |
-| F05 | Minor | ⏳ Pending | Correctness | `from __future__ import annotations` in `state.py` defers annotation evaluation. LangGraph resolves reducers via `get_type_hints(include_extras=True)` at compile time — currently safe, but latent `NameError` risk if any import is removed. Remove from `state.py`. | — |
-| F06 | Advisory | ⏳ Pending | Docs | `confidence: float \| None` in `state.py` diverges from canonical `confidence: float` in `architecture-rules.md` without documentation. Resolve as part of F02 schema reconciliation. | F02 |
+| F01 | High | ✅ Fixed | Docs | ADR-004 §6 wire format uses `"event"` discriminant + top-level `duration_ms` + raw `"delta"` — conflicts with TypeScript `AgentStepEvent` which uses `"type"`, structured `"payload"`, and `duration_ms` inside payload. One artifact must be corrected before Phase 2b writes any streaming code. | — |
+| F02 | High | ✅ Fixed | Architecture | `AgentState` 19-field implementation diverges from the canonical schema in `architecture-rules.md` with no covering ADR: 3 fields renamed/absent (`hallucination_risk`, `fallback_triggered`, `user_id`), 5 new fields added (`filters`, `k`, `grader_scores`, `all_below_threshold`, `retry_count`). Two sources of truth exist. | — |
+| F03 | Major | ✅ Fixed | Docs | `architecture-rules.md` SSE rule still reads "Three event types only: token, citations, done" — `agent_step` not mentioned. A Phase 2b reviewer running the checklist will flag `agent_step` as a rule violation. | F01 |
+| F04 | Major | ✅ Fixed | Types | `AgentStepNode` union is `"router" \| "grader" \| "critic"` — omits `"retriever"` and `"generator"`. Resolved via ADR-004 §6 — retriever and generator do not emit `agent_step` events; existing `AgentStepNode` is correct. | F01 |
+| F05 | Minor | ✅ Fixed | Correctness | `from __future__ import annotations` in `state.py` defers annotation evaluation. LangGraph resolves reducers via `get_type_hints(include_extras=True)` at compile time — currently safe, but latent `NameError` risk if any import is removed. Remove from `state.py`. | — |
+| F06 | Advisory | ✅ Fixed | Docs | `confidence: float \| None` in `state.py` diverges from canonical `confidence: float` in `architecture-rules.md` without documentation. Resolve as part of F02 schema reconciliation. | F02 |
 
 ---
 
@@ -117,12 +118,12 @@ Batch 3 — Code fix (independent):
 
 _Complete after all fixes are applied:_
 
-- [ ] ADR-004 §6 payload structure matches `AgentStepEvent` TypeScript interface
-- [ ] `architecture-rules.md` AgentState canonical schema matches `state.py` (19 fields)
-- [ ] `architecture-rules.md` SSE rule mentions `agent_step` for the agentic endpoint
-- [ ] `AgentStepNode` covers all nodes that emit `agent_step` events (or ADR-004 documents which do not)
-- [ ] `from __future__ import annotations` removed from `state.py`
-- [ ] `ruff check backend/src/ backend/tests/` — zero warnings
-- [ ] `mypy backend/src/ --strict` — zero errors
-- [ ] `pytest backend/tests/unit/ -q` — all green (no regressions)
-- [ ] `tsc --noEmit` — zero errors
+- [x] ADR-004 §6 payload structure matches `AgentStepEvent` TypeScript interface
+- [x] `architecture-rules.md` AgentState canonical schema matches `state.py` (19 fields)
+- [x] `architecture-rules.md` SSE rule mentions `agent_step` for the agentic endpoint
+- [x] `AgentStepNode` covers all nodes that emit `agent_step` events (ADR-004 §6 documents which do not — retriever and generator emit no `agent_step` events)
+- [x] `from __future__ import annotations` removed from `state.py`
+- [x] `ruff check backend/src/ backend/tests/` — zero warnings
+- [x] `mypy backend/src/ --strict` — zero errors (44 files)
+- [x] `pytest backend/tests/unit/ -q` — all green (260 passed)
+- [x] `tsc --noEmit` — zero errors

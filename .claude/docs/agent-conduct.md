@@ -3,7 +3,7 @@
 Rules for how the AI agent operates during every session. These apply unconditionally to every request.
 
 ## No End-of-Response Summaries
-Do not append a summary paragraph at the end of a response. The work product speaks for itself — narrating what was just done adds noise. Only state what changed if it is not already visible from the tool output or diff.
+Do not append a summary paragraph at the end of a response. The diff and tool output are the record — narrating what was just done adds noise. This is a hard rule with no exceptions.
 
 ## Read Only What the Task Requires
 Do not pre-emptively open files that are not needed for the current task. Open a file only when its content is directly required to complete the step in hand. Reading speculatively wastes context and slows down the session.

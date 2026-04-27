@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-27 (Phase 2a Gate Zero complete · 2b Graph Skeleton next)
+> Maintained by: project-manager agent | Last updated: 2026-04-27 (Phase 2a fixes cleared · 2b Graph Skeleton unblocked)
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -14,7 +14,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 | 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) · [1c](phase1/1c-generation/tasks.md) · [1c fixes](phase1/1c-generation/fixes.md) · [1d](phase1/1d-api/tasks.md) · [1d fixes](phase1/1d-api/fixes.md) · [1e](phase1/1e-ui/tasks.md) · [1e fixes](phase1/1e-ui/fixes.md) · [1f](phase1/1f-evaluation/tasks.md) | ✅ Complete | Passed 2026-04-26 |
 | 1g | Retrieval Quality (Chunking + Eval) | [1g](phase1/1g-retrieval-quality/tasks.md) | ✅ Complete | Passed 2026-04-26 |
 | 1h | Quality Transparency (UI + API) | [1h](phase1/1h-quality-transparency/tasks.md) | ✅ Complete | Passed 2026-04-26 |
-| 2a | Gate Zero (Tier 3 Pre-requisites) | [2a](phase2/2a-gate-zero/tasks.md) | ✅ Complete | Passed 2026-04-27 |
+| 2a | Gate Zero (Tier 3 Pre-requisites) | [2a](phase2/2a-gate-zero/tasks.md) · [fixes](phase2/2a-gate-zero/fixes.md) | ✅ Complete | Passed 2026-04-27 · Fixes cleared 2026-04-27 |
 | 2b | Graph Skeleton (StateGraph + Builder) | [2b](phase2/2b-graph-skeleton/tasks.md) | ⏳ Not Started | — |
 | 2c | Agent Nodes (Router · Retriever · Grader · Generator · Critic) | [2c](phase2/2c-agent-nodes/tasks.md) | ⏳ Not Started | — |
 | 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | — |
@@ -50,7 +50,7 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 
 | Feature | Registry | Status | Notes |
 |---------|----------|--------|-------|
-| 2a Gate Zero | [tasks](phase2/2a-gate-zero/tasks.md) | ✅ Complete | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field schema · AgentStreamEvent TS union |
+| 2a Gate Zero | [tasks](phase2/2a-gate-zero/tasks.md) · [fixes](phase2/2a-gate-zero/fixes.md) | ✅ Complete | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field schema · AgentStreamEvent TS union · 6 architect fixes cleared |
 | 2b Graph Skeleton | [tasks](phase2/2b-graph-skeleton/tasks.md) | ⏳ Not Started | StateGraph + stub nodes · builder · lifespan singleton · CompiledGraphDep |
 | 2c Agent Nodes | [tasks](phase2/2c-agent-nodes/tasks.md) | ⏳ Not Started | Router · Retriever · Grader · Generator · Critic · integration smoke test |
 | 2d Agentic API | [tasks](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | POST /api/v1/query/agentic · agent_step SSE events · X-Session-ID · Next.js proxy |
@@ -63,7 +63,7 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 
 ## Currently In Progress
 
-_Phase 2a Gate Zero passed 2026-04-27. Next: Phase 2b Graph Skeleton — StateGraph + stub nodes + builder + lifespan singleton._
+_Phase 2a Gate Zero passed 2026-04-27. Phase 2a architect fixes cleared 2026-04-27 (6/6 findings resolved). Next: Phase 2b Graph Skeleton — StateGraph + stub nodes + builder + lifespan singleton._
 
 ---
 
@@ -471,7 +471,7 @@ _Phase 2a Gate Zero passed 2026-04-27. Next: Phase 2b Graph Skeleton — StateGr
 | 1 | 2026-04-26 | faithfulness 0.9153 ≥ 0.70, 201 unit tests, mypy strict 0 errors, full stack verified, 17 knowledge files ingested |
 | 1g | 2026-04-26 | 241 unit tests, mypy strict 0 errors, ruff clean, `data/eval_baseline.json` with 5 metrics, faithfulness 0.9028 |
 | 1h | 2026-04-26 | retrieval scores in SSE · eval baseline endpoint · quality panel · sidebar card |
-| 2a | 2026-04-27 | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field TypedDict · AgentStreamEvent TS union · 260 unit tests · mypy strict 0 errors |
+| 2a | 2026-04-27 | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field TypedDict · AgentStreamEvent TS union · 260 unit tests · mypy strict 0 errors · 6 architect fixes cleared 2026-04-27 |
 | 2b | — | ⏳ Pending — depends on 2a gate |
 | 2c | — | ⏳ Pending — depends on 2b gate |
 | 2d | — | ⏳ Pending — depends on 2c gate |

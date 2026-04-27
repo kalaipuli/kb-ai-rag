@@ -79,9 +79,9 @@ Task: implement RRF fusion
 
 ## 5. Cross-Check Integrity After Every Feature
 Before marking a feature complete and moving to the next:
-- Run the full unit test suite — all green
-- Run mypy and ruff — zero errors
-- Run the TypeScript compiler check (`tsc --noEmit`) if frontend was touched
+- Run the full unit test suite — all green (via `poetry run pytest`)
+- Run mypy and ruff — zero errors (via `poetry run mypy` / `poetry run ruff`)
+- Run the TypeScript compiler check (`npm run tsc -- --noEmit`) if frontend was touched
 - Manually verify the end-to-end path for the feature (not just the unit under test)
 - Check that no existing tests were broken (regression check)
 - Review that the `AgentState` schema, API schemas, and metadata schemas are still consistent
@@ -94,6 +94,8 @@ Before marking a feature complete and moving to the next:
 
 ## 7. Definition of Done (per task)
 A task is done when **all** of the following commands produce zero output or pass cleanly. Run them in order; a failure is a blocker — do not mark the task ✅ Done until every command is clean.
+
+> **Environment rule:** Always invoke tools through the project's package manager — `poetry run <cmd>` for Python (backend), `npm run <cmd>` for Node (frontend). Never call `ruff`, `mypy`, `pytest`, or other tools as bare commands — they may resolve to the wrong environment or fail with "command not found".
 
 ```bash
 # 1. Lint — zero warnings
@@ -180,7 +182,7 @@ Every `fixes.md` must follow this structure exactly (see `docs/registry/phase1/1
 
 ## Fix Registry
 
-| ID | Severity | Status | Category | Summary | Depends On |
+| ID | Severity | Status | Category | Summary | Depends On | Assigned To |
 
 ---
 
