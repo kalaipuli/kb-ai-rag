@@ -73,11 +73,8 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
     checkpointer_path = Path(settings.sqlite_checkpointer_path)
     checkpointer_path.parent.mkdir(parents=True, exist_ok=True)
     conn = aiosqlite.connect(str(checkpointer_path))
-    # aiosqlite 0.22 removed is_alive() from Connection; langgraph-checkpoint-sqlite
-    # 2.0.11 still calls it in setup(). Delegate to the underlying thread so that
-    # setup() can detect an unconnected state and call `await conn` to connect.
     if not hasattr(conn, "is_alive"):
-        conn.is_alive = conn._thread.is_alive  # type: ignore[attr-defined]
+        conn.is_alive = conn._thread.is_alive  # type: ignore[attr-defined]  # aiosqlite 0.22 removed is_alive(); langgraph-checkpoint-sqlite 2.0.11 calls it in setup() — remove when langgraph-checkpoint-sqlite >= 2.0.12
     checkpointer = AsyncSqliteSaver(conn)
 
     return graph.compile(checkpointer=checkpointer)
