@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import aiosqlite
+from langchain_openai import AzureChatOpenAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -41,6 +42,16 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
     Returns:
         A compiled LangGraph StateGraph ready for astream() invocation.
     """
+    llm = AzureChatOpenAI(
+        azure_deployment="gpt-4o-mini",
+        azure_endpoint=settings.azure_openai_endpoint,
+        api_key=settings.azure_openai_api_key.get_secret_value(),  # type: ignore[arg-type]  # AzureChatOpenAI.openai_api_key is SecretStr internally; langchain-openai stubs type the alias as SecretStr but the constructor accepts str at runtime
+        api_version=settings.azure_openai_api_version,
+    )
+
+    async def _router_node(state: AgentState) -> dict[str, Any]:
+        return await router_node(state, llm=llm)
+
     async def _retriever_node(state: AgentState) -> dict[str, Any]:
         """Closure wrapping retriever_node; will receive the real retriever in 2c."""
         _ = retriever  # injected; used in Phase 2c implementation
@@ -48,7 +59,7 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
 
     graph: StateGraph = StateGraph(AgentState)
 
-    graph.add_node("router", router_node)
+    graph.add_node("router", _router_node)
     graph.add_node("retriever", _retriever_node)
     graph.add_node("grader", grader_node)
     graph.add_node("generator", generator_node)
