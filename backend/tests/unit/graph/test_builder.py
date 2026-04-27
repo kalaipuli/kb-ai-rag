@@ -104,3 +104,16 @@ async def test_build_graph_uses_settings_checkpointer_path(tmp_path: Path) -> No
     with patch("src.graph.builder.aiosqlite.connect", wraps=aiosqlite.connect) as mock_connect:
         await build_graph(settings=settings, retriever=retriever)
         mock_connect.assert_called_once_with(expected_path)
+
+
+# ---------------------------------------------------------------------------
+# Test 4: build_graph propagates OSError raised by aiosqlite.connect
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_build_graph_propagates_aiosqlite_connect_error(tmp_path: Path) -> None:
+    settings = _mock_settings(tmp_path)
+    retriever = _mock_retriever()
+    with patch("src.graph.builder.aiosqlite.connect", side_effect=OSError("disk full")), pytest.raises(OSError, match="disk full"):
+        await build_graph(settings=settings, retriever=retriever)
