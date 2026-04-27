@@ -49,19 +49,35 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
         api_version=settings.azure_openai_api_version,
     )
 
+    llm_4o = AzureChatOpenAI(
+        azure_deployment=settings.azure_chat_deployment,
+        azure_endpoint=settings.azure_openai_endpoint,
+        api_key=settings.azure_openai_api_key.get_secret_value(),  # type: ignore[arg-type]  # AzureChatOpenAI.openai_api_key is SecretStr internally; langchain-openai stubs type the alias as SecretStr but the constructor accepts str at runtime
+        api_version=settings.azure_openai_api_version,
+    )
+
     async def _router_node(state: AgentState) -> dict[str, Any]:
         return await router_node(state, llm=llm)
 
     async def _retriever_node(state: AgentState) -> dict[str, Any]:
         return await retriever_node(state, retriever=retriever)
 
+    async def _grader_node(state: AgentState) -> dict[str, Any]:
+        return await grader_node(state, llm=llm)
+
+    async def _generator_node(state: AgentState) -> dict[str, Any]:
+        return await generator_node(state, llm=llm_4o)
+
+    async def _critic_node(state: AgentState) -> dict[str, Any]:
+        return await critic_node(state, llm=llm)
+
     graph: StateGraph = StateGraph(AgentState)
 
     graph.add_node("router", _router_node)
     graph.add_node("retriever", _retriever_node)
-    graph.add_node("grader", grader_node)
-    graph.add_node("generator", generator_node)
-    graph.add_node("critic", critic_node)
+    graph.add_node("grader", _grader_node)
+    graph.add_node("generator", _generator_node)
+    graph.add_node("critic", _critic_node)
 
     graph.set_entry_point("router")
 
