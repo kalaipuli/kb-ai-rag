@@ -33,6 +33,7 @@ from src.exceptions import (
     RetrievalError,
 )
 from src.generation.chain import GenerationChain
+from src.graph.builder import build_graph
 from src.ingestion.bm25_store import BM25Store
 from src.ingestion.embedder import Embedder
 from src.logging_config import configure_logging
@@ -59,6 +60,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     embedder = Embedder(settings=settings)
     app.state.embedder = embedder
     retriever = HybridRetriever(settings=settings, bm25_store=bm25_store, embedder=embedder)
+    app.state.compiled_graph = await build_graph(settings=settings, retriever=retriever)
     app.state.generation_chain = GenerationChain(settings=settings, hybrid_retriever=retriever)
     app.state.bm25_store = bm25_store
     app.state.qdrant_client = AsyncQdrantClient(url=settings.qdrant_url)

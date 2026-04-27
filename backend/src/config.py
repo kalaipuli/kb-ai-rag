@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     # Evaluation baseline
     eval_baseline_path: str = "data/eval_baseline.json"
 
+    # LangGraph SqliteSaver checkpointer (Phase 2+; single-worker only — see ADR-004)
+    sqlite_checkpointer_path: str = "data/checkpointer.sqlite"
+
 
 @lru_cache
 def get_settings() -> Settings:

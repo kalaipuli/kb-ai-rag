@@ -15,7 +15,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 | 1g | Retrieval Quality (Chunking + Eval) | [1g](phase1/1g-retrieval-quality/tasks.md) | ✅ Complete | Passed 2026-04-26 |
 | 1h | Quality Transparency (UI + API) | [1h](phase1/1h-quality-transparency/tasks.md) | ✅ Complete | Passed 2026-04-26 |
 | 2a | Gate Zero (Tier 3 Pre-requisites) | [2a](phase2/2a-gate-zero/tasks.md) · [fixes](phase2/2a-gate-zero/fixes.md) | ✅ Complete | Passed 2026-04-27 · Fixes cleared 2026-04-27 |
-| 2b | Graph Skeleton (StateGraph + Builder) | [2b](phase2/2b-graph-skeleton/tasks.md) | ⏳ Not Started | — |
+| 2b | Graph Skeleton (StateGraph + Builder) | [2b](phase2/2b-graph-skeleton/tasks.md) | ✅ Complete | Passed 2026-04-27 |
 | 2c | Agent Nodes (Router · Retriever · Grader · Generator · Critic) | [2c](phase2/2c-agent-nodes/tasks.md) | ⏳ Not Started | — |
 | 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | — |
 | 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ⏳ Not Started | — |
@@ -51,7 +51,7 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 | Feature | Registry | Status | Notes |
 |---------|----------|--------|-------|
 | 2a Gate Zero | [tasks](phase2/2a-gate-zero/tasks.md) · [fixes](phase2/2a-gate-zero/fixes.md) | ✅ Complete | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field schema · AgentStreamEvent TS union · 6 architect fixes cleared |
-| 2b Graph Skeleton | [tasks](phase2/2b-graph-skeleton/tasks.md) | ⏳ Not Started | StateGraph + stub nodes · builder · lifespan singleton · CompiledGraphDep |
+| 2b Graph Skeleton | [tasks](phase2/2b-graph-skeleton/tasks.md) | ✅ Complete | 5 stub nodes · edges.py · builder.py · AsyncSqliteSaver · CompiledGraphDep · 10 tests |
 | 2c Agent Nodes | [tasks](phase2/2c-agent-nodes/tasks.md) | ⏳ Not Started | Router · Retriever · Grader · Generator · Critic · integration smoke test |
 | 2d Agentic API | [tasks](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | POST /api/v1/query/agentic · agent_step SSE events · X-Session-ID · Next.js proxy |
 | 2e Parallel UI | [tasks](phase2/2e-parallel-ui/tasks.md) | ⏳ Not Started | useAgentStream · AgentTrace · SharedInput · grid layout · verdict · latency bars |
@@ -63,7 +63,7 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 
 ## Currently In Progress
 
-_Phase 2a Gate Zero passed 2026-04-27. Phase 2a architect fixes cleared 2026-04-27 (6/6 findings resolved). Next: Phase 2b Graph Skeleton — StateGraph + stub nodes + builder + lifespan singleton._
+_Phase 2b Graph Skeleton passed 2026-04-27. 270 unit tests green · mypy strict 0 errors · ruff clean. Next: Phase 2c Agent Nodes — Router · Retriever · Grader · Generator · Critic._
 
 ---
 
@@ -472,7 +472,7 @@ _Phase 2a Gate Zero passed 2026-04-27. Phase 2a architect fixes cleared 2026-04-
 | 1g | 2026-04-26 | 241 unit tests, mypy strict 0 errors, ruff clean, `data/eval_baseline.json` with 5 metrics, faithfulness 0.9028 |
 | 1h | 2026-04-26 | retrieval scores in SSE · eval baseline endpoint · quality panel · sidebar card |
 | 2a | 2026-04-27 | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field TypedDict · AgentStreamEvent TS union · 260 unit tests · mypy strict 0 errors · 6 architect fixes cleared 2026-04-27 |
-| 2b | — | ⏳ Pending — depends on 2a gate |
+| 2b | 2026-04-27 | 270 unit tests · mypy strict 0 errors · ruff clean · 5 stub nodes · AsyncSqliteSaver checkpointer |
 | 2c | — | ⏳ Pending — depends on 2b gate |
 | 2d | — | ⏳ Pending — depends on 2c gate |
 | 2e | — | ⏳ Pending — depends on 2d gate |
