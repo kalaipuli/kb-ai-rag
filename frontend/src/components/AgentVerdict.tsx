@@ -1,13 +1,8 @@
 "use client";
 
 import type { JSX } from "react";
-import type {
-  AgentMessage,
-  AgentStep,
-  CriticStepPayload,
-  GraderStepPayload,
-  Message,
-} from "@/types";
+import type { AgentMessage, Message } from "@/types";
+import { isCriticPayload, isGraderPayload } from "@/lib/agentTypeGuards";
 
 interface AgentVerdictProps {
   staticMessages: Message[];
@@ -19,14 +14,6 @@ type VerdictWinner = "agentic" | "static" | "tie";
 interface Verdict {
   winner: VerdictWinner;
   reason: string;
-}
-
-function isCriticPayload(payload: AgentStep["payload"]): payload is CriticStepPayload {
-  return "hallucination_risk" in payload;
-}
-
-function isGraderPayload(payload: AgentStep["payload"]): payload is GraderStepPayload {
-  return "web_fallback" in payload;
 }
 
 function computeVerdict(

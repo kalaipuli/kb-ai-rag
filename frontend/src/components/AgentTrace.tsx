@@ -1,12 +1,12 @@
 "use client";
 
 import type { JSX } from "react";
-import type {
-  AgentStep,
-  CriticStepPayload,
-  GraderStepPayload,
-  RouterStepPayload,
-} from "@/types";
+import type { AgentStep, RouterStepPayload } from "@/types";
+import {
+  isCriticPayload,
+  isGraderPayload,
+  isRouterPayload,
+} from "@/lib/agentTypeGuards";
 
 interface AgentTraceProps {
   steps: AgentStep[];
@@ -25,24 +25,6 @@ const STRATEGY_LABELS: Record<RouterStepPayload["strategy"], string> = {
   dense: "Dense search",
   web: "Web search",
 };
-
-function isRouterPayload(
-  payload: AgentStep["payload"],
-): payload is RouterStepPayload {
-  return "query_type" in payload;
-}
-
-function isGraderPayload(
-  payload: AgentStep["payload"],
-): payload is GraderStepPayload {
-  return "web_fallback" in payload;
-}
-
-function isCriticPayload(
-  payload: AgentStep["payload"],
-): payload is CriticStepPayload {
-  return "hallucination_risk" in payload;
-}
 
 function criticColour(risk: number): string {
   if (risk < 0.4) return "bg-green-500";
