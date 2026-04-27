@@ -47,7 +47,7 @@ _STEPBACK_SYSTEM_PROMPT = (
 )
 
 
-async def router_node(state: AgentState, llm: AzureChatOpenAI) -> dict[str, Any]:
+async def router_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, Any]:
     query = state["query"]
     start = time.monotonic()
 

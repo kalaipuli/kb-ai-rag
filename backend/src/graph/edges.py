@@ -33,7 +33,7 @@ def route_after_critic(state: AgentState) -> Literal["retriever", "end"]:
     budget remains.  Falls through to "end" at max retries so the graph always
     terminates.
     """
-    critic_score = state.get("critic_score") or 0.0
+    critic_score: float = state["critic_score"] if state["critic_score"] is not None else 0.0
     if critic_score > CRITIC_THRESHOLD and state["retry_count"] < MAX_RETRIES:
         return "retriever"
     return "end"

@@ -5,6 +5,7 @@ Chunks below GRADER_THRESHOLD are filtered out. The edge function
 route_after_grader decides whether to re-retrieve or proceed to generation.
 """
 
+import asyncio
 import time
 from typing import Any
 
@@ -71,7 +72,9 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
         ]
 
         try:
-            results: list[_GradeDoc] = grader_chain.batch(messages_batch)  # type: ignore[arg-type, assignment]  # LangChain Runnable.batch stubs expect Sequence[PromptValue|str|...] but accept list[list[dict]] at runtime; assignment: returns list[Any] typed as list[_GradeDoc]
+            results: list[_GradeDoc] = await asyncio.to_thread(
+                grader_chain.batch, messages_batch  # type: ignore[arg-type]  # list[list[dict]] accepted by batch at runtime despite stub mismatch
+            )
             scores.extend(r.score for r in results)
         except Exception as exc:
             log.warning(
@@ -104,6 +107,6 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
         "grader_scores": scores,
         "graded_docs": graded_docs,
         "all_below_threshold": all_below,
-        "retry_count": state.get("retry_count", 0) + 1,
+        "retry_count": state["retry_count"] + 1,
         "steps_taken": [step],
     }
