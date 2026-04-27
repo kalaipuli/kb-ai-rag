@@ -42,6 +42,11 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
 
     Returns:
         A compiled LangGraph StateGraph ready for astream() invocation.
+
+    Note:
+        ``tavily_client`` is ``None`` when ``TAVILY_API_KEY`` is not configured;
+        the retriever node handles this gracefully by logging a warning and
+        skipping web-search augmentation.
     """
     llm = AzureChatOpenAI(
         azure_deployment="gpt-4o-mini",
@@ -60,7 +65,11 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
     async def _router_node(state: AgentState) -> dict[str, Any]:
         return await router_node(state, llm=llm)
 
-    tavily_client = TavilyClient(api_key=settings.tavily_api_key.get_secret_value())
+    tavily_client: TavilyClient | None = (
+        TavilyClient(api_key=settings.tavily_api_key.get_secret_value())
+        if settings.tavily_api_key.get_secret_value()
+        else None
+    )
 
     async def _retriever_node(state: AgentState) -> dict[str, Any]:
         return await retriever_node(state, retriever=retriever, tavily_client=tavily_client)
