@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-26 (Phase 1h complete · Phase 2 ready)
+> Maintained by: project-manager agent | Last updated: 2026-04-27 (Phase 2a Gate Zero complete · 2b Graph Skeleton next)
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -14,7 +14,12 @@ This is the single cross-phase status view. For task-level detail, open the link
 | 1 | Core MVP | [1a](phase1/1a-ingestion/tasks.md) · [1b](phase1/1b-retrieval/tasks.md) · [1c](phase1/1c-generation/tasks.md) · [1c fixes](phase1/1c-generation/fixes.md) · [1d](phase1/1d-api/tasks.md) · [1d fixes](phase1/1d-api/fixes.md) · [1e](phase1/1e-ui/tasks.md) · [1e fixes](phase1/1e-ui/fixes.md) · [1f](phase1/1f-evaluation/tasks.md) | ✅ Complete | Passed 2026-04-26 |
 | 1g | Retrieval Quality (Chunking + Eval) | [1g](phase1/1g-retrieval-quality/tasks.md) | ✅ Complete | Passed 2026-04-26 |
 | 1h | Quality Transparency (UI + API) | [1h](phase1/1h-quality-transparency/tasks.md) | ✅ Complete | Passed 2026-04-26 |
-| 2 | Agentic Pipeline (LangGraph) | — | ⏳ Not Started | — |
+| 2a | Gate Zero (Tier 3 Pre-requisites) | [2a](phase2/2a-gate-zero/tasks.md) | ✅ Complete | Passed 2026-04-27 |
+| 2b | Graph Skeleton (StateGraph + Builder) | [2b](phase2/2b-graph-skeleton/tasks.md) | ⏳ Not Started | — |
+| 2c | Agent Nodes (Router · Retriever · Grader · Generator · Critic) | [2c](phase2/2c-agent-nodes/tasks.md) | ⏳ Not Started | — |
+| 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | — |
+| 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ⏳ Not Started | — |
+| 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) | ⏳ Not Started | — |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
 | 5 | Observability & Evaluation | — | ⏳ Not Started | — |
@@ -39,42 +44,26 @@ This is the single cross-phase status view. For task-level detail, open the link
 
 ## Active Phase
 
-**Phase 1 — Core MVP** ✅ Complete 2026-04-26.
+**Phase 2 — Agentic Pipeline (LangGraph + Parallel-View UI)** 🔄 In Progress — started 2026-04-26
 
-| Feature | Completion | Notes |
-|---------|-----------|-------|
-| 1a Ingestion | 2026-04-23 | LocalFileLoader, RecursiveCharacterTextSplitter, Embedder, Qdrant upsert, BM25 |
-| 1b Retrieval | 2026-04-23 | Dense + sparse + RRF + cross-encoder re-rank |
-| 1c Generation | 2026-04-24 | LCEL chain, ADR-007/008, shared schema module |
-| 1d API | 2026-04-24 | SSE streaming, lifespan singletons, Tier 1/2 patterns |
-| 1e UI | 2026-04-24 | Next.js 15.3.9 · React 19 · Tailwind 4 · TypeScript 5.8 |
-| 1f Evaluation | 2026-04-26 | 20-Q golden dataset · faithfulness 0.9153 · all gate criteria met |
+Scope change from original plan: the Phase 2 UI introduces a **parallel-view chat interface** with two simultaneous panels — Static Chain (Phase 1 LCEL, unchanged) vs Agentic Pipeline (Phase 2 LangGraph). Both pipelines run concurrently on the same query, enabling direct latency and quality comparison. Architect review completed 2026-04-26.
 
-**201 unit tests passing · 54 frontend tests · mypy strict 0 errors · ruff 0 warnings · tsc 0 errors**
+| Feature | Registry | Status | Notes |
+|---------|----------|--------|-------|
+| 2a Gate Zero | [tasks](phase2/2a-gate-zero/tasks.md) | ✅ Complete | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field schema · AgentStreamEvent TS union |
+| 2b Graph Skeleton | [tasks](phase2/2b-graph-skeleton/tasks.md) | ⏳ Not Started | StateGraph + stub nodes · builder · lifespan singleton · CompiledGraphDep |
+| 2c Agent Nodes | [tasks](phase2/2c-agent-nodes/tasks.md) | ⏳ Not Started | Router · Retriever · Grader · Generator · Critic · integration smoke test |
+| 2d Agentic API | [tasks](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | POST /api/v1/query/agentic · agent_step SSE events · X-Session-ID · Next.js proxy |
+| 2e Parallel UI | [tasks](phase2/2e-parallel-ui/tasks.md) | ⏳ Not Started | useAgentStream · AgentTrace · SharedInput · grid layout · verdict · latency bars |
+| 2f Evaluation | [tasks](phase2/2f-evaluation/tasks.md) | ⏳ Not Started | RAGAS re-run on agentic endpoint · comparison report · baseline ≥ 0.85 |
 
----
-
-**Phase 1g — Retrieval Quality** ✅ Complete 2026-04-26
-
-Scope: token-aware chunking (tiktoken), configurable `SplitterFactory` (`recursive_character` / `sentence_window` / `semantic`), improved evaluation output (`AnswerCorrectness` metric, per-sample table, stddev, failure report, baseline comparison). ADR-009 accepted.
-
-**Gate 3 result:** `langchain-experimental` CONFLICTS with `langchain-text-splitters ^0.3`. `semantic` strategy deferred to Phase 2 — raises `ConfigurationError` referencing ADR-009. `sentence_window` strategy comparison also deferred to Phase 2.
-
-**RAGAS baseline (1g):** faithfulness 0.9028 · answer_relevancy 0.9752 · context_recall 0.9542 · context_precision 0.9642 · answer_correctness 0.7650. Persisted to `data/eval_baseline.json`.
-
----
-
-**Phase 1h — Quality Transparency** ⏳ Not Started (planned after 1g)
-
-Scope: per-citation retrieval scores in SSE wire format, `_build_citations` refactor in `chain.py`, eval baseline API endpoint, collapsible quality panel in chat UI, score bars in CitationList, EvalBaseline sidebar card. See [1h tasks](phase1/1h-quality-transparency/tasks.md).
-
-**Dependency:** 1h unit tests are fully independent; 1h end-to-end integration requires 1g eval baseline JSON to exist.
+**Completed phases:** Phase 1 (✅ 201 unit tests · 54 frontend tests) · Phase 1g (✅ 241 unit tests · 5-metric RAGAS baseline) · Phase 1h (✅ retrieval scores in SSE · eval baseline endpoint · quality panel)
 
 ---
 
 ## Currently In Progress
 
-_Phase 1g complete 2026-04-26. Ready to begin Phase 1h._
+_Phase 2a Gate Zero passed 2026-04-27. Next: Phase 2b Graph Skeleton — StateGraph + stub nodes + builder + lifespan singleton._
 
 ---
 
@@ -82,8 +71,10 @@ _Phase 1g complete 2026-04-26. Ready to begin Phase 1h._
 
 | Item | Risk | Mitigation |
 |------|------|-----------|
-| 1g-T07 (semantic strategy) | `langchain-experimental` may conflict with `langchain-core` pin | Dry-run gate before implementation; defer to Phase 2 if conflict |
-| 1h end-to-end test | Requires 1g eval baseline JSON | Unit tests mock the file; flag integration test dependency in 1h gate |
+| 2a-T01 (LangGraph version lock) | Bundle resolution may conflict with current `langchain-core` pin | Run dry-run before committing; adjust `langchain-core` bound with architect sign-off |
+| 2c-T01 (Router HyDE) | GPT-4o-mini structured output parsing failures | Add retry + safe default fallback; test error path |
+| 2f-T02 (RAGAS agentic gate) | Agentic faithfulness may drop below static baseline if CRAG web fallback adds noise | Tune `GRADER_THRESHOLD`; cap Tavily results to 3; architect review if gate fails |
+| SqliteSaver concurrency | Multi-worker Uvicorn will cause SQLite write contention | Document `--workers 1` constraint in ADR-004 amendment (2a-T02) |
 
 ---
 
@@ -275,45 +266,93 @@ _Phase 1g complete 2026-04-26. Ready to begin Phase 1h._
 
 ---
 
-### Phase 2 — Agentic Pipeline ⏳ Not Started
+### Phase 2 — Agentic Pipeline (LangGraph + Parallel-View UI) 🔄 In Progress
 
-> **Stack gate zero:** Before any Phase 2 task begins, complete [Tier 3 pre-requisites](../stack-upgrade-proposal.md#tier-3--phase-2-pre-requisites-gate-zero): lock LangGraph to an exact confirmed version, upgrade the LangChain bundle together, write the ADR-004 amendment, and define `AgentState` schema. Do not write any agent node until these are done.
+> **Scope note:** Parallel-view UI added vs original plan (architect review 2026-04-26). Left panel = Static Chain (Phase 1, frozen). Right panel = Agentic Pipeline (Phase 2). Both submit the same query simultaneously. See feature registries for full task breakdown.
+>
+> **Dependency direction:** `graph/nodes/` may import from `retrieval/` and `generation/`; `generation/` must NOT import from `graph/`.
+>
+> **Wire format commitment:** `agent_step` SSE events must include `duration_ms: int` in every payload from day one. `POST /api/v1/query` (Phase 1) is frozen — never modified.
 
-#### LangGraph State Machine
+#### 2a — Gate Zero ⏳ Not Started
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| `AgentState` TypedDict | Full state schema with `Annotated` reducers — define before any node | ⏳ Pending |
-| Graph compilation | `StateGraph` + `SqliteSaver` checkpointer | ⏳ Pending |
-| Conditional edges | Router → Retriever → Grader → Generator → Critic routing | ⏳ Pending |
-
-#### Agent Nodes
-
-| Agent | Role | Model | Status |
-|-------|------|-------|--------|
-| **Router** | Classifies query type + retrieval strategy | GPT-4o-mini | ⏳ Pending |
-| **Retriever** | Executes retrieval (no LLM) | — | ⏳ Pending |
-| **Grader** | Scores chunk relevance | GPT-4o-mini | ⏳ Pending |
-| **Generator** | Produces cited answer | GPT-4o | ⏳ Pending |
-| **Critic** | Detects hallucination risk, triggers re-retrieve | GPT-4o-mini | ⏳ Pending |
-
-#### Agentic Patterns
-
-| Pattern | Description | Status |
-|---------|-------------|--------|
-| Corrective RAG (CRAG) | Grader triggers Tavily web search when all chunks score < 0.5 | ⏳ Pending |
-| Self-RAG | Critic re-retrieves with refined query when hallucination risk > 0.7 | ⏳ Pending |
-| Adaptive RAG | Router selects dense / hybrid / web strategy per query type | ⏳ Pending |
-| HyDE | Hypothetical Document Embeddings for abstract queries | ⏳ Pending |
-| Step-back prompting | Reframe specific → general before retrieval | ⏳ Pending |
-
-#### Conversational Memory
+> **Hard gate.** No Phase 2b task may start until all items below are committed and CI is green.
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| `SqliteSaver` checkpointer | Per-session SQLite state persistence | ⏳ Pending |
-| Session ID header | `X-Session-ID` passed in API request | ⏳ Pending |
-| Context window | Last 5 exchanges injected into agent context | ⏳ Pending |
+| LangGraph + LangChain bundle version lock | Tilde-pinned in `pyproject.toml`; lockfile committed | ⏳ Pending |
+| ADR-004 amendment | Confirmed version · SqliteSaver import · stream_mode · single-worker constraint · duration_ms commitment | ⏳ Pending |
+| `AgentState` TypedDict + unit test | Full schema with `Annotated` reducers; ≥ 4 reducer tests | ⏳ Pending |
+| `AgentStreamEvent` TS union | `AgentStepEvent` discriminated union in `frontend/src/types/index.ts` | ⏳ Pending |
+| Gate zero CI verification | All DoD commands clean; tsc clean; build succeeds | ⏳ Pending |
+
+#### 2b — Graph Skeleton ⏳ Not Started
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `backend/src/graph/` module structure | All files with stub nodes | ⏳ Pending |
+| `edges.py` conditional edge functions | `route_after_grader` · `route_after_critic` (pure functions) | ⏳ Pending |
+| `builder.py` graph compilation | `build_graph(settings, retriever)` → `CompiledStateGraph` | ⏳ Pending |
+| `app.state.compiled_graph` | Added to lifespan in `main.py` | ⏳ Pending |
+| `CompiledGraphDep` | Added to `backend/src/api/deps.py` | ⏳ Pending |
+| Unit tests: edges + builder | ≥ 6 edge tests · ≥ 3 builder tests | ⏳ Pending |
+
+#### 2c — Agent Nodes ⏳ Not Started
+
+| Agent | Role | Model | Agentic Pattern | Status |
+|-------|------|-------|-----------------|--------|
+| **Router** | Query classification + strategy selection | GPT-4o-mini | Adaptive RAG · HyDE · Step-back | ⏳ Pending |
+| **Retriever** | HybridRetriever + Tavily web fallback | — | CRAG fallback trigger | ⏳ Pending |
+| **Grader** | Chunk relevance scoring; sets `all_below_threshold` | GPT-4o-mini | CRAG gate | ⏳ Pending |
+| **Generator** | Cited answer from `graded_docs` | GPT-4o | — | ⏳ Pending |
+| **Critic** | Hallucination risk score; triggers re-retrieval | GPT-4o-mini | Self-RAG | ⏳ Pending |
+| Integration smoke test | All 4 routing paths (happy / CRAG / Self-RAG / max-retry) | — | — | ⏳ Pending |
+
+#### 2d — Agentic API Endpoint ⏳ Not Started
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `AgentStepEvent` Pydantic schemas | `RouterStepPayload` · `GraderStepPayload` · `CriticStepPayload` · `AgentQueryRequest` | ⏳ Pending |
+| `POST /api/v1/query/agentic` | SSE route; `X-Session-ID` header; `stream_mode="updates"`; all 5 event types | ⏳ Pending |
+| Router registration in `main.py` | One `app.include_router()` call | ⏳ Pending |
+| Unit tests | ≥ 5 route tests including SSE event order and session ID handling | ⏳ Pending |
+| Next.js proxy `/api/proxy/query/agentic` | Forwards `X-Session-ID` header; API key server-side only | ⏳ Pending |
+
+#### 2e — Parallel-View Chat UI ⏳ Not Started
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `useAgentStream` hook | Session ID in `sessionStorage`; handles `agent_step` / `token` / `citations` / `done` | ⏳ Pending |
+| `AgentTrace` component | Per-node step cards: Router (human-readable labels) · Grader (score bars) · Critic (risk gauge) | ⏳ Pending |
+| `AgentPanel` component | Composes existing `ChatMessage` + `AgentTrace`; no copy-paste chat logic | ⏳ Pending |
+| `SharedInput` component | Fires both hooks; functional guard (not just visual) while either streaming | ⏳ Pending |
+| `chat/page.tsx` refactor | `grid grid-cols-2` layout; "Static Chain" vs "Agentic Pipeline" labels | ⏳ Pending |
+| `AgentVerdict` component | Post-completion verdict: winner + one-sentence reason | ⏳ Pending |
+| Per-node latency bars | Proportional `duration_ms` visualization; hidden during streaming | ⏳ Pending |
+| Component tests | ≥ 12 new frontend tests; all 54 existing tests still green | ⏳ Pending |
+
+#### 2f — Agentic Evaluation ⏳ Not Started
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| `EvaluationRunner` extension | `endpoint` param for `"static"` or `"agentic"` | ⏳ Pending |
+| RAGAS run (agentic) | 20-Q golden dataset against agentic endpoint; `data/eval_agentic_baseline.json` | ⏳ Pending |
+| Comparison report | `docs/evaluation_agentic_results.md` — 7 sections incl. CRAG/Self-RAG activation rates | ⏳ Pending |
+| Eval baseline API update | `GET /api/v1/eval/baseline?pipeline=agentic` | ⏳ Pending |
+| Phase 2 full gate review | All 15 gate criteria verified; DASHBOARD.md updated | ⏳ Pending |
+
+**Phase 2 gate criteria (all must pass):**
+- [ ] 2a Gate Zero: CI green; ADR-004 amended; AgentState unit tests; TS types committed
+- [ ] 2b Graph Skeleton: graph compiles; edges route correctly; no orphaned stubs
+- [ ] 2c Agent Nodes: all 5 nodes implemented; ≥ 27 new tests; error paths covered
+- [ ] 2d Agentic API: SSE endpoint live; `duration_ms` in all agent_step payloads; Phase 1 `query.py` unchanged
+- [ ] 2e Parallel UI: both panels demo-able; SharedInput guard correct; ≥ 66 total frontend tests
+- [ ] 2f Evaluation: RAGAS faithfulness ≥ 0.85; comparison report complete
+- [ ] `mypy backend/src/ --strict` — zero errors
+- [ ] `ruff check` — zero warnings
+- [ ] `tsc --noEmit` — zero errors
+- [ ] `npm run build` — succeeds
+- [ ] `docker compose up` — full stack < 90s
 
 ---
 
@@ -431,4 +470,10 @@ _Phase 1g complete 2026-04-26. Ready to begin Phase 1h._
 | 0 | 2026-04-23 | 29 unit tests, mypy strict (11 files), ruff clean, tsc clean, 5 ADRs, CI workflow, 10 architect fixes resolved |
 | 1 | 2026-04-26 | faithfulness 0.9153 ≥ 0.70, 201 unit tests, mypy strict 0 errors, full stack verified, 17 knowledge files ingested |
 | 1g | 2026-04-26 | 241 unit tests, mypy strict 0 errors, ruff clean, `data/eval_baseline.json` with 5 metrics, faithfulness 0.9028 |
-| 1h | — | ⏳ Pending — retrieval scores in SSE, eval baseline endpoint, chat quality panel, sidebar card |
+| 1h | 2026-04-26 | retrieval scores in SSE · eval baseline endpoint · quality panel · sidebar card |
+| 2a | 2026-04-27 | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field TypedDict · AgentStreamEvent TS union · 260 unit tests · mypy strict 0 errors |
+| 2b | — | ⏳ Pending — depends on 2a gate |
+| 2c | — | ⏳ Pending — depends on 2b gate |
+| 2d | — | ⏳ Pending — depends on 2c gate |
+| 2e | — | ⏳ Pending — depends on 2d gate |
+| 2f | — | ⏳ Pending — depends on 2e gate; RAGAS faithfulness ≥ 0.85 required |

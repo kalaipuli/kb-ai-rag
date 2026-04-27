@@ -159,73 +159,107 @@
 
 ---
 
-### Phase 2 — Agentic Pipeline (Days 9–16)
-**Goal:** Replace static chain with LangGraph agent graph. The system now reasons, not just retrieves.
+### Phase 2 — Agentic Pipeline + Parallel-View UI (Days 9–20)
+**Goal:** Replace static chain with LangGraph agent graph. The system now reasons, not just retrieves. A side-by-side UI lets users compare Static Chain vs Agentic Pipeline on the same query.
 
-> **Stack gate zero (before any agent node):** Complete all [Tier 3 pre-requisites](docs/stack-upgrade-proposal.md#tier-3--phase-2-pre-requisites-gate-zero): lock LangGraph to an exact confirmed version (not `^`), upgrade the LangChain bundle together, write the ADR-004 amendment, and define `AgentState` schema before writing any node function.
+> **Scope change (2026-04-26):** Original plan had a single chat UI. Phase 2 now introduces a **parallel-view chat interface**: Left panel = Static Chain (Phase 1 LCEL, frozen), Right panel = Agentic Pipeline (Phase 2 LangGraph). Both pipelines submit the same query simultaneously. Architect review completed 2026-04-26. See [registry](docs/registry/phase2/) for full task breakdown.
+>
+> **Dependency direction (enforced):** `graph/nodes/` may import from `retrieval/` and `generation/`; `generation/` must NEVER import from `graph/`. `POST /api/v1/query` (Phase 1) is frozen — never modified.
 
-#### LangGraph State Machine
-```python
-class AgentState(TypedDict):
-    session_id: str
-    query: str
-    query_rewritten: str | None
-    query_type: Literal["factual", "analytical", "multi_hop", "ambiguous"]
-    retrieval_strategy: Literal["dense", "hybrid", "web"]
-    retrieved_docs: list[Document]
-    graded_docs: list[Document]
-    answer: str | None
-    citations: list[Citation]
-    confidence: float
-    hallucination_risk: float
-    fallback_triggered: bool
-    steps_taken: list[str]
-    user_id: str
+#### 2a — Gate Zero (Tier 3 Pre-requisites)
+
+> **Hard gate.** No Phase 2b code begins until all four items are committed and CI is green.
+
+- **LangGraph + LangChain bundle version lock** — tilde-pinned (`~major.minor.patch`), not caret. Verify `StateGraph`, `add_conditional_edges`, `CompiledStateGraph.astream()`, and `SqliteSaver` import path against confirmed version before writing any node.
+- **ADR-004 amendment** — append to `docs/adr/004-langgraph-vs-chain.md`: confirmed version, SqliteSaver import path, `stream_mode="updates"` decision, single-writer constraint (`--workers 1` for Phase 2; `PostgresSaver` for Phase 7), `X-Session-ID` header contract, `duration_ms` commitment.
+- **`AgentState` TypedDict** — defined in `backend/src/graph/state.py` before any node. All fields + `Annotated` reducers for `retrieved_docs` (operator.add), `messages` (add_messages), `steps_taken` (operator.add). Unit tested (≥ 4 reducer tests).
+- **`AgentStreamEvent` TypeScript union** — `AgentStepEvent` discriminated union added to `frontend/src/types/index.ts` before any hook or component.
+
+#### 2b — Graph Skeleton (StateGraph + Builder)
+
+All stub nodes first — proves topology and wiring before any LLM logic:
+- `backend/src/graph/` module with stub node functions (return hardcoded partial state — not `NotImplementedError`)
+- `edges.py` — `route_after_grader` and `route_after_critic` (pure functions, no LLM, fully unit tested)
+- `builder.py` — `build_graph(settings, retriever) → CompiledStateGraph`; injects retriever singleton via closure
+- `app.state.compiled_graph` added to lifespan in `main.py`; `CompiledGraphDep` added to `deps.py`
+- New Settings field: `SQLITE_CHECKPOINTER_PATH` (default: `data/checkpointer.sqlite`)
+
+#### 2c — Agent Nodes
+
+```
+AgentState flow:
+START → Router → Retriever → Grader → Generator → Critic → END
+                    ↑           |                    |
+                    └───────────┘ (CRAG web fallback) └──── (Self-RAG re-retrieve)
 ```
 
-#### Agent Nodes
+| Agent | LLM | Agentic Pattern | Key Output Fields |
+|-------|-----|-----------------|-------------------|
+| **Router** | GPT-4o-mini | Adaptive RAG · HyDE · Step-back | `query_type`, `retrieval_strategy`, `query_rewritten` |
+| **Retriever** | None | CRAG trigger | `retrieved_docs` (append reducer), `web_fallback_used` |
+| **Grader** | GPT-4o-mini | CRAG gate | `grader_scores`, `graded_docs`, `all_below_threshold`, `retry_count` |
+| **Generator** | GPT-4o | — | `answer`, `citations`, `confidence`, appends to `messages` |
+| **Critic** | GPT-4o-mini | Self-RAG | `critic_score` (hallucination risk [0–1]) |
 
-| Agent | Input | Output | Model |
-|-------|-------|--------|-------|
-| **Router** | Raw query | query_type, retrieval_strategy | GPT-4o-mini (cheap, fast) |
-| **Retriever** | Rewritten query + strategy | retrieved_docs | No LLM — pure retrieval |
-| **Grader** | retrieved_docs | graded_docs, relevance_scores | GPT-4o-mini |
-| **Generator** | graded_docs + query | answer, citations | GPT-4o |
-| **Critic** | answer + graded_docs | hallucination_risk, decision | GPT-4o-mini |
+- **Adaptive RAG**: Router classifies `query_type` and sets `retrieval_strategy` accordingly
+- **HyDE**: For `analytical` queries, Router generates a hypothetical document, stores in `query_rewritten`
+- **Step-back prompting**: For `multi_hop` queries, Router rewrites to more general form
+- **CRAG**: If all `grader_scores < 0.5` and `retry_count < 1`, edge routes back to Retriever with Tavily web search
+- **Self-RAG**: If `critic_score > 0.7` and `retry_count < 1`, edge routes back to Retriever with refined query
+- **Max retry guard**: `MAX_RETRIES = 1` enforced in edge functions (not nodes)
+- Cost discipline: GPT-4o only for Generator (quality-critical); GPT-4o-mini for all classification/scoring nodes
 
-#### Conditional Routing (Edges)
-```
-START
-  → Router
-  → Retriever
-  → Grader
-      → [all docs poor] → WebSearch → Generator
-      → [docs OK]       → Generator
-  → Critic
-      → [hallucination risk high] → Retriever (refined query, max 1 retry)
-      → [answer grounded]         → END
-```
+#### 2d — Agentic API Endpoint
 
-#### Agentic Patterns Implemented
-1. **Corrective RAG (CRAG)** — Grader triggers Tavily web search fallback when all chunks score < 0.5
-2. **Self-RAG** — Critic checks grounding; re-retrieves with refined query if risk > 0.7
-3. **Adaptive RAG** — Router selects retrieval strategy per query type:
-   - `factual` → hybrid (dense + BM25)
-   - `analytical` → dense with larger k
-   - `multi_hop` → query decomposition (Phase 3)
-   - `ambiguous` → clarification or best-effort
+- **New endpoint: `POST /api/v1/query/agentic`** — separate from existing `POST /api/v1/query` (frozen)
+- **`X-Session-ID` header** — read from request headers, not body; passed as `config={"configurable": {"thread_id": session_id}}`
+- **SSE wire format** (new event types — additive, existing format unchanged):
+  ```
+  {"type": "agent_step", "node": "router", "payload": {"query_type": "...", "strategy": "...", "duration_ms": 142}}
+  {"type": "agent_step", "node": "grader", "payload": {"scores": [...], "web_fallback": false, "duration_ms": 380}}
+  {"type": "agent_step", "node": "critic", "payload": {"hallucination_risk": 0.31, "reruns": 0, "duration_ms": 210}}
+  {"type": "token", "content": "..."}
+  {"type": "citations", "citations": [...], "confidence": 0.87, "chunks_retrieved": 5}
+  {"type": "done"}
+  ```
+- **`duration_ms` in every `agent_step` payload** — day-one commitment; retrofitting requires wire format version bump
+- **Next.js proxy** — `/api/proxy/query/agentic/route.ts` forwards `X-Session-ID` header; API key stays server-side
 
-#### Query Rewriting
-- **HyDE** (Hypothetical Document Embeddings): generate a hypothetical answer, embed it, use that vector to retrieve — improves dense recall for abstract questions
-- **Step-back prompting**: reframe specific questions as general principles before retrieval
+#### 2e — Parallel-View Chat UI
 
-#### Conversational Memory
+The UI is the portfolio demonstration surface for the Phase 2 decision.
 
-> **Note:** Confirm `SqliteSaver` import path for the locked LangGraph version before writing checkpointer code — it may have moved to a separate `langgraph-checkpoint-sqlite` package. See [T3-4](docs/stack-upgrade-proposal.md#t3-4-confirm-sqlitesaver-import-path).
+**Layout:** `grid grid-cols-2` — "Static Chain" (left, existing components) vs "Agentic Pipeline" (right, new `AgentPanel`)
 
-- LangGraph `SqliteSaver` checkpointer: one SQLite DB per session
-- Session ID passed in API request header (`X-Session-ID`)
-- Agent references prior turns in context window (last 5 exchanges)
+**New components:**
+- `useAgentStream` hook — parallel to `useStream`; manages `sessionId` in `sessionStorage`; handles `agent_step` events by appending to `AgentMessage.agentSteps`
+- `AgentTrace` — per-node step cards: Router (human-readable query type + strategy badges), Grader (score bars, web fallback indicator), Critic (color-coded hallucination risk gauge: green/amber/red)
+- `AgentPanel` — composes existing `ChatMessage`, `CitationList`, `ConfidenceBadge` + new `AgentTrace`
+- `SharedInput` — fires both hooks simultaneously; **functional guard** (not just visual) blocks submit while either stream active
+- `AgentVerdict` — post-completion: compares static `confidence` vs agentic `critic_score`; one-sentence verdict
+- Per-node latency bars — proportional `duration_ms` visualization; hidden during streaming
+
+**Correctness constraint:** `SharedInput.onSubmit` must be a no-op (not just disabled) while `staticStreaming || agentStreaming`. Concurrent submission to same `session_id` SqliteSaver thread causes write corruption.
+
+**UX labels:** Router payload mapped to human-readable strings — `"factual"` → `"Direct fact lookup"`, `"multi_hop"` → `"Multi-step reasoning"`, `"ambiguous"` → `"Needs clarification"`.
+
+#### 2f — Agentic Pipeline Evaluation
+
+- RAGAS re-run against `POST /api/v1/query/agentic` using the same 20-question golden dataset
+- New output: `data/eval_agentic_baseline.json` (same schema as static baseline)
+- Phase 2 gate: faithfulness ≥ 0.85; no regression below static chain baseline (0.9028)
+- `GET /api/v1/eval/baseline?pipeline=agentic` — new query param on existing endpoint
+- Comparison report: `docs/evaluation_agentic_results.md` — CRAG/Self-RAG activation rates, per query type breakdown, latency impact
+
+**Phase 2 gate (all must pass):**
+- [ ] 2a: LangGraph version locked · ADR-004 amended · AgentState unit tests green · TS types committed
+- [ ] 2b: Graph compiles · edge tests green · no orphaned stubs
+- [ ] 2c: All 5 nodes implemented · ≥ 27 new tests · all error paths covered
+- [ ] 2d: SSE endpoint live · `duration_ms` in all agent_step payloads · `query.py` unchanged
+- [ ] 2e: Both panels demo-able · SharedInput guard correct · ≥ 66 total frontend tests
+- [ ] 2f: RAGAS faithfulness ≥ 0.85 · comparison report complete
+- [ ] `mypy backend/src/ --strict` · `ruff check` · `tsc --noEmit` — all zero errors/warnings
+- [ ] `npm run build` · `docker compose up` — succeed
 
 ---
 
