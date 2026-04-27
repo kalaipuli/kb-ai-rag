@@ -16,6 +16,7 @@ from langchain_openai import AzureChatOpenAI
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.state import CompiledStateGraph
+from tavily import TavilyClient
 
 from src.config import Settings
 from src.graph.edges import route_after_critic, route_after_grader
@@ -59,8 +60,10 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
     async def _router_node(state: AgentState) -> dict[str, Any]:
         return await router_node(state, llm=llm)
 
+    tavily_client = TavilyClient(api_key=settings.tavily_api_key.get_secret_value())
+
     async def _retriever_node(state: AgentState) -> dict[str, Any]:
-        return await retriever_node(state, retriever=retriever)
+        return await retriever_node(state, retriever=retriever, tavily_client=tavily_client)
 
     async def _grader_node(state: AgentState) -> dict[str, Any]:
         return await grader_node(state, llm=llm)

@@ -2,7 +2,7 @@
 
 import re
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from langchain_core.documents import Document
@@ -116,18 +116,11 @@ async def test_web_strategy_calls_tavily_and_sets_fallback_flag() -> None:
         ]
     }
 
-    mock_client_instance = MagicMock()
-    mock_client_instance.search.return_value = tavily_response
+    mock_client = MagicMock()
+    mock_client.search.return_value = tavily_response
 
-    with patch("src.graph.nodes.retriever.get_settings") as mock_settings_fn, patch(
-        "tavily.TavilyClient", return_value=mock_client_instance
-    ):
-        mock_settings = MagicMock()
-        mock_settings.tavily_api_key.get_secret_value.return_value = "fake-key"
-        mock_settings_fn.return_value = mock_settings
-
-        state = _make_state(strategy="web")
-        result = await retriever_node(state)
+    state = _make_state(strategy="web")
+    result = await retriever_node(state, tavily_client=mock_client)
 
     assert result["web_fallback_used"] is True
     docs = result["retrieved_docs"]
@@ -146,15 +139,11 @@ async def test_web_strategy_calls_tavily_and_sets_fallback_flag() -> None:
 
 @pytest.mark.asyncio
 async def test_tavily_error_returns_empty_docs_without_raising() -> None:
-    with patch("src.graph.nodes.retriever.get_settings") as mock_settings_fn, patch(
-        "tavily.TavilyClient", side_effect=RuntimeError("Tavily unavailable")
-    ):
-        mock_settings = MagicMock()
-        mock_settings.tavily_api_key.get_secret_value.return_value = "fake-key"
-        mock_settings_fn.return_value = mock_settings
+    mock_client = MagicMock()
+    mock_client.search.side_effect = RuntimeError("Tavily unavailable")
 
-        state = _make_state(strategy="web")
-        result = await retriever_node(state)
+    state = _make_state(strategy="web")
+    result = await retriever_node(state, tavily_client=mock_client)
 
     assert result["web_fallback_used"] is False
     assert result["retrieved_docs"] == []

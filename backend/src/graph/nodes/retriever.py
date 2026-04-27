@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 import structlog
 from langchain_core.documents import Document
 
-from src.config import get_settings
 from src.graph.state import AgentState
 
 if TYPE_CHECKING:
@@ -51,12 +50,14 @@ async def retriever_node(
     state: AgentState,
     *,
     retriever: RetrieverProtocol | None = None,
+    tavily_client: Any | None = None,
 ) -> dict[str, Any]:
     """Retrieve documents and return a partial AgentState update.
 
     Branches on ``state.retrieval_strategy``:
     - ``"dense"`` / ``"hybrid"`` → delegates to *retriever* (HybridRetriever).
-    - ``"web"`` → calls the Tavily API; sets ``web_fallback_used = True``.
+    - ``"web"`` → calls the Tavily API via *tavily_client*; sets
+      ``web_fallback_used = True``.
 
     On any retrieval error the node logs a warning and returns an empty
     ``retrieved_docs`` list — it never propagates exceptions.
@@ -65,6 +66,8 @@ async def retriever_node(
         state: Current AgentState snapshot.
         retriever: Injected HybridRetriever (must be provided for dense/hybrid
             strategies; may be ``None`` only when strategy is ``"web"``).
+        tavily_client: Injected TavilyClient singleton (required for web
+            strategy; constructed once in build_graph()).
 
     Returns:
         Partial state dict with ``retrieved_docs``, ``web_fallback_used``, and
@@ -109,44 +112,34 @@ async def retriever_node(
                 docs = []
 
     elif strategy == "web":
-        settings = get_settings()
-        try:
-            from tavily import TavilyClient
-
-            api_key = settings.tavily_api_key.get_secret_value()
-            max_results = k if k is not None else 5
-            client = TavilyClient(api_key=api_key)
-            response: dict[str, Any] = await asyncio.to_thread(
-                client.search,
-                query=effective_query,
-                max_results=max_results,
-            )
-            raw_results: list[dict[str, Any]] = response.get("results", [])
-            docs = [
-                Document(
-                    page_content=r["content"],
-                    metadata={
-                        "source": r["url"],
-                        "title": r.get("title", ""),
-                        "score": float(r.get("score", 0.0)),
-                    },
+        if tavily_client is None:
+            log.warning("tavily_client_not_injected", query=effective_query)
+        else:
+            try:
+                max_results = k if k is not None else 5
+                response: dict[str, Any] = await asyncio.to_thread(
+                    tavily_client.search,
+                    query=effective_query,
+                    max_results=max_results,
                 )
-                for r in raw_results
-            ]
-            web_fallback_used = True
-            log.info(
-                "retriever_web_complete",
-                doc_count=len(docs),
-                query_len=len(effective_query),
-            )
-        except Exception as exc:
-            log.warning(
-                "retriever_web_failed",
-                error=str(exc),
-                query=effective_query,
-            )
-            docs = []
-            web_fallback_used = False
+                raw_results: list[dict[str, Any]] = response.get("results", [])
+                docs = [
+                    Document(
+                        page_content=r["content"],
+                        metadata={
+                            "source": r["url"],
+                            "title": r.get("title", ""),
+                            "score": float(r.get("score", 0.0)),
+                        },
+                    )
+                    for r in raw_results
+                ]
+                web_fallback_used = True
+                log.info("retriever_web_complete", doc_count=len(docs), query_len=len(effective_query))
+            except Exception as exc:
+                log.warning("retriever_web_failed", error=str(exc), query=effective_query)
+                docs = []
+                web_fallback_used = False
     else:
         log.warning(
             "retriever_unknown_strategy",
