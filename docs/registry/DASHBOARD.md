@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-27 (Phase 2c architect fixes cleared · 307 unit tests · mypy strict 0 errors · ruff clean · ADR-010 added · Phase 2d Agentic API unblocked)
+> Maintained by: project-manager agent | Last updated: 2026-04-27 (Phase 2e Parallel UI complete · useAgentStream · AgentTrace · AgentPanel · SharedInput · AgentVerdict · parallel grid layout · 96 frontend tests · tsc clean · eslint clean · build succeeds)
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -17,8 +17,8 @@ This is the single cross-phase status view. For task-level detail, open the link
 | 2a | Gate Zero (Tier 3 Pre-requisites) | [2a](phase2/2a-gate-zero/tasks.md) · [fixes](phase2/2a-gate-zero/fixes.md) | ✅ Complete | Passed 2026-04-27 · Fixes cleared 2026-04-27 |
 | 2b | Graph Skeleton (StateGraph + Builder) | [2b](phase2/2b-graph-skeleton/tasks.md) · [fixes](phase2/2b-graph-skeleton/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · Fixes cleared 2026-04-27 |
 | 2c | Agent Nodes (Router · Retriever · Grader · Generator · Critic) | [2c](phase2/2c-agent-nodes/tasks.md) · [fixes](phase2/2c-agent-nodes/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · Fixes cleared 2026-04-27 |
-| 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | — |
-| 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ⏳ Not Started | — |
+| 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · All 9 fixes cleared 2026-04-27 |
+| 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | Passed 2026-04-27 |
 | 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) | ⏳ Not Started | — |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
@@ -53,8 +53,8 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 | 2a Gate Zero | [tasks](phase2/2a-gate-zero/tasks.md) · [fixes](phase2/2a-gate-zero/fixes.md) | ✅ Complete | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field schema · AgentStreamEvent TS union · 6 architect fixes cleared |
 | 2b Graph Skeleton | [tasks](phase2/2b-graph-skeleton/tasks.md) · [fixes](phase2/2b-graph-skeleton/fixes.md) | ✅ Complete | 5 stub nodes · edges.py · builder.py · AsyncSqliteSaver · CompiledGraphDep · 271 tests · fixes cleared 2026-04-27 |
 | 2c Agent Nodes | [tasks](phase2/2c-agent-nodes/tasks.md) · [fixes](phase2/2c-agent-nodes/fixes.md) | ✅ Complete | All 5 nodes real (Adaptive RAG · HyDE · step-back · CRAG · Self-RAG) · 307 tests · 9 architect fixes cleared 2026-04-27 · ADR-010 added |
-| 2d Agentic API | [tasks](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | POST /api/v1/query/agentic · agent_step SSE events · X-Session-ID · Next.js proxy |
-| 2e Parallel UI | [tasks](phase2/2e-parallel-ui/tasks.md) | ⏳ Not Started | useAgentStream · AgentTrace · SharedInput · grid layout · verdict · latency bars |
+| 2d Agentic API | [tasks](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | POST /api/v1/query/agentic · all 5 SSE event types · X-Session-ID session routing · Next.js proxy · 316 tests · architect review + 9 fixes cleared 2026-04-27 |
+| 2e Parallel UI | [tasks](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | useAgentStream · AgentTrace · AgentPanel · SharedInput · AgentVerdict · grid layout · verdict · latency bars · 96 frontend tests · 2026-04-27 |
 | 2f Evaluation | [tasks](phase2/2f-evaluation/tasks.md) | ⏳ Not Started | RAGAS re-run on agentic endpoint · comparison report · baseline ≥ 0.85 |
 
 **Completed phases:** Phase 1 (✅ 201 unit tests · 54 frontend tests) · Phase 1g (✅ 241 unit tests · 5-metric RAGAS baseline) · Phase 1h (✅ retrieval scores in SSE · eval baseline endpoint · quality panel)
@@ -63,7 +63,7 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 
 ## Currently In Progress
 
-_Phase 2c complete 2026-04-27. 306 unit tests green · mypy strict 0 errors · ruff clean. All 5 nodes (Router, Retriever, Grader, Generator, Critic) fully implemented with real LLM logic. Agentic patterns: Adaptive RAG, HyDE, step-back (Router), CRAG gate (Grader→edge), Self-RAG (Critic→edge). Integration smoke tests cover all 4 routing paths. Phase 2d Agentic API is now unblocked._
+_Phase 2e complete 2026-04-27. All 8 tasks done. 96 frontend tests green (54 existing + 42 new) · tsc --noEmit zero errors · eslint zero warnings · npm run build succeeds. Parallel-view chat page with `grid grid-cols-2` layout: Static Chain (left) vs Agentic Pipeline (right). SharedInput fires both hooks simultaneously with functional no-op guard while streaming. AgentTrace renders Router/Grader/Critic step cards with human-readable labels and latency bars after streaming ends. AgentVerdict computes post-completion winner from criticRisk, webFallback, and confidence delta. SessionID persisted in sessionStorage. Phase 2f Evaluation is now unblocked._
 
 ---
 
@@ -490,6 +490,6 @@ _Phase 2c complete 2026-04-27. 306 unit tests green · mypy strict 0 errors · r
 | 2a | 2026-04-27 | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field TypedDict · AgentStreamEvent TS union · 260 unit tests · mypy strict 0 errors · 6 architect fixes cleared 2026-04-27 |
 | 2b | 2026-04-27 | 271 unit tests · mypy strict 0 errors · ruff clean · 5 stub nodes · AsyncSqliteSaver checkpointer · architect review + fixes cleared 2026-04-27 — see [fixes.md](phase2/2b-graph-skeleton/fixes.md) |
 | 2c | 2026-04-27 | 307 unit tests · mypy strict 0 errors · ruff clean · all 5 nodes real · 4-path integration smoke test · 9 architect fixes cleared · ADR-010 (Tavily) added |
-| 2d | — | ⏳ Pending — depends on 2c gate |
-| 2e | — | ⏳ Pending — depends on 2d gate |
+| 2d | 2026-04-27 | 316 unit tests · mypy strict 0 errors · ruff clean · tsc clean · POST /api/v1/query/agentic · Next.js proxy · Phase 1 query.py unchanged · architect review 9/9 fixes cleared 2026-04-27 |
+| 2e | 2026-04-27 | 96 frontend tests · tsc clean · eslint clean · build succeeds · parallel grid layout · SharedInput functional guard · AgentTrace human-readable labels · latency bars · AgentVerdict verdict logic |
 | 2f | — | ⏳ Pending — depends on 2e gate; RAGAS faithfulness ≥ 0.85 required |
