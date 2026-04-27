@@ -19,16 +19,22 @@ export function AgentPanel({ messages, isStreaming, error }: AgentPanelProps): J
           {error.message}
         </div>
       )}
-      {messages.map((message) => (
-        <div key={message.id}>
-          <ChatMessage message={message} />
-          {message.role === "assistant" &&
-            message.agentSteps &&
-            message.agentSteps.length > 0 && (
-              <AgentTrace steps={message.agentSteps} isStreaming={isStreaming} />
-            )}
-        </div>
-      ))}
+      {messages.map((message, index) => {
+        const isLastMessage = index === messages.length - 1;
+        return (
+          <div key={message.id}>
+            <ChatMessage message={message} />
+            {message.role === "assistant" &&
+              message.agentSteps &&
+              message.agentSteps.length > 0 && (
+                <AgentTrace
+                  steps={message.agentSteps}
+                  isStreaming={isStreaming && isLastMessage}
+                />
+              )}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -11,7 +11,7 @@
 | ID | Severity | Status | Category | Summary | Depends On | Assigned To |
 |----|----------|--------|----------|---------|------------|-------------|
 | F01 | Major | ✅ | DRY / Single-Definition | `isCriticPayload` and `isGraderPayload` duplicated verbatim in `AgentTrace.tsx` and `AgentVerdict.tsx` | — | frontend-developer |
-| F02 | Minor | ⏳ | Visual Correctness | `isStreaming` passed to all `AgentTrace` instances; older completed traces show a spinner during new-message streaming | — | frontend-developer |
+| F02 | Minor | ✅ Fixed | Visual Correctness | `isStreaming` passed to all `AgentTrace` instances; older completed traces show a spinner during new-message streaming | — | frontend-developer |
 | F03 | Advisory | ⏳ | Type Hygiene | `AgentVerdictProps`, `VerdictWinner`, and `Verdict` are defined locally in `AgentVerdict.tsx`; `AgentVerdictProps` is not shared across components but shares the `AgentMessage` / `Message` domain; assess whether they belong in `src/types/index.ts` | — | frontend-developer |
 
 ---
@@ -146,8 +146,8 @@ F01 and F02 must be cleared before Phase 2f begins. F03 may be deferred to the P
 - [x] F01: Unit test for `agentTypeGuards.ts` — 9 test cases (3 per guard: positive + 2 negative)
 - [x] F01: `npm run lint` — zero warnings
 - [x] F01: `npm run build` — succeeds
-- [ ] F02: `AgentPanel` passes `isStreaming && isLastMessage` to each `AgentTrace`
-- [ ] F02: `npm run test -- --testPathPattern=AgentPanel` — passes
-- [ ] F02: `npm run build` — succeeds
+- [x] F02: `AgentPanel` passes `isStreaming && isLastMessage` to each `AgentTrace`
+- [x] F02: `npm run test -- --testPathPattern=AgentPanel` — passes (3 tests, 108 total)
+- [x] F02: `npm run build` — succeeds
 - [ ] F03 (Advisory): `AgentVerdictProps` moved to `src/types/index.ts`
 - [ ] F03 (Advisory): `npx tsc --noEmit` — zero errors
