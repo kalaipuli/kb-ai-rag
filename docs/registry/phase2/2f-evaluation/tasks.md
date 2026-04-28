@@ -1,6 +1,6 @@
 # Phase 2f — Agentic Pipeline Evaluation
 
-> Status: 🔄 In Progress | Phase: 2f | Estimated Days: 1–2
+> Status: ✅ Complete | Phase: 2f | Gate Passed: 2026-04-28
 > Governed by: CLAUDE.md §9 — all tasks follow the Definition of Done checklist (§7)
 > Last updated: 2026-04-28
 >
@@ -42,10 +42,10 @@ If the agentic pipeline achieves faithfulness ≥ 0.9028 (matching or exceeding 
 | ID | Status | Task | Agent | Depends On |
 |----|--------|------|-------|------------|
 | T01 | ✅ Done | Extend `EvaluationRunner` to support the agentic pipeline endpoint | backend-developer | 2e all |
-| T02 | ⏳ Pending | Run RAGAS evaluation against agentic endpoint; persist results | backend-developer | T01 |
-| T03 | ⏳ Pending | Produce comparison report (static vs agentic, per query type) | backend-developer | T02 |
+| T02 | ✅ Done | Run RAGAS evaluation against agentic endpoint; persist results | backend-developer | T01 |
+| T03 | ✅ Done | Produce comparison report (static vs agentic, per query type) | backend-developer | T02 |
 | T04 | ✅ Done | Extend `GET /api/v1/eval/baseline` with `?pipeline=agentic` query parameter | backend-developer | T02 |
-| T05 | ⏳ Pending | Phase 2 full gate review | architect | T01–T04 |
+| T05 | ✅ Done | Phase 2 full gate review | architect | T01–T04 |
 
 ---
 

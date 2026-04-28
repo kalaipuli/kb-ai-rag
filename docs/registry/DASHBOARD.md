@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-28 (Phase 2f In Progress · T01 EvaluationRunner done · T04 eval baseline ?pipeline=agentic done · retry_count init bug fixed · 331 backend tests · T02 live eval pending container rebuild)
+> Maintained by: project-manager agent | Last updated: 2026-04-28 (Phase 2 COMPLETE · Phase 2f RAGAS faithfulness 0.9528 · 332 backend tests · 108 frontend tests · all 15 gate criteria verified)
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -19,7 +19,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 | 2c | Agent Nodes (Router · Retriever · Grader · Generator · Critic) | [2c](phase2/2c-agent-nodes/tasks.md) · [fixes](phase2/2c-agent-nodes/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · Fixes cleared 2026-04-27 |
 | 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · All 9 fixes cleared 2026-04-27 |
 | 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | Passed 2026-04-27 |
-| 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) | 🔄 In Progress | T01 ✅ · T04 ✅ · T02/T03 pending live eval |
+| 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) | ✅ Complete | Passed 2026-04-28 · faithfulness 0.9528 |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
 | 5 | Observability & Evaluation | — | ⏳ Not Started | — |
@@ -44,7 +44,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 
 ## Active Phase
 
-**Phase 2 — Agentic Pipeline (LangGraph + Parallel-View UI)** 🔄 In Progress — started 2026-04-26
+**Phase 2 — Agentic Pipeline (LangGraph + Parallel-View UI)** ✅ Complete — 2026-04-28
 
 Scope change from original plan: the Phase 2 UI introduces a **parallel-view chat interface** with two simultaneous panels — Static Chain (Phase 1 LCEL, unchanged) vs Agentic Pipeline (Phase 2 LangGraph). Both pipelines run concurrently on the same query, enabling direct latency and quality comparison. Architect review completed 2026-04-26.
 
@@ -55,7 +55,7 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 | 2c Agent Nodes | [tasks](phase2/2c-agent-nodes/tasks.md) · [fixes](phase2/2c-agent-nodes/fixes.md) | ✅ Complete | All 5 nodes real (Adaptive RAG · HyDE · step-back · CRAG · Self-RAG) · 307 tests · 9 architect fixes cleared 2026-04-27 · ADR-010 added |
 | 2d Agentic API | [tasks](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | POST /api/v1/query/agentic · all 5 SSE event types · X-Session-ID session routing · Next.js proxy · 316 tests · architect review + 9 fixes cleared 2026-04-27 |
 | 2e Parallel UI | [tasks](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | useAgentStream · AgentTrace · AgentPanel · SharedInput · AgentVerdict · grid layout · verdict · latency bars · 96 frontend tests · 2026-04-27 |
-| 2f Evaluation | [tasks](phase2/2f-evaluation/tasks.md) | 🔄 In Progress | T01 EvaluationRunner ✅ · T04 eval baseline API ✅ · retry_count bug fixed · T02 live eval pending |
+| 2f Evaluation | [tasks](phase2/2f-evaluation/tasks.md) | ✅ Complete | EvaluationRunner · eval baseline API · RAGAS run · comparison report · faithfulness 0.9528 |
 
 **Completed phases:** Phase 1 (✅ 201 unit tests · 54 frontend tests) · Phase 1g (✅ 241 unit tests · 5-metric RAGAS baseline) · Phase 1h (✅ retrieval scores in SSE · eval baseline endpoint · quality panel)
 
@@ -63,7 +63,7 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 
 ## Currently In Progress
 
-_Phase 2f In Progress 2026-04-28. T01 complete: `backend/src/evaluation/runner.py` — `EvaluationRunner` class with `endpoint: Literal["static", "agentic"]`, httpx SSE consumption, 60s per-question timeout, 10 unit tests. T04 complete: `GET /api/v1/eval/baseline?pipeline=agentic` routing added, 4 new route tests. Critical bug fixed: `retry_count` was missing from initial state in `query_agentic.py` — grader node raised `KeyError: 'retry_count'` on every request. Fix committed (`"retry_count": 0` added to initial_state). T02 (live RAGAS eval) requires container rebuild before re-run. Total backend tests: 331 (330 existing + 1 new regression test for retry_count). Awaiting: `docker compose build backend && docker compose up -d` then `poetry run python scripts/run_eval_agentic.py`._
+_Phase 2 complete 2026-04-28. Phase 2f gate: faithfulness 0.9528 (gate ≥ 0.85, static baseline 0.9028) — PASS and exceeds baseline. CRAG activation: 0/20 (grader always passed ≥1 chunk). Self-RAG activation: 0/20 (critic score always 0.0). 332 backend unit tests · 108 frontend tests · mypy strict 0 errors · ruff clean · tsc clean · eslint clean. Two bugs found and fixed: (1) retry_count not initialized in initial_state of query_agentic.py — grader raised KeyError on every request; (2) citations SSE event missing retrieved_contexts field — RAGAS computed 0 faithfulness because contexts were filename strings not chunk text. Both fixes committed. Comparison report: docs/evaluation_agentic_results.md._
 
 ---
 
@@ -492,4 +492,4 @@ _Phase 2f In Progress 2026-04-28. T01 complete: `backend/src/evaluation/runner.p
 | 2c | 2026-04-27 | 307 unit tests · mypy strict 0 errors · ruff clean · all 5 nodes real · 4-path integration smoke test · 9 architect fixes cleared · ADR-010 (Tavily) added |
 | 2d | 2026-04-27 | 316 unit tests · mypy strict 0 errors · ruff clean · tsc clean · POST /api/v1/query/agentic · Next.js proxy · Phase 1 query.py unchanged · architect review 9/9 fixes cleared 2026-04-27 |
 | 2e | 2026-04-27 | 96 frontend tests · tsc clean · eslint clean · build succeeds · parallel grid layout · SharedInput functional guard · AgentTrace human-readable labels · latency bars · AgentVerdict verdict logic |
-| 2f | — | ⏳ Pending — depends on 2e gate; RAGAS faithfulness ≥ 0.85 required |
+| 2f | 2026-04-28 | faithfulness 0.9528 ≥ 0.85 — PASS and exceeds static baseline 0.9028 |
