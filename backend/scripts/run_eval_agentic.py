@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import dataclasses
 import json
 import sys
 from datetime import date
@@ -31,7 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.config import Settings
-from src.evaluation.ragas_eval import EvaluationResult, load_baseline, save_baseline
+from src.evaluation.ragas_eval import load_baseline, save_baseline
 from src.evaluation.runner import EvaluationRunner
 
 DEFAULT_DATASET = Path(__file__).parent.parent / "src" / "evaluation" / "golden_dataset.json"
