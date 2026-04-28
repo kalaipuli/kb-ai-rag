@@ -321,3 +321,42 @@ class TestQueryAgenticEndpoint:
         assert payload["query_type"] == "factual"
         assert payload["strategy"] == "hybrid"
         assert payload["duration_ms"] == 45
+
+    def test_initial_state_includes_retry_count_zero(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """initial_state passed to astream must include retry_count=0 to prevent KeyError in grader."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        captured_state: dict[str, Any] = {}
+
+        async def _astream(
+            state: Any, *_args: Any, **_kwargs: Any
+        ) -> AsyncIterator[dict[str, Any]]:
+            if isinstance(state, dict):
+                captured_state.update(state)
+            for chunk in _make_astream_chunks():
+                yield chunk
+
+        mock_graph = MagicMock()
+        mock_graph.astream = _astream
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test retry_count"},
+                headers=authenticated_headers,
+            ) as response:
+                assert response.status_code == 200
+                list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        assert "retry_count" in captured_state, "retry_count must be in initial_state"
+        assert captured_state["retry_count"] == 0, "retry_count must start at 0"

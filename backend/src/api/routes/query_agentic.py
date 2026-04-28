@@ -98,6 +98,7 @@ async def query_agentic_endpoint(
         "query": body.query,
         "filters": body.filters,
         "k": body.k,
+        "retry_count": 0,
     }
     config: RunnableConfig = {"configurable": {"thread_id": session_id}}
 
