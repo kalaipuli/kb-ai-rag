@@ -33,12 +33,20 @@ class _GradeDoc(BaseModel):
     reasoning: str  # for LangSmith trace only; not stored in state
 
 
-async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, Any]:
+async def grader_node(
+    state: AgentState, *, llm: AzureChatOpenAI, web_search_enabled: bool
+) -> dict[str, Any]:
     """Score each retrieved document for relevance to the user query.
 
     Uses GPT-4o-mini with structured output to produce a float score per chunk.
     Chunks scoring below settings.grader_threshold are filtered from graded_docs.
     Increments retry_count by 1 — the edge function uses this to gate re-routing.
+
+    CRAG escalation: when all scores are below threshold and the post-increment
+    retry_count >= 2, this node writes retrieval_strategy="web" into the return dict
+    to signal the retriever node to fall back to Tavily on the next attempt. This only
+    applies when web_search_enabled=True and web_fallback_used=False (guards against
+    double-escalation). Edge functions remain pure routing strings and do not mutate state.
 
     Raises:
         GraderError: when every batch fails, leaving no usable scores.
@@ -46,10 +54,13 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
     Args:
         state: Current AgentState containing retrieved_docs and query.
         llm: AzureChatOpenAI instance injected by the builder closure.
+        web_search_enabled: Whether Tavily web search is available. Captured in the
+            build_graph() closure — it is infrastructure state, not graph state.
 
     Returns:
         Partial state update with grader_scores, graded_docs, all_below_threshold,
-        retry_count, and steps_taken.
+        retry_count, and steps_taken. Optionally includes retrieval_strategy="web"
+        when CRAG escalation conditions are met.
     """
     settings = get_settings()
     query = state["query"]
@@ -114,6 +125,9 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
     duration_ms = round((time.monotonic() - start) * 1000)
     step = f"grader:scored={len(scores)}:passed={len(graded_docs)}:{duration_ms}ms"
 
+    new_retry_count = state["retry_count"] + 1
+    web_fallback_used: bool = state["web_fallback_used"]
+
     log.info(
         "grader_complete",
         total_chunks=len(docs),
@@ -122,10 +136,21 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
         duration_ms=duration_ms,
     )
 
-    return {
+    result: dict[str, Any] = {
         "grader_scores": scores,
         "graded_docs": graded_docs,
         "all_below_threshold": all_below,
-        "retry_count": state["retry_count"] + 1,
+        "retry_count": new_retry_count,
         "steps_taken": [step],
     }
+
+    if (
+        all_below
+        and new_retry_count >= 2
+        and web_search_enabled
+        and not web_fallback_used
+    ):
+        log.info("grader_escalating_to_web", retry_count=new_retry_count)
+        result["retrieval_strategy"] = "web"
+
+    return result

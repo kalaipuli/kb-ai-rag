@@ -70,18 +70,19 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
         if settings.tavily_api_key.get_secret_value()
         else None
     )
+    web_search_enabled: bool = tavily_client is not None
 
     async def _retriever_node(state: AgentState) -> dict[str, Any]:
         return await retriever_node(state, retriever=retriever, tavily_client=tavily_client)
 
     async def _grader_node(state: AgentState) -> dict[str, Any]:
-        return await grader_node(state, llm=llm)
+        return await grader_node(state, llm=llm, web_search_enabled=web_search_enabled)
 
     async def _generator_node(state: AgentState) -> dict[str, Any]:
         return await generator_node(state, llm=llm_4o)
 
     async def _critic_node(state: AgentState) -> dict[str, Any]:
-        return await critic_node(state, llm=llm)
+        return await critic_node(state, llm=llm, web_search_enabled=web_search_enabled)
 
     graph: StateGraph = StateGraph(AgentState)
 

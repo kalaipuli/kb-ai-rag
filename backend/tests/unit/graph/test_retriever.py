@@ -70,7 +70,7 @@ async def test_hybrid_strategy_calls_retriever_and_returns_documents() -> None:
     state = _make_state(strategy="hybrid")
     result = await retriever_node(state, retriever=mock_retriever)
 
-    mock_retriever.retrieve.assert_awaited_once_with("What is RAG?", k=None, filters=None)
+    mock_retriever.retrieve.assert_awaited_once_with("What is RAG?", k=None, filters=None, mode="hybrid")
 
     docs = result["retrieved_docs"]
     assert len(docs) == 1
@@ -97,7 +97,7 @@ async def test_uses_query_rewritten_when_set() -> None:
     )
     await retriever_node(state, retriever=mock_retriever)
 
-    mock_retriever.retrieve.assert_awaited_once_with("rewritten query", k=None, filters=None)
+    mock_retriever.retrieve.assert_awaited_once_with("rewritten query", k=None, filters=None, mode="hybrid")
 
 
 # ---------------------------------------------------------------------------
@@ -189,12 +189,12 @@ async def test_steps_taken_contains_retriever_step_with_duration() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 7: dense strategy also calls HybridRetriever.retrieve (same path as hybrid)
+# Test 7: dense strategy forwards mode="dense" to HybridRetriever.retrieve
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_dense_strategy_calls_retriever() -> None:
+async def test_dense_strategy_forwards_mode_dense_to_retriever() -> None:
     raw = _make_retrieval_result(text="dense chunk")
     mock_retriever = MagicMock()
     mock_retriever.retrieve = AsyncMock(return_value=[raw])
@@ -202,6 +202,25 @@ async def test_dense_strategy_calls_retriever() -> None:
     state = _make_state(strategy="dense", k=3)
     result = await retriever_node(state, retriever=mock_retriever)
 
-    mock_retriever.retrieve.assert_awaited_once_with("What is RAG?", k=3, filters=None)
+    mock_retriever.retrieve.assert_awaited_once_with("What is RAG?", k=3, filters=None, mode="dense")
     assert len(result["retrieved_docs"]) == 1
     assert result["retrieved_docs"][0].page_content == "dense chunk"
+
+
+# ---------------------------------------------------------------------------
+# Test 8: hybrid strategy forwards mode="hybrid" to HybridRetriever.retrieve
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_hybrid_strategy_forwards_mode_hybrid_to_retriever() -> None:
+    raw = _make_retrieval_result(text="hybrid chunk")
+    mock_retriever = MagicMock()
+    mock_retriever.retrieve = AsyncMock(return_value=[raw])
+
+    state = _make_state(strategy="hybrid", k=5)
+    result = await retriever_node(state, retriever=mock_retriever)
+
+    mock_retriever.retrieve.assert_awaited_once_with("What is RAG?", k=5, filters=None, mode="hybrid")
+    assert len(result["retrieved_docs"]) == 1
+    assert result["retrieved_docs"][0].page_content == "hybrid chunk"

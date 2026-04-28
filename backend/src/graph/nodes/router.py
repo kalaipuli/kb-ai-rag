@@ -14,7 +14,7 @@ log = structlog.get_logger(__name__)
 
 class _RouterOutput(BaseModel):
     query_type: Literal["factual", "analytical", "multi_hop", "ambiguous"]
-    retrieval_strategy: Literal["dense", "hybrid", "web"]
+    retrieval_strategy: Literal["dense", "hybrid"]
     reasoning: str
 
 
@@ -22,7 +22,7 @@ class _RewriteOutput(BaseModel):
     rewritten_query: str
 
 
-_STRATEGY_MAP: dict[str, Literal["dense", "hybrid", "web"]] = {
+_STRATEGY_MAP: dict[str, Literal["dense", "hybrid"]] = {
     "factual": "hybrid",
     "analytical": "hybrid",
     "multi_hop": "hybrid",

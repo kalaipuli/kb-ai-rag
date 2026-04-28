@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pydantic import ValidationError
 
 from src.graph.nodes.router import router_node
 
@@ -182,3 +183,22 @@ async def test_steps_taken_contains_router_step_string() -> None:
     assert re.fullmatch(
         r"router:factual:hybrid:\d+ms", step
     ), f"step string '{step}' did not match expected pattern"
+
+
+# ---------------------------------------------------------------------------
+# Test 7: _RouterOutput rejects "web" as retrieval_strategy (T04)
+# ---------------------------------------------------------------------------
+
+
+def test_router_output_rejects_web_strategy() -> None:
+    """_RouterOutput.retrieval_strategy is Literal["dense", "hybrid"]; "web" must be rejected.
+
+    "web" is a CRAG escalation value written by grader/critic nodes — it is not
+    a valid router output (ADR-013).
+    """
+    from src.graph.nodes.router import (
+        _RouterOutput,  # type: ignore[attr-defined]  # private class accessed only in tests
+    )
+
+    with pytest.raises(ValidationError):
+        _RouterOutput(query_type="factual", retrieval_strategy="web", reasoning="test")

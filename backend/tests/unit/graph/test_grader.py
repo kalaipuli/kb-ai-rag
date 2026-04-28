@@ -29,6 +29,7 @@ def _make_state(
     docs: list[Document],
     query: str = "What is X?",
     retry_count: int = 0,
+    web_fallback_used: bool = False,
 ) -> dict[str, Any]:
     return {
         "session_id": "s1",
@@ -39,7 +40,7 @@ def _make_state(
         "retrieval_strategy": "hybrid",
         "query_rewritten": None,
         "retrieved_docs": docs,
-        "web_fallback_used": False,
+        "web_fallback_used": web_fallback_used,
         "grader_scores": [],
         "graded_docs": [],
         "all_below_threshold": False,
@@ -74,7 +75,7 @@ async def test_all_above_threshold() -> None:
     llm = _mock_llm_with_scores([0.9, 0.8])
     state = _make_state(docs)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+    result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert len(result["graded_docs"]) == 2
     assert result["all_below_threshold"] is False
@@ -92,7 +93,7 @@ async def test_all_below_threshold() -> None:
     llm = _mock_llm_with_scores([0.2, 0.1])
     state = _make_state(docs)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+    result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert result["graded_docs"] == []
     assert result["all_below_threshold"] is True
@@ -111,7 +112,7 @@ async def test_mixed_scores() -> None:
     llm = _mock_llm_with_scores([0.8, 0.3, 0.6])
     state = _make_state([doc_a, doc_b, doc_c])
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+    result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert len(result["graded_docs"]) == 2
     assert doc_a in result["graded_docs"]
@@ -131,7 +132,7 @@ async def test_retry_count_incremented() -> None:
     llm = _mock_llm_with_scores([0.7])
     state = _make_state(docs, retry_count=2)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+    result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert result["retry_count"] == 3
 
@@ -159,7 +160,7 @@ async def test_batch_failure_assigns_zero_score() -> None:
     llm.with_structured_output.return_value = chain_mock
     state = _make_state(all_docs)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+    result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     # First 10 chunks scored 0.0 due to batch failure; last chunk scored 0.8
     assert result["grader_scores"] == [0.0] * 10 + [0.8]
@@ -178,7 +179,7 @@ async def test_steps_taken_contains_grader_entry() -> None:
     llm = _mock_llm_with_scores([0.9])
     state = _make_state(docs)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+    result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert len(result["steps_taken"]) == 1
     step = result["steps_taken"][0]
@@ -199,7 +200,7 @@ async def test_empty_docs_no_batch_call() -> None:
     llm.with_structured_output.return_value = chain_mock
     state = _make_state([])
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+    result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert result["graded_docs"] == []
     assert result["grader_scores"] == []
@@ -221,4 +222,89 @@ async def test_all_batches_fail_raises_grader_error() -> None:
     state = _make_state(docs)
 
     with pytest.raises(GraderError):
-        await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+        await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+
+
+# ---------------------------------------------------------------------------
+# Test 9: CRAG escalation — escalates to web on second retry when enabled
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_escalates_to_web_on_second_retry_when_enabled() -> None:
+    """all_below=True, post-increment retry_count=2, web enabled, not yet used → escalate."""
+    docs = [_make_doc("doc A", "c1"), _make_doc("doc B", "c2")]
+    llm = _mock_llm_with_scores([0.2, 0.1])
+    state = _make_state(docs, retry_count=1, web_fallback_used=False)
+
+    result = await grader_node(state, llm=llm, web_search_enabled=True)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+
+    assert result.get("retrieval_strategy") == "web"
+
+
+# ---------------------------------------------------------------------------
+# Test 10: no escalation on first retry (post-increment retry_count == 1)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_no_escalation_on_first_retry() -> None:
+    """all_below=True, post-increment retry_count=1 — not enough retries to escalate."""
+    docs = [_make_doc("doc A", "c1"), _make_doc("doc B", "c2")]
+    llm = _mock_llm_with_scores([0.2, 0.1])
+    state = _make_state(docs, retry_count=0, web_fallback_used=False)
+
+    result = await grader_node(state, llm=llm, web_search_enabled=True)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+
+    assert "retrieval_strategy" not in result
+
+
+# ---------------------------------------------------------------------------
+# Test 11: no escalation when web search is disabled
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_no_escalation_when_web_disabled() -> None:
+    """all_below=True, retry_count>=2, but web_search_enabled=False → no escalation."""
+    docs = [_make_doc("doc A", "c1"), _make_doc("doc B", "c2")]
+    llm = _mock_llm_with_scores([0.2, 0.1])
+    state = _make_state(docs, retry_count=1, web_fallback_used=False)
+
+    result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+
+    assert "retrieval_strategy" not in result
+
+
+# ---------------------------------------------------------------------------
+# Test 12: no escalation when web fallback already used
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_no_escalation_when_web_already_used() -> None:
+    """all_below=True, retry_count>=2, web enabled, but web_fallback_used=True → no escalation."""
+    docs = [_make_doc("doc A", "c1"), _make_doc("doc B", "c2")]
+    llm = _mock_llm_with_scores([0.2, 0.1])
+    state = _make_state(docs, retry_count=1, web_fallback_used=True)
+
+    result = await grader_node(state, llm=llm, web_search_enabled=True)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+
+    assert "retrieval_strategy" not in result
+
+
+# ---------------------------------------------------------------------------
+# Test 13: no escalation when scores are above threshold
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_no_escalation_when_above_threshold() -> None:
+    """all_below=False → escalation must not trigger regardless of retry_count."""
+    docs = [_make_doc("doc A", "c1"), _make_doc("doc B", "c2")]
+    llm = _mock_llm_with_scores([0.9, 0.8])
+    state = _make_state(docs, retry_count=1, web_fallback_used=False)
+
+    result = await grader_node(state, llm=llm, web_search_enabled=True)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+
+    assert "retrieval_strategy" not in result

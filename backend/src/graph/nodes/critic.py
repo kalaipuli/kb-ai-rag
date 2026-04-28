@@ -33,7 +33,9 @@ class _CriticOutput(BaseModel):
     reasoning: str  # LangSmith trace only; not stored in state
 
 
-async def critic_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, Any]:
+async def critic_node(
+    state: AgentState, *, llm: AzureChatOpenAI, web_search_enabled: bool
+) -> dict[str, Any]:
     """Score the generated answer for hallucination risk.
 
     Compares the answer against graded_docs to identify unsupported claims.

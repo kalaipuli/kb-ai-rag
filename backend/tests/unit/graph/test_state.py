@@ -1,7 +1,7 @@
 """Unit tests for AgentState TypedDict schema (src/graph/state.py).
 
 Tests cover:
-  1. retrieved_docs reducer — operator.add appends, does not overwrite.
+  1. retrieved_docs — plain replacement, no reducer attached (ADR-011).
   2. messages reducer   — add_messages deduplicates by message ID.
   3. steps_taken reducer — operator.add appends string entries.
   4. Schema completeness — all 19 required field names are present.
@@ -17,37 +17,24 @@ from langgraph.graph.message import add_messages
 from src.graph.state import AgentState
 
 # ---------------------------------------------------------------------------
-# 1. retrieved_docs reducer: operator.add appends across partial updates
+# 1. retrieved_docs: plain replacement — no reducer attached (ADR-011)
 # ---------------------------------------------------------------------------
 
 
-def test_retrieved_docs_reducer_appends() -> None:
-    """operator.add on two lists produces a combined list, not a replacement."""
-    from langchain_core.documents import Document
+def test_retrieved_docs_has_no_reducer() -> None:
+    """retrieved_docs must be a plain list[Document] with no LangGraph reducer.
 
-    first_batch: list[Document] = [Document(page_content="chunk-1")]
-    second_batch: list[Document] = [Document(page_content="chunk-2")]
+    If operator.add were still attached via Annotated, the type would carry a
+    __metadata__ attribute (Annotated stores metadata there).  Plain list[Document]
+    has no __metadata__, which is what we assert here.
+    """
+    annotation = AgentState.__annotations__["retrieved_docs"]
 
-    merged = operator.add(first_batch, second_batch)
-
-    assert len(merged) == 2
-    assert merged[0].page_content == "chunk-1"
-    assert merged[1].page_content == "chunk-2"
-
-
-def test_retrieved_docs_reducer_does_not_overwrite() -> None:
-    """Reducer result is distinct from both inputs — no in-place mutation."""
-    from langchain_core.documents import Document
-
-    a: list[Document] = [Document(page_content="a")]
-    b: list[Document] = [Document(page_content="b")]
-
-    merged = operator.add(a, b)
-
-    # Original lists must remain unchanged
-    assert len(a) == 1
-    assert len(b) == 1
-    assert len(merged) == 2
+    # A plain list[Document] is not an Annotated type — it has no __metadata__
+    assert not hasattr(annotation, "__metadata__"), (
+        "retrieved_docs must not have a reducer. "
+        "Found __metadata__ — Annotated wrapper is still present."
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, runtime_checkable
 
 import structlog
 from langchain_core.documents import Document
@@ -27,6 +27,7 @@ class RetrieverProtocol(Protocol):
         query: str,
         k: int | None = None,
         filters: dict[str, str] | None = None,
+        mode: Literal["dense", "hybrid"] = "hybrid",
     ) -> list[Any]:
         """Retrieve documents matching *query*."""
         ...
@@ -92,7 +93,12 @@ async def retriever_node(
             )
         else:
             try:
-                results: list[Any] = await retriever.retrieve(effective_query, k=k, filters=filters)
+                results: list[Any] = await retriever.retrieve(
+                    effective_query,
+                    k=k,
+                    filters=filters,
+                    mode=cast(Literal["dense", "hybrid"], strategy),
+                )
                 docs = [_result_to_document(r) for r in results]
                 log.info(
                     "retriever_hybrid_complete",
