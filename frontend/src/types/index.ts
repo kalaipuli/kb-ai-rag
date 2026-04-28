@@ -90,3 +90,7 @@ export interface AgentStep {
   payload: RouterStepPayload | GraderStepPayload | CriticStepPayload;
   timestamp: string;
 }
+
+export interface AgentMessage extends Message {
+  agentSteps?: AgentStep[];
+}

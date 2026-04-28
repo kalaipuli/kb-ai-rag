@@ -22,6 +22,8 @@ __all__ = [
     "IngestAcceptedResponse",
     "CollectionInfo",
     "CollectionsResponse",
+    "EvalMetrics",
+    "EvalBaselineResponse",
 ]
 
 
@@ -72,3 +74,21 @@ class CollectionsResponse(BaseModel):
     """Response body for GET /api/v1/collections."""
 
     collections: list[CollectionInfo]
+
+
+class EvalMetrics(BaseModel):
+    """Five RAGAS metric scores from one evaluation run."""
+
+    faithfulness: float
+    answer_relevancy: float
+    context_recall: float
+    context_precision: float
+    answer_correctness: float
+
+
+class EvalBaselineResponse(BaseModel):
+    """Normalized response for GET /api/v1/eval/baseline."""
+
+    pipeline: str
+    run_date: str | None
+    metrics: EvalMetrics

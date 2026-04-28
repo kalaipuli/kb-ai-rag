@@ -7,6 +7,7 @@ in the app lifespan and exposed via these dependency functions.
 from typing import Annotated
 
 from fastapi import Depends, Request
+from langgraph.graph.state import CompiledStateGraph
 from qdrant_client import AsyncQdrantClient
 
 from src.config import Settings, get_settings
@@ -31,3 +32,10 @@ def get_embedder(request: Request) -> Embedder:
 GenerationChainDep = Annotated[GenerationChain, Depends(get_generation_chain)]
 QdrantClientDep = Annotated[AsyncQdrantClient, Depends(get_qdrant_client)]
 EmbedderDep = Annotated[Embedder, Depends(get_embedder)]
+
+
+def get_compiled_graph(request: Request) -> CompiledStateGraph:
+    return request.app.state.compiled_graph  # type: ignore[no-any-return]
+
+
+CompiledGraphDep = Annotated[CompiledStateGraph, Depends(get_compiled_graph)]

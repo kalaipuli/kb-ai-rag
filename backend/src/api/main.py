@@ -23,6 +23,7 @@ from src.api.routes.eval import router as eval_router
 from src.api.routes.health import router as health_router
 from src.api.routes.ingest import router as ingest_router
 from src.api.routes.query import router as query_router
+from src.api.routes.query_agentic import router as query_agentic_router
 from src.api.schemas import ErrorResponse
 from src.config import get_settings
 from src.exceptions import (
@@ -33,6 +34,7 @@ from src.exceptions import (
     RetrievalError,
 )
 from src.generation.chain import GenerationChain
+from src.graph.builder import build_graph
 from src.ingestion.bm25_store import BM25Store
 from src.ingestion.embedder import Embedder
 from src.logging_config import configure_logging
@@ -59,6 +61,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     embedder = Embedder(settings=settings)
     app.state.embedder = embedder
     retriever = HybridRetriever(settings=settings, bm25_store=bm25_store, embedder=embedder)
+    app.state.compiled_graph = await build_graph(settings=settings, retriever=retriever)
     app.state.generation_chain = GenerationChain(settings=settings, hybrid_retriever=retriever)
     app.state.bm25_store = bm25_store
     app.state.qdrant_client = AsyncQdrantClient(url=settings.qdrant_url)
@@ -98,6 +101,7 @@ app.middleware("http")(api_key_middleware)
 app.include_router(health_router, prefix="/api/v1")
 app.include_router(ingest_router, prefix="/api/v1")
 app.include_router(query_router, prefix="/api/v1")
+app.include_router(query_agentic_router, prefix="/api/v1", tags=["query"])
 app.include_router(collections_router, prefix="/api/v1")
 app.include_router(eval_router, prefix="/api/v1")
 

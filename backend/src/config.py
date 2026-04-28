@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     langchain_tracing_v2: bool = False
 
     # Tavily web-search fallback (Phase 2+; leave blank until then)
-    tavily_api_key: str = ""
+    tavily_api_key: SecretStr = SecretStr("")
 
     # Chunking strategy
     chunk_strategy: str = "recursive_character"
@@ -61,6 +61,9 @@ class Settings(BaseSettings):
 
     # Evaluation baseline
     eval_baseline_path: str = "data/eval_baseline.json"
+
+    # LangGraph SqliteSaver checkpointer (Phase 2+; single-worker only — see ADR-004)
+    sqlite_checkpointer_path: str = "data/checkpointer.sqlite"
 
 
 @lru_cache

@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-27 (Phase 2a fixes cleared · 2b Graph Skeleton unblocked)
+> Maintained by: project-manager agent | Last updated: 2026-04-28 (Phase 2 COMPLETE · Phase 2f RAGAS faithfulness 0.9528 · 334 backend tests · 108 frontend tests · all 15 gate criteria verified · Phase 2f architect review + 5 fixes cleared 2026-04-28)
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -15,11 +15,11 @@ This is the single cross-phase status view. For task-level detail, open the link
 | 1g | Retrieval Quality (Chunking + Eval) | [1g](phase1/1g-retrieval-quality/tasks.md) | ✅ Complete | Passed 2026-04-26 |
 | 1h | Quality Transparency (UI + API) | [1h](phase1/1h-quality-transparency/tasks.md) | ✅ Complete | Passed 2026-04-26 |
 | 2a | Gate Zero (Tier 3 Pre-requisites) | [2a](phase2/2a-gate-zero/tasks.md) · [fixes](phase2/2a-gate-zero/fixes.md) | ✅ Complete | Passed 2026-04-27 · Fixes cleared 2026-04-27 |
-| 2b | Graph Skeleton (StateGraph + Builder) | [2b](phase2/2b-graph-skeleton/tasks.md) | ⏳ Not Started | — |
-| 2c | Agent Nodes (Router · Retriever · Grader · Generator · Critic) | [2c](phase2/2c-agent-nodes/tasks.md) | ⏳ Not Started | — |
-| 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | — |
-| 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ⏳ Not Started | — |
-| 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) | ⏳ Not Started | — |
+| 2b | Graph Skeleton (StateGraph + Builder) | [2b](phase2/2b-graph-skeleton/tasks.md) · [fixes](phase2/2b-graph-skeleton/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · Fixes cleared 2026-04-27 |
+| 2c | Agent Nodes (Router · Retriever · Grader · Generator · Critic) | [2c](phase2/2c-agent-nodes/tasks.md) · [fixes](phase2/2c-agent-nodes/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · Fixes cleared 2026-04-27 |
+| 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · All 9 fixes cleared 2026-04-27 |
+| 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | Passed 2026-04-27 |
+| 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) · [fixes](phase2/2f-evaluation/fixes.md) | ✅ Complete | Passed 2026-04-28 · faithfulness 0.9528 · Architect review 2026-04-28 · All 5 fixes cleared 2026-04-28 |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
 | 5 | Observability & Evaluation | — | ⏳ Not Started | — |
@@ -44,18 +44,18 @@ This is the single cross-phase status view. For task-level detail, open the link
 
 ## Active Phase
 
-**Phase 2 — Agentic Pipeline (LangGraph + Parallel-View UI)** 🔄 In Progress — started 2026-04-26
+**Phase 2 — Agentic Pipeline (LangGraph + Parallel-View UI)** ✅ Complete — 2026-04-28
 
 Scope change from original plan: the Phase 2 UI introduces a **parallel-view chat interface** with two simultaneous panels — Static Chain (Phase 1 LCEL, unchanged) vs Agentic Pipeline (Phase 2 LangGraph). Both pipelines run concurrently on the same query, enabling direct latency and quality comparison. Architect review completed 2026-04-26.
 
 | Feature | Registry | Status | Notes |
 |---------|----------|--------|-------|
 | 2a Gate Zero | [tasks](phase2/2a-gate-zero/tasks.md) · [fixes](phase2/2a-gate-zero/fixes.md) | ✅ Complete | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field schema · AgentStreamEvent TS union · 6 architect fixes cleared |
-| 2b Graph Skeleton | [tasks](phase2/2b-graph-skeleton/tasks.md) | ⏳ Not Started | StateGraph + stub nodes · builder · lifespan singleton · CompiledGraphDep |
-| 2c Agent Nodes | [tasks](phase2/2c-agent-nodes/tasks.md) | ⏳ Not Started | Router · Retriever · Grader · Generator · Critic · integration smoke test |
-| 2d Agentic API | [tasks](phase2/2d-agentic-api/tasks.md) | ⏳ Not Started | POST /api/v1/query/agentic · agent_step SSE events · X-Session-ID · Next.js proxy |
-| 2e Parallel UI | [tasks](phase2/2e-parallel-ui/tasks.md) | ⏳ Not Started | useAgentStream · AgentTrace · SharedInput · grid layout · verdict · latency bars |
-| 2f Evaluation | [tasks](phase2/2f-evaluation/tasks.md) | ⏳ Not Started | RAGAS re-run on agentic endpoint · comparison report · baseline ≥ 0.85 |
+| 2b Graph Skeleton | [tasks](phase2/2b-graph-skeleton/tasks.md) · [fixes](phase2/2b-graph-skeleton/fixes.md) | ✅ Complete | 5 stub nodes · edges.py · builder.py · AsyncSqliteSaver · CompiledGraphDep · 271 tests · fixes cleared 2026-04-27 |
+| 2c Agent Nodes | [tasks](phase2/2c-agent-nodes/tasks.md) · [fixes](phase2/2c-agent-nodes/fixes.md) | ✅ Complete | All 5 nodes real (Adaptive RAG · HyDE · step-back · CRAG · Self-RAG) · 307 tests · 9 architect fixes cleared 2026-04-27 · ADR-010 added |
+| 2d Agentic API | [tasks](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | POST /api/v1/query/agentic · all 5 SSE event types · X-Session-ID session routing · Next.js proxy · 316 tests · architect review + 9 fixes cleared 2026-04-27 |
+| 2e Parallel UI | [tasks](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | useAgentStream · AgentTrace · AgentPanel · SharedInput · AgentVerdict · grid layout · verdict · latency bars · 96 frontend tests · 2026-04-27 |
+| 2f Evaluation | [tasks](phase2/2f-evaluation/tasks.md) | ✅ Complete | EvaluationRunner · eval baseline API · RAGAS run · comparison report · faithfulness 0.9528 |
 
 **Completed phases:** Phase 1 (✅ 201 unit tests · 54 frontend tests) · Phase 1g (✅ 241 unit tests · 5-metric RAGAS baseline) · Phase 1h (✅ retrieval scores in SSE · eval baseline endpoint · quality panel)
 
@@ -63,18 +63,22 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 
 ## Currently In Progress
 
-_Phase 2a Gate Zero passed 2026-04-27. Phase 2a architect fixes cleared 2026-04-27 (6/6 findings resolved). Next: Phase 2b Graph Skeleton — StateGraph + stub nodes + builder + lifespan singleton._
+_Phase 2 complete 2026-04-28. Phase 2f gate: faithfulness 0.9528 (gate ≥ 0.85, static baseline 0.9028) — PASS and exceeds baseline. CRAG activation: 0/20 (grader always passed ≥1 chunk). Self-RAG activation: 0/20 (critic score always 0.0). 332 backend unit tests · 108 frontend tests · mypy strict 0 errors · ruff clean · tsc clean · eslint clean. Two bugs found and fixed: (1) retry_count not initialized in initial_state of query_agentic.py — grader raised KeyError on every request; (2) citations SSE event missing retrieved_contexts field — RAGAS computed 0 faithfulness because contexts were filename strings not chunk text. Both fixes committed. Comparison report: docs/evaluation_agentic_results.md._
 
 ---
 
 ## Blocked / At Risk
 
-| Item | Risk | Mitigation |
-|------|------|-----------|
-| 2a-T01 (LangGraph version lock) | Bundle resolution may conflict with current `langchain-core` pin | Run dry-run before committing; adjust `langchain-core` bound with architect sign-off |
-| 2c-T01 (Router HyDE) | GPT-4o-mini structured output parsing failures | Add retry + safe default fallback; test error path |
-| 2f-T02 (RAGAS agentic gate) | Agentic faithfulness may drop below static baseline if CRAG web fallback adds noise | Tune `GRADER_THRESHOLD`; cap Tavily results to 3; architect review if gate fails |
-| SqliteSaver concurrency | Multi-worker Uvicorn will cause SQLite write contention | Document `--workers 1` constraint in ADR-004 amendment (2a-T02) |
+| Item | Risk | Target Phase | Mitigation |
+|------|------|-------------|-----------|
+| 2b-F04 (duration_ms carry-forward) | ADR-004 amendment §6 requires `duration_ms` in every `agent_step` payload from first emission — stub nodes do not include it; Phase 2c must add it from day one to avoid multi-node retrofit | **Phase 2c task spec** | Add `duration_ms: int` to every emitting node return dict; include in Phase 2c T01–T05 acceptance criteria |
+| 2b-F04 (duration_ms carry-forward) | ADR-004 amendment §6 requires `duration_ms` in every `agent_step` payload from first emission — stub nodes do not include it; Phase 2c must add it from day one to avoid multi-node retrofit | **Phase 2c task spec** | Add `duration_ms: int` to every emitting node return dict; include in Phase 2c T01–T05 acceptance criteria |
+| 2c-T01 (Router HyDE) | GPT-4o-mini structured output parsing failures | Phase 2c | Add retry + safe default fallback; test error path |
+| 2f-T02 (RAGAS agentic gate) | Agentic faithfulness may drop below static baseline if CRAG web fallback adds noise | Phase 2f | Tune `GRADER_THRESHOLD`; cap Tavily results to 3; architect review if gate fails |
+| SqliteSaver concurrency | Multi-worker Uvicorn will cause SQLite write contention — documented in ADR-004 amendment | Phase 7 | `--workers 1` constraint enforced in deployment config |
+| 2b-F06 (sync I/O on event loop) | `pickle.dump`, `PdfReader`, `.read_text()` in ingestion and evaluation block the event loop under concurrent load | **Phase 5/6** | Wrap each in `asyncio.to_thread`; see [2b fixes.md F06](phase2/2b-graph-skeleton/fixes.md) |
+| 2b-F03 (lifespan singleton violations) | `AsyncQdrantClient`, `AzureChatOpenAI`, `AzureOpenAIEmbeddings` constructed per-call in `ingestion/`, `evaluation/`, `generation/` — connection churn at scale | **Phase 7** | Migrate to `app.state` singletons with `deps.py` aliases before multi-replica deployment; see [2b fixes.md F03](phase2/2b-graph-skeleton/fixes.md) |
+| 2b-F05 (conn.is_alive monkey-patch) | `builder.py:80` patches `_thread.is_alive` on aiosqlite — breaks silently across patch releases | **Phase 2c / next dep update** | Add removal-reminder comments to `pyproject.toml` pins; see [2b fixes.md F05](phase2/2b-graph-skeleton/fixes.md) |
 
 ---
 
@@ -299,6 +303,14 @@ _Phase 2a Gate Zero passed 2026-04-27. Phase 2a architect fixes cleared 2026-04-
 
 #### 2c — Agent Nodes ⏳ Not Started
 
+> **Pre-conditions before any 2c task starts:**
+> - 2b-F01 cleared: error-path test in `test_builder.py`
+> - 2b-F02 cleared: `type: ignore` justification inline on `builder.py:80`
+>
+> **Carry-forward from 2b architect review (2b-F04):** Every node that emits an `agent_step` SSE event must include `duration_ms: int` in its return dict from the first implementation. Do not implement nodes without this field — retrofitting across all nodes simultaneously is high coordination cost. Add `duration_ms: int` to `AgentState` if not already present.
+>
+> **Carry-forward from 2b architect review (2b-F05):** Add removal-reminder comments to `langgraph-checkpoint-sqlite` and `aiosqlite` pins in `pyproject.toml` — see [2b fixes.md F05](phase2/2b-graph-skeleton/fixes.md).
+
 | Agent | Role | Model | Agentic Pattern | Status |
 |-------|------|-------|-----------------|--------|
 | **Router** | Query classification + strategy selection | GPT-4o-mini | Adaptive RAG · HyDE · Step-back | ⏳ Pending |
@@ -385,6 +397,8 @@ _Phase 2a Gate Zero passed 2026-04-27. Phase 2a architect fixes cleared 2026-04-
 ### Phase 5 — Observability & Evaluation ⏳ Not Started
 
 > **Stack pre-requisite:** Before setting up RAGAS automation, move `ragas` into `[tool.poetry.group.eval.dependencies]` in `pyproject.toml`. See [RAGAS isolation](../stack-upgrade-proposal.md#hold--do-not-upgrade-yet).
+>
+> **Carry-forward from 2b architect review (2b-F06 · High):** Wrap all blocking I/O in `asyncio.to_thread` before load testing. Affected files: `backend/src/ingestion/pipeline.py` (`pickle.dump`), `backend/src/ingestion/local_loader.py:95,137` (`PdfReader`, `.read_text()`), `backend/src/api/routes/eval.py:39` (`.read_text()`), `backend/src/evaluation/ragas_eval.py:165,238` (`.read_text()`). See [2b fixes.md F06](phase2/2b-graph-skeleton/fixes.md).
 
 | Feature | Description | Status |
 |---------|-------------|--------|
@@ -430,6 +444,8 @@ _Phase 2a Gate Zero passed 2026-04-27. Phase 2a architect fixes cleared 2026-04-
 
 ### Phase 7 — Azure Deployment & CI/CD ⏳ Not Started
 
+> **Carry-forward from 2b architect review (2b-F03 · High):** Before multi-replica deployment, migrate all per-call client constructions to lifespan singletons. Affected files: `backend/src/ingestion/vector_store.py:33` (`AsyncQdrantClient`), `backend/src/ingestion/embedder.py:64` (`AzureOpenAIEmbeddings`), `backend/src/retrieval/dense.py:24` (`AsyncQdrantClient`), `backend/src/generation/chain.py:116` (`AzureChatOpenAI`), `backend/src/evaluation/ragas_eval.py:220,229` (`AzureChatOpenAI`, `AzureOpenAIEmbeddings`). Each must be added to `app.state` with a `deps.py` alias following the `QdrantClientDep` pattern. See [2b fixes.md F03](phase2/2b-graph-skeleton/fixes.md).
+
 #### Infrastructure as Code (Terraform)
 
 | Feature | Description | Status |
@@ -472,8 +488,8 @@ _Phase 2a Gate Zero passed 2026-04-27. Phase 2a architect fixes cleared 2026-04-
 | 1g | 2026-04-26 | 241 unit tests, mypy strict 0 errors, ruff clean, `data/eval_baseline.json` with 5 metrics, faithfulness 0.9028 |
 | 1h | 2026-04-26 | retrieval scores in SSE · eval baseline endpoint · quality panel · sidebar card |
 | 2a | 2026-04-27 | langgraph ~0.2.76 locked · ADR-004 amended · AgentState 19-field TypedDict · AgentStreamEvent TS union · 260 unit tests · mypy strict 0 errors · 6 architect fixes cleared 2026-04-27 |
-| 2b | — | ⏳ Pending — depends on 2a gate |
-| 2c | — | ⏳ Pending — depends on 2b gate |
-| 2d | — | ⏳ Pending — depends on 2c gate |
-| 2e | — | ⏳ Pending — depends on 2d gate |
-| 2f | — | ⏳ Pending — depends on 2e gate; RAGAS faithfulness ≥ 0.85 required |
+| 2b | 2026-04-27 | 271 unit tests · mypy strict 0 errors · ruff clean · 5 stub nodes · AsyncSqliteSaver checkpointer · architect review + fixes cleared 2026-04-27 — see [fixes.md](phase2/2b-graph-skeleton/fixes.md) |
+| 2c | 2026-04-27 | 307 unit tests · mypy strict 0 errors · ruff clean · all 5 nodes real · 4-path integration smoke test · 9 architect fixes cleared · ADR-010 (Tavily) added |
+| 2d | 2026-04-27 | 316 unit tests · mypy strict 0 errors · ruff clean · tsc clean · POST /api/v1/query/agentic · Next.js proxy · Phase 1 query.py unchanged · architect review 9/9 fixes cleared 2026-04-27 |
+| 2e | 2026-04-27 | 96 frontend tests · tsc clean · eslint clean · build succeeds · parallel grid layout · SharedInput functional guard · AgentTrace human-readable labels · latency bars · AgentVerdict verdict logic |
+| 2f | 2026-04-28 | faithfulness 0.9528 ≥ 0.85 — PASS and exceeds static baseline 0.9028 |

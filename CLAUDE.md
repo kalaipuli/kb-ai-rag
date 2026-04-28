@@ -30,6 +30,47 @@ Enterprise Agentic RAG platform. Five LangGraph agents orchestrate hybrid retrie
 
 ---
 
+## Orchestrator Role
+
+The main Claude instance (this session) is the **orchestrator**. Its job is to plan, decompose, brief, and validate — not to implement. All actual implementation, testing, and file writes are performed by sub-agents.
+
+**Orchestrator responsibilities:**
+- Read all required section files before forming a plan
+- Run pre-implementation gate checks (grep commands from `development-process.md §1`) and confirm results before briefing an agent
+- Compose complete, self-contained sub-agent briefs that include all required context
+- Validate sub-agent output (read changed files, run DoD gate commands) before marking a task done
+- Update `tasks.md` and `DASHBOARD.md` after each task completes
+
+**What the orchestrator must NOT do:**
+- Write implementation code directly (use `backend-developer`, `frontend-developer`, etc.)
+- Write tests directly (use `tester` or the implementing agent)
+- Skip sub-agent delegation and implement inline to save time
+
+---
+
+## Sub-Agent Briefing Requirements
+
+When invoking a sub-agent, you **must** read and pass the full content of the required files listed below for that agent type. Do not summarise or paraphrase — pass the actual file content in the agent prompt. A sub-agent brief that omits a required file is incomplete and may produce non-compliant output.
+
+| Agent | Required files to pass (read and include verbatim) |
+|-------|---------------------------------------------------|
+| `backend-developer` | `development-process.md`, `python-rules.md`, `anti-patterns.md` |
+| `frontend-developer` | `development-process.md`, `frontend-rules.md`, `anti-patterns.md` |
+| `architect` | `architecture-rules.md`, `development-process.md`, `anti-patterns.md` |
+| `data-engineer` | `development-process.md`, `python-rules.md`, `anti-patterns.md` |
+| `tester` | `development-process.md`, `python-rules.md` |
+| `test-manager` | `development-process.md` |
+| `security-reviewer` | `architecture-rules.md`, `python-rules.md`, `anti-patterns.md` |
+| `project-manager` | `development-process.md` |
+
+**Additional context required for every `backend-developer` invocation:**
+- The relevant `tasks.md` entry (full DoD spec for the task being implemented)
+- The current stub file being replaced (so the agent knows exactly what to overwrite)
+- All `AgentState` fields and any injected dependencies the node touches
+- The pre-implementation gate check results (§1 of `development-process.md`) run and confirmed before the brief is sent
+
+---
+
 ## Always-Apply Rules
 
 These three rules are active in every session without needing to load a section file.

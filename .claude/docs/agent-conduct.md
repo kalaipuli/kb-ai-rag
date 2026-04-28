@@ -1,6 +1,6 @@
 # Agent Conduct
 
-Rules for how the AI agent operates during every session. These apply unconditionally to every request.
+Rules for how the AI agent operates during every session. These apply unconditionally to every agent request.
 
 ## No End-of-Response Summaries
 Do not append a summary paragraph at the end of a response. The diff and tool output are the record — narrating what was just done adds noise. This is a hard rule with no exceptions.
