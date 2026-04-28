@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-27 (Phase 2e Parallel UI complete · useAgentStream · AgentTrace · AgentPanel · SharedInput · AgentVerdict · parallel grid layout · 96 frontend tests · tsc clean · eslint clean · build succeeds)
+> Maintained by: project-manager agent | Last updated: 2026-04-28 (Phase 2f In Progress · T01 EvaluationRunner done · T04 eval baseline ?pipeline=agentic done · retry_count init bug fixed · 331 backend tests · T02 live eval pending container rebuild)
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -19,7 +19,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 | 2c | Agent Nodes (Router · Retriever · Grader · Generator · Critic) | [2c](phase2/2c-agent-nodes/tasks.md) · [fixes](phase2/2c-agent-nodes/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · Fixes cleared 2026-04-27 |
 | 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · All 9 fixes cleared 2026-04-27 |
 | 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | Passed 2026-04-27 |
-| 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) | ⏳ Not Started | — |
+| 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) | 🔄 In Progress | T01 ✅ · T04 ✅ · T02/T03 pending live eval |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
 | 5 | Observability & Evaluation | — | ⏳ Not Started | — |
@@ -55,7 +55,7 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 | 2c Agent Nodes | [tasks](phase2/2c-agent-nodes/tasks.md) · [fixes](phase2/2c-agent-nodes/fixes.md) | ✅ Complete | All 5 nodes real (Adaptive RAG · HyDE · step-back · CRAG · Self-RAG) · 307 tests · 9 architect fixes cleared 2026-04-27 · ADR-010 added |
 | 2d Agentic API | [tasks](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | POST /api/v1/query/agentic · all 5 SSE event types · X-Session-ID session routing · Next.js proxy · 316 tests · architect review + 9 fixes cleared 2026-04-27 |
 | 2e Parallel UI | [tasks](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | useAgentStream · AgentTrace · AgentPanel · SharedInput · AgentVerdict · grid layout · verdict · latency bars · 96 frontend tests · 2026-04-27 |
-| 2f Evaluation | [tasks](phase2/2f-evaluation/tasks.md) | ⏳ Not Started | RAGAS re-run on agentic endpoint · comparison report · baseline ≥ 0.85 |
+| 2f Evaluation | [tasks](phase2/2f-evaluation/tasks.md) | 🔄 In Progress | T01 EvaluationRunner ✅ · T04 eval baseline API ✅ · retry_count bug fixed · T02 live eval pending |
 
 **Completed phases:** Phase 1 (✅ 201 unit tests · 54 frontend tests) · Phase 1g (✅ 241 unit tests · 5-metric RAGAS baseline) · Phase 1h (✅ retrieval scores in SSE · eval baseline endpoint · quality panel)
 
@@ -63,7 +63,7 @@ Scope change from original plan: the Phase 2 UI introduces a **parallel-view cha
 
 ## Currently In Progress
 
-_Phase 2e complete 2026-04-27. All 8 tasks done. 96 frontend tests green (54 existing + 42 new) · tsc --noEmit zero errors · eslint zero warnings · npm run build succeeds. Parallel-view chat page with `grid grid-cols-2` layout: Static Chain (left) vs Agentic Pipeline (right). SharedInput fires both hooks simultaneously with functional no-op guard while streaming. AgentTrace renders Router/Grader/Critic step cards with human-readable labels and latency bars after streaming ends. AgentVerdict computes post-completion winner from criticRisk, webFallback, and confidence delta. SessionID persisted in sessionStorage. Phase 2f Evaluation is now unblocked._
+_Phase 2f In Progress 2026-04-28. T01 complete: `backend/src/evaluation/runner.py` — `EvaluationRunner` class with `endpoint: Literal["static", "agentic"]`, httpx SSE consumption, 60s per-question timeout, 10 unit tests. T04 complete: `GET /api/v1/eval/baseline?pipeline=agentic` routing added, 4 new route tests. Critical bug fixed: `retry_count` was missing from initial state in `query_agentic.py` — grader node raised `KeyError: 'retry_count'` on every request. Fix committed (`"retry_count": 0` added to initial_state). T02 (live RAGAS eval) requires container rebuild before re-run. Total backend tests: 331 (330 existing + 1 new regression test for retry_count). Awaiting: `docker compose build backend && docker compose up -d` then `poetry run python scripts/run_eval_agentic.py`._
 
 ---
 
