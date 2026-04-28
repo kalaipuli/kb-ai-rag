@@ -80,7 +80,7 @@ Task: implement RRF fusion
 ## 5. Cross-Check Integrity After Every Feature
 Before marking a feature complete and moving to the next:
 - Run the full unit test suite — all green (via `poetry run pytest`)
-- Run mypy and ruff — zero errors (via `poetry run mypy` / `poetry run ruff`)
+- Run mypy and ruff — zero errors (via `poetry run mypy` / `poetry run ruff` / `poetry run ruff format`)
 - Run the TypeScript compiler check (`npm run tsc -- --noEmit`) if frontend was touched
 - Manually verify the end-to-end path for the feature (not just the unit under test)
 - Check that no existing tests were broken (regression check)

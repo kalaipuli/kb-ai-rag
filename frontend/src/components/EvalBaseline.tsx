@@ -61,7 +61,7 @@ export function EvalBaseline(): JSX.Element {
       {(Object.keys(METRIC_LABELS) as Array<keyof BaselineMetrics>).map((key) => (
         <li key={key} className="flex justify-between text-xs text-gray-600">
           <span>{METRIC_LABELS[key]}</span>
-          <span className="font-medium tabular-nums">{metrics[key].toFixed(4)}</span>
+          <span className="font-medium tabular-nums">{metrics[key] != null ? metrics[key].toFixed(4) : "—"}</span>
         </li>
       ))}
     </ul>

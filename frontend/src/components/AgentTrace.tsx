@@ -66,7 +66,7 @@ function GraderCard({ step }: { step: AgentStep }): JSX.Element | null {
                 style={{ width: `${Math.min(score * 100, 100)}%` }}
               />
             </div>
-            <span className="w-8 text-right text-gray-500">{(score * 100).toFixed(0)}%</span>
+            <span className="w-8 text-right text-gray-500">{score != null ? (score * 100).toFixed(0) : "—"}%</span>
           </div>
         ))}
       </div>
@@ -95,7 +95,7 @@ function CriticCard({ step }: { step: AgentStep }): JSX.Element | null {
           />
         </div>
         <span className="w-12 text-right text-gray-500">
-          {(hallucination_risk * 100).toFixed(0)}% risk
+          {hallucination_risk != null ? (hallucination_risk * 100).toFixed(0) : "—"}% risk
         </span>
       </div>
       {reruns > 0 && (
