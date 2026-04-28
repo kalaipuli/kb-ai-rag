@@ -104,6 +104,7 @@ async def query_agentic_endpoint(
 
     async def _stream() -> AsyncGenerator[str, None]:
         _grader_doc_count: int = 0
+        _context_texts: list[str] = []
         try:
             async for chunk in compiled_graph.astream(
                 initial_state,
@@ -113,9 +114,13 @@ async def query_agentic_endpoint(
                 for node_name, state_update in chunk.items():
                     if node_name in ("router", "grader", "critic"):
                         if node_name == "grader":
-                            _grader_doc_count = len(
-                                state_update.get("graded_docs", [])
-                            )
+                            graded = state_update.get("graded_docs", [])
+                            _grader_doc_count = len(graded)
+                            _context_texts = [
+                                doc.page_content if hasattr(doc, "page_content") else ""
+                                for doc in graded
+                                if doc
+                            ]
                         event = _build_agent_step_event(node_name, state_update)
                         yield f"data: {event.model_dump_json()}\n\n"
 
@@ -134,8 +139,18 @@ async def query_agentic_endpoint(
                         confidence: float | None = state_update.get("confidence")
                         chunks_retrieved: int = _grader_doc_count
                         yield (
-                            f"data: {json.dumps({'type': 'citations', 'citations': serialised_citations, 'confidence': confidence, 'chunks_retrieved': chunks_retrieved})}\n\n"
+                            f"data: {json.dumps({'type': 'citations', 'citations': serialised_citations, 'confidence': confidence, 'chunks_retrieved': chunks_retrieved, 'retrieved_contexts': _context_texts})}\n\n"
                         )
+
+                    elif node_name == "retriever":
+                        # Track retrieved docs — used as context texts when CRAG web fallback activates
+                        retrieved = state_update.get("retrieved_docs", [])
+                        if retrieved and not _context_texts:
+                            _context_texts = [
+                                doc.page_content if hasattr(doc, "page_content") else ""
+                                for doc in retrieved
+                                if doc
+                            ]
 
         except Exception as exc:
             logger.error(

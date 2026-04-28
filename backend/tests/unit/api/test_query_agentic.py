@@ -151,6 +151,10 @@ class TestQueryAgenticEndpoint:
             citations_event = next(e for e in events if e["type"] == "citations")
             assert citations_event["chunks_retrieved"] == 1
 
+            # retrieved_contexts must be present in the citations event (additive field for RAGAS)
+            assert "retrieved_contexts" in citations_event
+            assert isinstance(citations_event["retrieved_contexts"], list)
+
             # F06: "Test answer" splits into 2 words → at least 2 token events
             token_events = [e for e in events if e["type"] == "token"]
             assert len(token_events) >= 2

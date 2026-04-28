@@ -184,6 +184,7 @@ async def test_agentic_runner_extracts_answer_from_token_events(
                 ],
                 "confidence": 0.9,
                 "chunks_retrieved": 1,
+                "retrieved_contexts": ["actual chunk text from grader"],
             },
             {"type": "done"},
         ]
@@ -568,3 +569,65 @@ async def test_citation_fallback_when_text_absent(
     assert len(captured_samples) == 1
     sample = captured_samples[0]
     assert sample.retrieved_contexts == ["manual.pdf p.3"]
+
+
+# ---------------------------------------------------------------------------
+# Test: retrieved_contexts SSE field takes priority over citation metadata
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_retrieved_contexts_field_preferred_over_citation_fallback(
+    single_question_dataset: Path,
+) -> None:
+    """When retrieved_contexts is present in the citations event, it is used
+    directly instead of building a context string from citation metadata.
+    """
+    settings = _make_mock_settings()
+    runner = _make_runner(settings, single_question_dataset, endpoint="agentic")
+
+    lines = _sse_lines(
+        [
+            {"type": "token", "content": "ans"},
+            {
+                "type": "citations",
+                "citations": [
+                    {
+                        "chunk_id": "c3",
+                        "filename": "policy.pdf",
+                        "source_path": "/data/policy.pdf",
+                        "page_number": 7,
+                        "retrieval_score": 0.95,
+                    }
+                ],
+                "confidence": 0.95,
+                "chunks_retrieved": 1,
+                "retrieved_contexts": [
+                    "The actual graded chunk text for RAGAS faithfulness"
+                ],
+            },
+            {"type": "done"},
+        ]
+    )
+    mock_client = _make_client_with_stream(lines)
+
+    captured_samples: list[object] = []
+
+    def _capture_evaluate(**kwargs: object) -> MagicMock:
+        dataset = kwargs.get("dataset")
+        if hasattr(dataset, "samples"):
+            captured_samples.extend(dataset.samples)  # type: ignore[arg-type]
+        return _mock_ragas_result(n=1)
+
+    with (
+        patch("src.evaluation.runner.httpx.AsyncClient", return_value=mock_client),
+        patch("src.evaluation.runner.evaluate", side_effect=_capture_evaluate),
+    ):
+        await runner.run()
+
+    assert len(captured_samples) == 1
+    sample = captured_samples[0]
+    # Must use retrieved_contexts, not the filename fallback "policy.pdf p.7"
+    assert sample.retrieved_contexts == [
+        "The actual graded chunk text for RAGAS faithfulness"
+    ]

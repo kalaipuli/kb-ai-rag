@@ -160,13 +160,17 @@ class EvaluationRunner:
                     if event_type == "token":
                         tokens.append(str(event.get("content", "")))
                     elif event_type == "citations":
-                        raw_citations = event.get("citations")
-                        if isinstance(raw_citations, list):
-                            contexts = [
-                                _citation_to_context(c)
-                                for c in raw_citations
-                                if isinstance(c, dict)
-                            ]
+                        retrieved_contexts = event.get("retrieved_contexts")
+                        if isinstance(retrieved_contexts, list) and any(retrieved_contexts):
+                            contexts = [str(c) for c in retrieved_contexts if c]
+                        else:
+                            raw_citations = event.get("citations")
+                            if isinstance(raw_citations, list):
+                                contexts = [
+                                    _citation_to_context(c)
+                                    for c in raw_citations
+                                    if isinstance(c, dict)
+                                ]
                     elif event_type == "done":
                         break
         except httpx.ReadTimeout as exc:
