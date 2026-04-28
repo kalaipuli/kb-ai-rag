@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import structlog
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from src.api.deps import SettingsDep
 
@@ -14,25 +14,47 @@ router = APIRouter()
 
 
 @router.get("/eval/baseline")
-async def eval_baseline(settings: SettingsDep) -> dict[str, object]:
+async def eval_baseline(
+    settings: SettingsDep,
+    pipeline: str | None = Query(default=None),
+) -> dict[str, object]:
     """Return the persisted RAGAS evaluation baseline metrics.
 
-    Reads the JSON file at ``settings.eval_baseline_path``.
+    Reads the JSON file at ``settings.eval_baseline_path`` by default.
+    When ``pipeline=agentic`` is supplied, reads the agentic baseline file
+    (``eval_agentic_baseline.json``) located in the same directory.
+
+    Args:
+        pipeline: Optional query parameter.  Must be ``"agentic"`` or omitted.
+                  Any other value returns 422.
 
     Returns:
         JSON object with 5 RAGAS metric scores.
 
     Raises:
         HTTPException 404: File does not exist — evaluator has not been run yet.
-        HTTPException 422: File exists but contains malformed JSON.
+        HTTPException 422: File exists but contains malformed JSON, or
+                           ``pipeline`` holds an invalid value.
     """
-    path = Path(settings.eval_baseline_path)
+    if pipeline is not None and pipeline != "agentic":
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid pipeline value. Must be 'agentic' or omitted.",
+        )
+
+    if pipeline == "agentic":
+        baseline_dir = Path(settings.eval_baseline_path).parent
+        path = baseline_dir / "eval_agentic_baseline.json"
+        not_found_detail = "Agentic baseline not yet generated"
+    else:
+        path = Path(settings.eval_baseline_path)
+        not_found_detail = "No evaluation baseline found. Run the evaluator first."
 
     if not path.exists():
-        logger.info("eval_baseline_not_found", path=str(path))
+        logger.info("eval_baseline_not_found", path=str(path), pipeline=pipeline)
         raise HTTPException(
             status_code=404,
-            detail="No evaluation baseline found. Run the evaluator first.",
+            detail=not_found_detail,
         )
 
     try:
@@ -45,5 +67,5 @@ async def eval_baseline(settings: SettingsDep) -> dict[str, object]:
             detail=f"Evaluation baseline file is malformed: {exc}",
         ) from exc
 
-    logger.info("eval_baseline_served", path=str(path))
+    logger.info("eval_baseline_served", path=str(path), pipeline=pipeline)
     return data
