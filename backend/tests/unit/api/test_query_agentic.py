@@ -66,9 +66,7 @@ def _make_astream_chunks() -> list[dict[str, Any]]:
 def _make_mock_graph(chunks: list[dict[str, Any]]) -> MagicMock:
     """Return a mock compiled_graph whose astream() yields the given chunks."""
 
-    async def _astream(
-        *args: Any, **kwargs: Any
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def _astream(*args: Any, **kwargs: Any) -> AsyncIterator[dict[str, Any]]:
         for chunk in chunks:
             yield chunk
 
@@ -79,7 +77,7 @@ def _make_mock_graph(chunks: list[dict[str, Any]]) -> MagicMock:
 
 def _parse_events(lines: list[str]) -> list[dict[str, Any]]:
     data_lines = [ln for ln in lines if ln.startswith("data: ")]
-    return [json.loads(ln[len("data: "):]) for ln in data_lines]
+    return [json.loads(ln[len("data: ") :]) for ln in data_lines]
 
 
 # ---------------------------------------------------------------------------
@@ -173,9 +171,7 @@ class TestQueryAgenticEndpoint:
 
         captured_config: dict[str, Any] = {}
 
-        async def _astream(
-            *args: Any, **kwargs: Any
-        ) -> AsyncIterator[dict[str, Any]]:
+        async def _astream(*args: Any, **kwargs: Any) -> AsyncIterator[dict[str, Any]]:
             captured_config.update(kwargs.get("config") or {})
             for chunk in _make_astream_chunks():
                 yield chunk
@@ -211,9 +207,7 @@ class TestQueryAgenticEndpoint:
 
         captured_config: dict[str, Any] = {}
 
-        async def _astream(
-            *args: Any, **kwargs: Any
-        ) -> AsyncIterator[dict[str, Any]]:
+        async def _astream(*args: Any, **kwargs: Any) -> AsyncIterator[dict[str, Any]]:
             captured_config.update(kwargs.get("config") or {})
             for chunk in _make_astream_chunks():
                 yield chunk
@@ -264,9 +258,7 @@ class TestQueryAgenticEndpoint:
         from src.api.deps import get_compiled_graph
         from src.api.main import app
 
-        async def _failing_astream(
-            *args: Any, **kwargs: Any
-        ) -> AsyncIterator[dict[str, Any]]:
+        async def _failing_astream(*args: Any, **kwargs: Any) -> AsyncIterator[dict[str, Any]]:
             raise RuntimeError("graph failed")
             yield  # makes this an async generator
 
@@ -275,12 +267,15 @@ class TestQueryAgenticEndpoint:
         app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
 
         try:
-            with structlog.testing.capture_logs() as captured, test_client_1d.stream(
-                "POST",
-                "/api/v1/query/agentic",
-                json={"query": "What is X?"},
-                headers=authenticated_headers,
-            ) as response:
+            with (
+                structlog.testing.capture_logs() as captured,
+                test_client_1d.stream(
+                    "POST",
+                    "/api/v1/query/agentic",
+                    json={"query": "What is X?"},
+                    headers=authenticated_headers,
+                ) as response,
+            ):
                 assert response.status_code == 200
                 lines = list(response.iter_lines())
 

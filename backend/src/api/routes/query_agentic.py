@@ -39,9 +39,7 @@ def _parse_duration_ms(step: str) -> int:
         return 0
 
 
-def _build_agent_step_event(
-    node_name: str, state_update: dict[str, object]
-) -> AgentStepEvent:
+def _build_agent_step_event(node_name: str, state_update: dict[str, object]) -> AgentStepEvent:
     """Construct an AgentStepEvent from a node name and its state delta."""
     steps: list[str] = state_update.get("steps_taken", [])  # type: ignore[assignment]
     duration_ms = _parse_duration_ms(steps[0]) if steps else 0
@@ -133,8 +131,7 @@ async def query_agentic_endpoint(
                         citations = state_update.get("citations", [])
                         # Citations may be Citation objects; serialise each with model_dump if available
                         serialised_citations = [
-                            c.model_dump() if hasattr(c, "model_dump") else c
-                            for c in citations
+                            c.model_dump() if hasattr(c, "model_dump") else c for c in citations
                         ]
                         confidence: float | None = state_update.get("confidence")
                         chunks_retrieved: int = _grader_doc_count

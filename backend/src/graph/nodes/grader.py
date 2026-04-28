@@ -73,7 +73,8 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
 
         try:
             results: list[_GradeDoc] = await asyncio.to_thread(
-                grader_chain.batch, messages_batch  # type: ignore[arg-type]  # list[list[dict]] accepted by batch at runtime despite stub mismatch
+                grader_chain.batch,
+                messages_batch,  # type: ignore[arg-type]  # list[list[dict]] accepted by batch at runtime despite stub mismatch
             )
             scores.extend(r.score for r in results)
         except Exception as exc:
@@ -89,7 +90,9 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
     if not docs:
         scores = []
 
-    graded_docs = [doc for doc, score in zip(docs, scores, strict=True) if score >= GRADER_THRESHOLD]
+    graded_docs = [
+        doc for doc, score in zip(docs, scores, strict=True) if score >= GRADER_THRESHOLD
+    ]
     all_below = len(scores) > 0 and all(s < GRADER_THRESHOLD for s in scores)
 
     duration_ms = round((time.monotonic() - start) * 1000)

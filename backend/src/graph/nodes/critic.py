@@ -52,9 +52,7 @@ async def critic_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
     query = state["query"]
     start = time.monotonic()
 
-    context_parts = [
-        f"[{i + 1}] {doc.page_content}" for i, doc in enumerate(graded_docs)
-    ]
+    context_parts = [f"[{i + 1}] {doc.page_content}" for i, doc in enumerate(graded_docs)]
     context_str = "\n\n".join(context_parts) if context_parts else "(no context available)"
 
     user_content = (

@@ -303,9 +303,7 @@ async def test_runner_continues_on_question_timeout(
             cm.__aexit__ = AsyncMock(return_value=False)
             return cm
         # Second question succeeds
-        lines = _sse_lines(
-            [{"type": "token", "content": "ok"}, {"type": "done"}]
-        )
+        lines = _sse_lines([{"type": "token", "content": "ok"}, {"type": "done"}])
         return _make_stream_cm(lines)
 
     mock_client = MagicMock()
@@ -345,9 +343,7 @@ async def test_runner_continues_on_http_error(
         call_count += 1
         if call_count == 1:
             cm = MagicMock()
-            cm.__aenter__ = AsyncMock(
-                side_effect=httpx.HTTPError("connection refused")
-            )
+            cm.__aenter__ = AsyncMock(side_effect=httpx.HTTPError("connection refused"))
             cm.__aexit__ = AsyncMock(return_value=False)
             return cm
         lines = _sse_lines([{"type": "token", "content": "ok"}, {"type": "done"}])
@@ -383,9 +379,7 @@ async def test_runner_logs_error_on_timeout(
     runner = _make_runner(settings, single_question_dataset, endpoint="agentic")
 
     cm = MagicMock()
-    cm.__aenter__ = AsyncMock(
-        side_effect=httpx.ReadTimeout("timed out", request=MagicMock())
-    )
+    cm.__aenter__ = AsyncMock(side_effect=httpx.ReadTimeout("timed out", request=MagicMock()))
     cm.__aexit__ = AsyncMock(return_value=False)
 
     mock_client = MagicMock()
@@ -403,9 +397,9 @@ async def test_runner_logs_error_on_timeout(
         await runner.run()
 
     error_events = [e for e in cap_logs if e.get("log_level") == "error"]
-    assert any("timeout" in e.get("event", "") for e in error_events), (
-        f"Expected a timeout error log; got: {cap_logs}"
-    )
+    assert any(
+        "timeout" in e.get("event", "") for e in error_events
+    ), f"Expected a timeout error log; got: {cap_logs}"
 
 
 # ---------------------------------------------------------------------------
@@ -602,9 +596,7 @@ async def test_retrieved_contexts_field_preferred_over_citation_fallback(
                 ],
                 "confidence": 0.95,
                 "chunks_retrieved": 1,
-                "retrieved_contexts": [
-                    "The actual graded chunk text for RAGAS faithfulness"
-                ],
+                "retrieved_contexts": ["The actual graded chunk text for RAGAS faithfulness"],
             },
             {"type": "done"},
         ]
@@ -628,6 +620,4 @@ async def test_retrieved_contexts_field_preferred_over_citation_fallback(
     assert len(captured_samples) == 1
     sample = captured_samples[0]
     # Must use retrieved_contexts, not the filename fallback "policy.pdf p.7"
-    assert sample.retrieved_contexts == [
-        "The actual graded chunk text for RAGAS faithfulness"
-    ]
+    assert sample.retrieved_contexts == ["The actual graded chunk text for RAGAS faithfulness"]

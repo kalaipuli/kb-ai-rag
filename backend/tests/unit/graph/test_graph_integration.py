@@ -233,7 +233,10 @@ async def test_crag_path_reroutes_to_retriever(tmp_path: Path) -> None:
         # Second grader call: retrieved_docs accumulator now has 2 docs (operator.add reducer)
         grader_outputs=[
             [_GradeDoc(score=0.1, reasoning="irrelevant")],
-            [_GradeDoc(score=0.8, reasoning="now relevant"), _GradeDoc(score=0.8, reasoning="still relevant")],
+            [
+                _GradeDoc(score=0.8, reasoning="now relevant"),
+                _GradeDoc(score=0.8, reasoning="still relevant"),
+            ],
         ],
         gen_output=_GeneratorOutput(answer="Paris.", confidence=0.9, reasoning="ok"),
         critic_outputs=[
@@ -274,7 +277,10 @@ async def test_self_rag_path_reroutes_after_critic(tmp_path: Path) -> None:
         # Second grader call: retrieved_docs has 2 docs (operator.add reducer accumulated 1+1)
         grader_outputs=[
             [_GradeDoc(score=0.8, reasoning="relevant")],
-            [_GradeDoc(score=0.8, reasoning="still relevant"), _GradeDoc(score=0.8, reasoning="also relevant")],
+            [
+                _GradeDoc(score=0.8, reasoning="still relevant"),
+                _GradeDoc(score=0.8, reasoning="also relevant"),
+            ],
         ],
         gen_output=_GeneratorOutput(answer="Some answer.", confidence=0.7, reasoning="ok"),
         critic_outputs=[
@@ -370,9 +376,7 @@ async def test_generator_llm_failure_produces_fallback_answer(tmp_path: Path) ->
     )
 
     grader_chain = MagicMock()
-    grader_chain.batch = MagicMock(
-        return_value=[_GradeDoc(score=0.9, reasoning="relevant")]
-    )
+    grader_chain.batch = MagicMock(return_value=[_GradeDoc(score=0.9, reasoning="relevant")])
 
     # Generator chain raises to simulate Azure throttling
     gen_chain = MagicMock()
@@ -393,8 +397,8 @@ async def test_generator_llm_failure_produces_fallback_answer(tmp_path: Path) ->
     }
 
     llm_mock = MagicMock()
-    llm_mock.with_structured_output.side_effect = (
-        lambda schema: schema_map.get(schema.__name__, MagicMock())
+    llm_mock.with_structured_output.side_effect = lambda schema: schema_map.get(
+        schema.__name__, MagicMock()
     )
 
     with (

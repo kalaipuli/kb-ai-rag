@@ -92,7 +92,9 @@ async def test_uses_query_rewritten_when_set() -> None:
     mock_retriever = MagicMock()
     mock_retriever.retrieve = AsyncMock(return_value=[raw])
 
-    state = _make_state(strategy="hybrid", query="original query", query_rewritten="rewritten query")
+    state = _make_state(
+        strategy="hybrid", query="original query", query_rewritten="rewritten query"
+    )
     await retriever_node(state, retriever=mock_retriever)
 
     mock_retriever.retrieve.assert_awaited_once_with("rewritten query", k=None, filters=None)
@@ -181,9 +183,9 @@ async def test_steps_taken_contains_retriever_step_with_duration() -> None:
 
     assert len(result["steps_taken"]) == 1
     step = result["steps_taken"][0]
-    assert re.fullmatch(r"retriever:dense:\d+ms", step), (
-        f"step string '{step}' did not match expected pattern"
-    )
+    assert re.fullmatch(
+        r"retriever:dense:\d+ms", step
+    ), f"step string '{step}' did not match expected pattern"
 
 
 # ---------------------------------------------------------------------------

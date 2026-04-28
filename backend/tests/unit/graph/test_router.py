@@ -127,7 +127,9 @@ async def test_analytical_query_generates_hyde_rewrite() -> None:
 async def test_multi_hop_query_generates_stepback_rewrite() -> None:
     expected_rewrite = "What are the components of modern question-answering systems?"
     llm = _make_llm_with_structured_output("multi_hop", "hybrid", rewritten_query=expected_rewrite)
-    state = _make_state("What model does the RAG system use and who built it and when was it released?")
+    state = _make_state(
+        "What model does the RAG system use and who built it and when was it released?"
+    )
 
     result = await router_node(state, llm=llm)  # type: ignore[arg-type]
 
@@ -177,6 +179,6 @@ async def test_steps_taken_contains_router_step_string() -> None:
 
     assert len(result["steps_taken"]) == 1
     step = result["steps_taken"][0]
-    assert re.fullmatch(r"router:factual:hybrid:\d+ms", step), (
-        f"step string '{step}' did not match expected pattern"
-    )
+    assert re.fullmatch(
+        r"router:factual:hybrid:\d+ms", step
+    ), f"step string '{step}' did not match expected pattern"

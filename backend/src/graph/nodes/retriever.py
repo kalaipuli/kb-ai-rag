@@ -92,9 +92,7 @@ async def retriever_node(
             )
         else:
             try:
-                results: list[Any] = await retriever.retrieve(
-                    effective_query, k=k, filters=filters
-                )
+                results: list[Any] = await retriever.retrieve(effective_query, k=k, filters=filters)
                 docs = [_result_to_document(r) for r in results]
                 log.info(
                     "retriever_hybrid_complete",
@@ -135,7 +133,9 @@ async def retriever_node(
                     for r in raw_results
                 ]
                 web_fallback_used = True
-                log.info("retriever_web_complete", doc_count=len(docs), query_len=len(effective_query))
+                log.info(
+                    "retriever_web_complete", doc_count=len(docs), query_len=len(effective_query)
+                )
             except Exception as exc:
                 log.warning("retriever_web_failed", error=str(exc), query=effective_query)
                 docs = []

@@ -81,9 +81,7 @@ async def generator_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str
         context_docs = graded_docs  # empty list — LLM will say insufficient context
 
     # Build numbered context string
-    context_parts = [
-        f"[{i + 1}] {doc.page_content}" for i, doc in enumerate(context_docs)
-    ]
+    context_parts = [f"[{i + 1}] {doc.page_content}" for i, doc in enumerate(context_docs)]
     context_str = "\n\n".join(context_parts) if context_parts else "(no context available)"
 
     # Last 5 messages for conversation context
