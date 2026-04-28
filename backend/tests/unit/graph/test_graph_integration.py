@@ -148,7 +148,9 @@ async def _collect_terminal_state(compiled: Any, initial: dict[str, Any]) -> dic
         for node_update in update.values():
             if isinstance(node_update, dict):
                 for k, v in node_update.items():
-                    if k in ("retrieved_docs", "steps_taken", "messages") and isinstance(v, list):
+                    # steps_taken and messages accumulate (reducer fields).
+                    # retrieved_docs uses plain replacement semantics (ADR-011).
+                    if k in ("steps_taken", "messages") and isinstance(v, list):
                         existing = terminal.get(k, [])
                         terminal[k] = (existing if isinstance(existing, list) else []) + v
                     else:
@@ -230,13 +232,10 @@ async def test_crag_path_reroutes_to_retriever(tmp_path: Path) -> None:
             query_type="factual", retrieval_strategy="hybrid", reasoning="ok"
         ),
         # First grader call: 1 doc, all below threshold → CRAG re-route
-        # Second grader call: retrieved_docs accumulator now has 2 docs (operator.add reducer)
+        # Second grader call: plain replacement — retrieved_docs has exactly 1 doc (ADR-011)
         grader_outputs=[
             [_GradeDoc(score=0.1, reasoning="irrelevant")],
-            [
-                _GradeDoc(score=0.8, reasoning="now relevant"),
-                _GradeDoc(score=0.8, reasoning="still relevant"),
-            ],
+            [_GradeDoc(score=0.8, reasoning="now relevant")],
         ],
         gen_output=_GeneratorOutput(answer="Paris.", confidence=0.9, reasoning="ok"),
         critic_outputs=[
@@ -281,13 +280,10 @@ async def test_self_rag_path_reroutes_after_critic(tmp_path: Path) -> None:
             query_type="factual", retrieval_strategy="hybrid", reasoning="ok"
         ),
         # First grader call: 1 doc above threshold → generator → critic fires → re-route
-        # Second grader call: retrieved_docs has 2 docs (operator.add reducer accumulated 1+1)
+        # Second grader call: plain replacement — retrieved_docs has exactly 1 doc (ADR-011)
         grader_outputs=[
             [_GradeDoc(score=0.8, reasoning="relevant")],
-            [
-                _GradeDoc(score=0.8, reasoning="still relevant"),
-                _GradeDoc(score=0.8, reasoning="also relevant"),
-            ],
+            [_GradeDoc(score=0.8, reasoning="still relevant")],
         ],
         gen_output=_GeneratorOutput(answer="Some answer.", confidence=0.7, reasoning="ok"),
         critic_outputs=[

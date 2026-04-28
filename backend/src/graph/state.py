@@ -18,10 +18,13 @@ from src.schemas.generation import Citation
 class AgentState(TypedDict):
     """Shared state passed between every node in the LangGraph workflow.
 
-    Fields annotated with a reducer (``Annotated[list[...], reducer]``) are
-    *append-only* — LangGraph merges partial updates by applying the reducer
-    rather than replacing the previous value.  All other fields are plain
-    TypedDict entries whose values are replaced on each update.
+    Two fields carry reducer annotations:
+    - ``messages``: ``add_messages`` deduplicates by message ID (conversation history).
+    - ``steps_taken``: ``operator.add`` appends step labels (observability audit log).
+
+    All other fields are plain TypedDict entries whose values are replaced on
+    each update.  In particular, ``retrieved_docs`` is a plain replacement field
+    — each retrieval pass produces a clean working set (see ADR-011).
     """
 
     # ------------------------------------------------------------------
@@ -41,9 +44,10 @@ class AgentState(TypedDict):
 
     # ------------------------------------------------------------------
     # Retriever node outputs
-    # reducer: operator.add — partial updates append rather than replace
+    # Plain replacement — each retrieval pass overwrites with a clean working
+    # set (no reducer).  See ADR-011 for rationale.
     # ------------------------------------------------------------------
-    retrieved_docs: Annotated[list[Document], operator.add]
+    retrieved_docs: list[Document]
     web_fallback_used: bool
 
     # ------------------------------------------------------------------

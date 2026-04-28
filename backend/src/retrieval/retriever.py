@@ -1,5 +1,7 @@
 """HybridRetriever — orchestrates dense + sparse + RRF + cross-encoder re-rank."""
 
+from typing import Literal
+
 import structlog
 
 from src.config import Settings
@@ -43,13 +45,19 @@ class HybridRetriever:
         query: str,
         k: int | None = None,
         filters: dict[str, str] | None = None,
+        mode: Literal["dense", "hybrid"] = "hybrid",
     ) -> list[RetrievalResult]:
-        """Run the full hybrid retrieval pipeline and return re-ranked results.
+        """Run the retrieval pipeline and return re-ranked results.
 
         Args:
             query: Natural-language query string.
             k: Override for retrieval_top_k (dense + sparse candidate pool).
             filters: Optional payload field filters forwarded to dense search.
+            mode: Retrieval strategy.
+                ``"hybrid"`` (default) — embed → Qdrant dense → BM25 sparse → RRF fusion →
+                cross-encoder rerank.
+                ``"dense"`` — embed → Qdrant dense → cross-encoder rerank. BM25 and RRF are
+                skipped entirely.
 
         Returns:
             Up to ``reranker_top_k`` results sorted by cross-encoder score.
@@ -62,13 +70,28 @@ class HybridRetriever:
             raise RetrievalError(f"Query embedding failed during retrieval: {exc}") from exc
 
         dense = await self._dense.search(query_vector, k=top_k, filters=filters)
-        sparse = self._sparse.search(query, k=top_k)
 
+        if mode == "dense":
+            reranked = self._reranker.rerank(query, dense, top_k=self._settings.reranker_top_k)
+            logger.info(
+                "retrieval_complete",
+                mode=mode,
+                query_len=len(query),
+                dense_count=len(dense),
+                sparse_count=0,
+                fused_count=len(dense),
+                final_count=len(reranked),
+            )
+            return reranked
+
+        # mode == "hybrid"
+        sparse = self._sparse.search(query, k=top_k)
         fused = reciprocal_rank_fusion([dense, sparse], k=self._settings.rrf_k)
         reranked = self._reranker.rerank(query, fused, top_k=self._settings.reranker_top_k)
 
         logger.info(
             "retrieval_complete",
+            mode=mode,
             query_len=len(query),
             dense_count=len(dense),
             sparse_count=len(sparse),

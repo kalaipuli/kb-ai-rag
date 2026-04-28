@@ -12,11 +12,13 @@ from src.graph.state import AgentState
 
 
 def route_after_grader(state: AgentState) -> Literal["retriever", "generator"]:
-    """Route after grading: fall back to Tavily retrieval when all chunks fail.
+    """Route after grading: pure routing based on grader outcome and retry budget.
 
     Returns "retriever" only when every grader score is below threshold AND
     retry budget remains.  Falls through to "generator" at max retries so the
-    graph always terminates.
+    graph always terminates.  Strategy transitions (e.g. escalating to web
+    retrieval on the CRAG path) are the grader node's responsibility — this
+    function only routes.
     """
     settings = get_settings()
     if state["all_below_threshold"] and state["retry_count"] < settings.graph_max_retries:

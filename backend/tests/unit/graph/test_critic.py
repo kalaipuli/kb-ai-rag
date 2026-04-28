@@ -72,7 +72,7 @@ async def test_low_critic_score_state_updated() -> None:
     llm = _mock_llm(hallucination_risk=0.2)
     state = _make_state()
 
-    result = await critic_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await critic_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert result["critic_score"] == pytest.approx(0.2)
 
@@ -87,7 +87,7 @@ async def test_high_critic_score_state_updated() -> None:
     llm = _mock_llm(hallucination_risk=0.85)
     state = _make_state(answer="The Eiffel Tower is in London.")
 
-    result = await critic_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await critic_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert result["critic_score"] == pytest.approx(0.85)
 
@@ -102,7 +102,7 @@ async def test_steps_taken_contains_critic_entry() -> None:
     llm = _mock_llm(hallucination_risk=0.3)
     state = _make_state()
 
-    result = await critic_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await critic_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert len(result["steps_taken"]) == 1
     step = result["steps_taken"][0]
@@ -123,7 +123,7 @@ async def test_llm_failure_returns_zero_score() -> None:
     llm.with_structured_output.return_value = chain_mock
     state = _make_state()
 
-    result = await critic_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await critic_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert result["critic_score"] == 0.0
 
@@ -147,6 +147,6 @@ async def test_score_clamped_to_valid_range() -> None:
     llm.with_structured_output.return_value = chain_mock
     state = _make_state()
 
-    result = await critic_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await critic_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert 0.0 <= result["critic_score"] <= 1.0
