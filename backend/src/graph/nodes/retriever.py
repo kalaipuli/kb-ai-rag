@@ -38,12 +38,16 @@ def _result_to_document(result: "RetrievalResult") -> Document:
     metadata: dict[str, Any] = {
         "chunk_id": result.chunk_id,
         "score": result.score,
+        "retrieval_score": result.score,
     }
     # ChunkMetadata is a TypedDict — access via dict key lookup.
     raw_meta = cast(dict[str, Any], result.metadata)
     source = raw_meta.get("source_path")
     if source is not None:
         metadata["source"] = source
+    raw_page = raw_meta.get("page_number")
+    if raw_page is not None and int(raw_page) != -1:
+        metadata["page_number"] = int(raw_page)
     return Document(page_content=result.text, metadata=metadata)
 
 
