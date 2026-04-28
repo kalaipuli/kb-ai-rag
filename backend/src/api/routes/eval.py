@@ -1,5 +1,6 @@
 """GET /api/v1/eval/baseline — serve the persisted RAGAS evaluation baseline."""
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -7,6 +8,7 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query
 
 from src.api.deps import SettingsDep
+from src.api.schemas import EvalBaselineResponse, EvalMetrics
 
 logger = structlog.get_logger(__name__)
 
@@ -17,7 +19,7 @@ router = APIRouter()
 async def eval_baseline(
     settings: SettingsDep,
     pipeline: str | None = Query(default=None),
-) -> dict[str, object]:
+) -> EvalBaselineResponse:
     """Return the persisted RAGAS evaluation baseline metrics.
 
     Reads the JSON file at ``settings.eval_baseline_path`` by default.
@@ -58,7 +60,7 @@ async def eval_baseline(
         )
 
     try:
-        raw = path.read_text(encoding="utf-8")
+        raw = await asyncio.to_thread(path.read_text, encoding="utf-8")
         data: dict[str, object] = json.loads(raw)
     except json.JSONDecodeError as exc:
         logger.error("eval_baseline_malformed", path=str(path), error=str(exc))
@@ -67,5 +69,32 @@ async def eval_baseline(
             detail=f"Evaluation baseline file is malformed: {exc}",
         ) from exc
 
+    try:
+        if pipeline == "agentic":
+            raw_metrics: object = data.get("metrics", data)
+            run_date: str | None = str(data["run_date"]) if "run_date" in data else None
+        else:
+            raw_metrics = data
+            run_date = None
+        if not isinstance(raw_metrics, dict):
+            raise TypeError(f"Expected dict for metrics, got {type(raw_metrics)}")
+        metrics = EvalMetrics(
+            faithfulness=float(raw_metrics["faithfulness"]),
+            answer_relevancy=float(raw_metrics["answer_relevancy"]),
+            context_recall=float(raw_metrics["context_recall"]),
+            context_precision=float(raw_metrics["context_precision"]),
+            answer_correctness=float(raw_metrics["answer_correctness"]),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        logger.error("eval_baseline_invalid_schema", path=str(path), error=str(exc))
+        raise HTTPException(
+            status_code=422,
+            detail=f"Evaluation baseline file is missing required metric fields: {exc}",
+        ) from exc
+
     logger.info("eval_baseline_served", path=str(path), pipeline=pipeline)
-    return data
+    return EvalBaselineResponse(
+        pipeline=pipeline or "static",
+        run_date=run_date,
+        metrics=metrics,
+    )

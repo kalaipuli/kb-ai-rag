@@ -103,7 +103,7 @@ class EvaluationRunner:
         self._ragas_embeddings = LangchainEmbeddingsWrapper(
             AzureOpenAIEmbeddings(
                 azure_endpoint=settings.azure_openai_endpoint,
-                api_key=api_key_str,  # type: ignore[arg-type]
+                api_key=api_key_str,  # type: ignore[arg-type]  # httpx str accepted at call site
                 azure_deployment=settings.azure_embedding_deployment,
                 api_version=settings.azure_openai_api_version,
             )

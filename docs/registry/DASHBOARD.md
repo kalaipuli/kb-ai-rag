@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-28 (Phase 2 COMPLETE · Phase 2f RAGAS faithfulness 0.9528 · 332 backend tests · 108 frontend tests · all 15 gate criteria verified)
+> Maintained by: project-manager agent | Last updated: 2026-04-28 (Phase 2 COMPLETE · Phase 2f RAGAS faithfulness 0.9528 · 334 backend tests · 108 frontend tests · all 15 gate criteria verified · Phase 2f architect review + 5 fixes cleared 2026-04-28)
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -19,7 +19,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 | 2c | Agent Nodes (Router · Retriever · Grader · Generator · Critic) | [2c](phase2/2c-agent-nodes/tasks.md) · [fixes](phase2/2c-agent-nodes/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · Fixes cleared 2026-04-27 |
 | 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · All 9 fixes cleared 2026-04-27 |
 | 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | Passed 2026-04-27 |
-| 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) | ✅ Complete | Passed 2026-04-28 · faithfulness 0.9528 |
+| 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) · [fixes](phase2/2f-evaluation/fixes.md) | ✅ Complete | Passed 2026-04-28 · faithfulness 0.9528 · Architect review 2026-04-28 · All 5 fixes cleared 2026-04-28 |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
 | 5 | Observability & Evaluation | — | ⏳ Not Started | — |

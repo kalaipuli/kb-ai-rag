@@ -39,9 +39,9 @@ class TestEvalBaselineRoute:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["faithfulness"] == pytest.approx(0.9028)
-        assert data["answer_relevancy"] == pytest.approx(0.9752)
-        assert data["answer_correctness"] == pytest.approx(0.7650)
+        assert data["metrics"]["faithfulness"] == pytest.approx(0.9028)
+        assert data["metrics"]["answer_relevancy"] == pytest.approx(0.9752)
+        assert data["metrics"]["answer_correctness"] == pytest.approx(0.7650)
 
     def test_returns_404_when_file_missing(
         self,
@@ -93,11 +93,15 @@ class TestEvalBaselineRoute:
     ) -> None:
         """?pipeline=agentic returns 200 with agentic baseline content."""
         agentic_content = {
-            "faithfulness": 0.88,
-            "answer_relevancy": 0.91,
-            "context_recall": 0.85,
-            "context_precision": 0.87,
-            "answer_correctness": 0.80,
+            "run_date": "2026-04-28",
+            "endpoint": "agentic",
+            "metrics": {
+                "faithfulness": 0.88,
+                "answer_relevancy": 0.91,
+                "context_recall": 0.85,
+                "context_precision": 0.87,
+                "answer_correctness": 0.80,
+            },
         }
         with (
             patch("src.api.routes.eval.Path.exists", return_value=True),
@@ -113,8 +117,8 @@ class TestEvalBaselineRoute:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["faithfulness"] == pytest.approx(0.88)
-        assert data["answer_correctness"] == pytest.approx(0.80)
+        assert data["metrics"]["faithfulness"] == pytest.approx(0.88)
+        assert data["metrics"]["answer_correctness"] == pytest.approx(0.80)
 
     def test_agentic_pipeline_returns_404_when_file_missing(
         self,
@@ -168,4 +172,52 @@ class TestEvalBaselineRoute:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["faithfulness"] == pytest.approx(0.9028)
+        assert data["metrics"]["faithfulness"] == pytest.approx(0.9028)
+
+    def test_returns_422_when_agentic_baseline_missing_metrics_key(
+        self,
+        test_client: TestClient,
+        authenticated_headers: dict[str, str],
+        mock_settings: Settings,
+    ) -> None:
+        """422 when agentic JSON is valid but missing required metric fields."""
+        with (
+            patch("src.api.routes.eval.Path.exists", return_value=True),
+            patch(
+                "src.api.routes.eval.Path.read_text",
+                return_value=json.dumps({"endpoint": "agentic"}),
+            ),
+        ):
+            response = test_client.get(
+                "/api/v1/eval/baseline?pipeline=agentic",
+                headers=authenticated_headers,
+            )
+        assert response.status_code == 422
+        assert "missing required metric fields" in response.json()["detail"]
+
+    def test_returns_422_on_json_decode_error_side_effect(
+        self,
+        test_client: TestClient,
+        authenticated_headers: dict[str, str],
+        mock_settings: Settings,
+    ) -> None:
+        """Route returns 422 when the file read raises JSONDecodeError (error-path boundary test).
+
+        asyncio.to_thread propagates exceptions raised by the wrapped function, so
+        side_effect on Path.read_text fires json.JSONDecodeError through the await
+        and into the except json.JSONDecodeError handler without patching global state.
+        """
+        with (
+            patch("src.api.routes.eval.Path.exists", return_value=True),
+            patch(
+                "src.api.routes.eval.Path.read_text",
+                side_effect=json.JSONDecodeError("Expecting value", "", 0),
+            ),
+        ):
+            response = test_client.get(
+                "/api/v1/eval/baseline",
+                headers=authenticated_headers,
+            )
+
+        assert response.status_code == 422
+        assert "malformed" in response.json()["detail"]
