@@ -1,24 +1,24 @@
 """Grader node — scores retrieved chunks for relevance using GPT-4o-mini structured output.
 
 Each retrieved document is scored [0.0, 1.0] against the user query.
-Chunks below GRADER_THRESHOLD are filtered out. The edge function
+Chunks below grader_threshold (from settings) are filtered out. The edge function
 route_after_grader decides whether to re-retrieve or proceed to generation.
 """
 
 import asyncio
+import functools
 import time
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from langchain_openai import AzureChatOpenAI
 from pydantic import BaseModel
 
-from src.graph.edges import GRADER_THRESHOLD
+from src.config import get_settings
+from src.exceptions import GraderError
 from src.graph.state import AgentState
 
 log = structlog.get_logger(__name__)
-
-_BATCH_SIZE = 10
 
 _GRADER_SYSTEM_PROMPT = (
     "You are a document relevance assessor. Given a user query and a document chunk, "
@@ -37,8 +37,11 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
     """Score each retrieved document for relevance to the user query.
 
     Uses GPT-4o-mini with structured output to produce a float score per chunk.
-    Chunks scoring below GRADER_THRESHOLD are filtered from graded_docs.
+    Chunks scoring below settings.grader_threshold are filtered from graded_docs.
     Increments retry_count by 1 — the edge function uses this to gate re-routing.
+
+    Raises:
+        GraderError: when every batch fails, leaving no usable scores.
 
     Args:
         state: Current AgentState containing retrieved_docs and query.
@@ -48,17 +51,30 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
         Partial state update with grader_scores, graded_docs, all_below_threshold,
         retry_count, and steps_taken.
     """
+    settings = get_settings()
     query = state["query"]
     docs = state["retrieved_docs"]
     start = time.monotonic()
 
+    if not docs:
+        duration_ms = round((time.monotonic() - start) * 1000)
+        step = f"grader:scored=0:passed=0:{duration_ms}ms"
+        return {
+            "grader_scores": [],
+            "graded_docs": [],
+            "all_below_threshold": False,
+            "retry_count": state["retry_count"] + 1,
+            "steps_taken": [step],
+        }
+
     grader_chain = llm.with_structured_output(_GradeDoc)
     scores: list[float] = []
+    failed_batches = 0
+    total_batches = 0
 
-    for batch_start in range(0, max(len(docs), 1), _BATCH_SIZE):
-        batch = docs[batch_start : batch_start + _BATCH_SIZE]
-        if not batch:
-            break
+    for batch_start in range(0, len(docs), settings.grader_batch_size):
+        batch = docs[batch_start : batch_start + settings.grader_batch_size]
+        total_batches += 1
 
         messages_batch = [
             [
@@ -72,28 +88,28 @@ async def grader_node(state: AgentState, *, llm: AzureChatOpenAI) -> dict[str, A
         ]
 
         try:
-            results: list[_GradeDoc] = await asyncio.to_thread(
-                grader_chain.batch,
-                messages_batch,  # type: ignore[arg-type]  # list[list[dict]] accepted by batch at runtime despite stub mismatch
+            raw = await asyncio.to_thread(
+                functools.partial(grader_chain.batch, messages_batch)  # type: ignore[arg-type]  # LangChain batch() stub types return as list[dict|Any]; functools.partial avoids lambda closure capture bug
             )
+            results: list[_GradeDoc] = cast(list[_GradeDoc], raw)
             scores.extend(r.score for r in results)
         except Exception as exc:
-            log.warning(
+            failed_batches += 1
+            log.error(
                 "grader_batch_failed",
                 error=str(exc),
                 batch_start=batch_start,
                 batch_size=len(batch),
             )
-            # assign 0.0 for every chunk in the failed batch
             scores.extend(0.0 for _ in batch)
 
-    if not docs:
-        scores = []
+    if failed_batches == total_batches:
+        raise GraderError(f"All {total_batches} grader batch(es) failed — LLM unavailable")
 
     graded_docs = [
-        doc for doc, score in zip(docs, scores, strict=True) if score >= GRADER_THRESHOLD
+        doc for doc, score in zip(docs, scores, strict=True) if score >= settings.grader_threshold
     ]
-    all_below = len(scores) > 0 and all(s < GRADER_THRESHOLD for s in scores)
+    all_below = all(s < settings.grader_threshold for s in scores)
 
     duration_ms = round((time.monotonic() - start) * 1000)
     step = f"grader:scored={len(scores)}:passed={len(graded_docs)}:{duration_ms}ms"

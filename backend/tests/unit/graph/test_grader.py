@@ -5,8 +5,10 @@ Covers:
 2. All scores below threshold → graded_docs empty; all_below_threshold True
 3. Mixed scores → only above-threshold docs in graded_docs
 4. retry_count incremented by 1 from incoming value
-5. LLM batch failure for one chunk → that chunk receives score 0.0 (error path)
+5. LLM batch failure for one batch only (partial failure) → failed chunks get 0.0, passing batch preserved
 6. steps_taken contains grader entry with duration_ms
+7. empty retrieved_docs → no batch call, all_below_threshold False
+8. all batches fail → GraderError raised
 """
 
 from typing import Any
@@ -15,6 +17,7 @@ from unittest.mock import MagicMock
 import pytest
 from langchain_core.documents import Document
 
+from src.exceptions import GraderError
 from src.graph.nodes.grader import _GradeDoc, grader_node
 
 
@@ -71,7 +74,7 @@ async def test_all_above_threshold() -> None:
     llm = _mock_llm_with_scores([0.9, 0.8])
     state = _make_state(docs)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert len(result["graded_docs"]) == 2
     assert result["all_below_threshold"] is False
@@ -89,7 +92,7 @@ async def test_all_below_threshold() -> None:
     llm = _mock_llm_with_scores([0.2, 0.1])
     state = _make_state(docs)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert result["graded_docs"] == []
     assert result["all_below_threshold"] is True
@@ -108,7 +111,7 @@ async def test_mixed_scores() -> None:
     llm = _mock_llm_with_scores([0.8, 0.3, 0.6])
     state = _make_state([doc_a, doc_b, doc_c])
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert len(result["graded_docs"]) == 2
     assert doc_a in result["graded_docs"]
@@ -128,31 +131,40 @@ async def test_retry_count_incremented() -> None:
     llm = _mock_llm_with_scores([0.7])
     state = _make_state(docs, retry_count=2)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert result["retry_count"] == 3
 
 
 # ---------------------------------------------------------------------------
-# Test 5: LLM batch failure → failed chunk scored 0.0 (error path)
+# Test 5: partial batch failure — first batch raises, second batch succeeds
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
 async def test_batch_failure_assigns_zero_score() -> None:
-    docs = [_make_doc("doc A", "c1"), _make_doc("doc B", "c2")]
+    """First batch (docs 0-9) fails → 0.0 scores; second batch succeeds → real scores preserved."""
+    # With default grader_batch_size=10, docs 0..9 form batch 1, docs 10..10 form batch 2.
+    # We need 11 docs so there are two batches; the first raises, the second succeeds.
+    docs_batch1 = [_make_doc(f"doc {i}", f"c{i}") for i in range(10)]
+    doc_batch2 = _make_doc("doc 10", "c10")
+    all_docs = docs_batch1 + [doc_batch2]
+
+    second_batch_result = [_GradeDoc(score=0.8, reasoning="ok")]
     chain_mock = MagicMock()
-    chain_mock.batch = MagicMock(side_effect=RuntimeError("Azure unavailable"))
+    chain_mock.batch = MagicMock(
+        side_effect=[RuntimeError("Azure unavailable"), second_batch_result]
+    )
     llm = MagicMock()
     llm.with_structured_output.return_value = chain_mock
-    state = _make_state(docs)
+    state = _make_state(all_docs)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
-    # Both chunks scored 0.0 due to batch failure
-    assert result["grader_scores"] == [0.0, 0.0]
-    assert result["graded_docs"] == []
-    assert result["all_below_threshold"] is True
+    # First 10 chunks scored 0.0 due to batch failure; last chunk scored 0.8
+    assert result["grader_scores"] == [0.0] * 10 + [0.8]
+    assert len(result["graded_docs"]) == 1
+    assert result["graded_docs"][0] == doc_batch2
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +178,7 @@ async def test_steps_taken_contains_grader_entry() -> None:
     llm = _mock_llm_with_scores([0.9])
     state = _make_state(docs)
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert len(result["steps_taken"]) == 1
     step = result["steps_taken"][0]
@@ -187,8 +199,26 @@ async def test_empty_docs_no_batch_call() -> None:
     llm.with_structured_output.return_value = chain_mock
     state = _make_state([])
 
-    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]
+    result = await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert result["graded_docs"] == []
     assert result["grader_scores"] == []
     assert result["all_below_threshold"] is False
+
+
+# ---------------------------------------------------------------------------
+# Test 8: all batches fail → GraderError raised
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_all_batches_fail_raises_grader_error() -> None:
+    docs = [_make_doc("doc A", "c1"), _make_doc("doc B", "c2")]
+    chain_mock = MagicMock()
+    chain_mock.batch = MagicMock(side_effect=RuntimeError("Azure unavailable"))
+    llm = MagicMock()
+    llm.with_structured_output.return_value = chain_mock
+    state = _make_state(docs)
+
+    with pytest.raises(GraderError):
+        await grader_node(state, llm=llm)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level

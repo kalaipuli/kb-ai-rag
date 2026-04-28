@@ -7,11 +7,8 @@ add_conditional_edges.
 
 from typing import Literal
 
+from src.config import get_settings
 from src.graph.state import AgentState
-
-GRADER_THRESHOLD: float = 0.5
-CRITIC_THRESHOLD: float = 0.7
-MAX_RETRIES: int = 1
 
 
 def route_after_grader(state: AgentState) -> Literal["retriever", "generator"]:
@@ -21,7 +18,8 @@ def route_after_grader(state: AgentState) -> Literal["retriever", "generator"]:
     retry budget remains.  Falls through to "generator" at max retries so the
     graph always terminates.
     """
-    if state["all_below_threshold"] and state["retry_count"] < MAX_RETRIES:
+    settings = get_settings()
+    if state["all_below_threshold"] and state["retry_count"] < settings.graph_max_retries:
         return "retriever"
     return "generator"
 
@@ -33,7 +31,11 @@ def route_after_critic(state: AgentState) -> Literal["retriever", "end"]:
     budget remains.  Falls through to "end" at max retries so the graph always
     terminates.
     """
+    settings = get_settings()
     critic_score: float = state["critic_score"] if state["critic_score"] is not None else 0.0
-    if critic_score > CRITIC_THRESHOLD and state["retry_count"] < MAX_RETRIES:
+    if (
+        critic_score > settings.critic_threshold
+        and state["retry_count"] < settings.graph_max_retries
+    ):
         return "retriever"
     return "end"

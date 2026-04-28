@@ -47,3 +47,10 @@ class GenerationError(KBRagError):
 
     def __init__(self, message: str) -> None:
         super().__init__(message)
+
+
+class GraderError(KBRagError):
+    """Raised when the grader LLM batch call fails for all chunks in a node invocation."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)

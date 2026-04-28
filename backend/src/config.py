@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     # LangGraph SqliteSaver checkpointer (Phase 2+; single-worker only — see ADR-004)
     sqlite_checkpointer_path: str = "data/checkpointer.sqlite"
 
+    # Graph node tuning
+    grader_batch_size: int = 10
+    grader_threshold: float = 0.5
+    critic_threshold: float = 0.7
+    graph_max_retries: int = 1
+
 
 @lru_cache
 def get_settings() -> Settings:

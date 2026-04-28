@@ -15,9 +15,10 @@ Patch strategy:
   a single mock instance is returned whose `with_structured_output` dispatch controls all nodes.
 - `src.graph.builder.retriever_node` — intercepts the retriever closure in build_graph()
   so each test controls retrieved_docs and call counts independently.
-- `src.graph.edges.MAX_RETRIES` and the copies imported into builder/nodes — patched to 2
-  in re-routing tests so that grader's increment of retry_count (0→1) still leaves budget
-  for one CRAG/Self-RAG re-route (1 < 2 = True). The max-retry-guard test uses MAX_RETRIES=1.
+- `src.graph.edges.get_settings` and `src.graph.nodes.grader.get_settings` — patched with
+  graph_max_retries=2 in re-routing tests so that grader's increment of retry_count (0→1)
+  still leaves budget for one CRAG/Self-RAG re-route (1 < 2 = True).
+  The max-retry-guard test uses graph_max_retries=1 (default).
 """
 
 from pathlib import Path
@@ -28,7 +29,6 @@ import pytest
 from langchain_core.documents import Document
 
 from src.graph.builder import build_graph
-from src.graph.edges import MAX_RETRIES
 from src.graph.nodes.critic import _CriticOutput
 from src.graph.nodes.generator import _GeneratorOutput
 from src.graph.nodes.grader import _GradeDoc
@@ -244,10 +244,17 @@ async def test_crag_path_reroutes_to_retriever(tmp_path: Path) -> None:
         ],
     )
 
+    edges_settings = MagicMock()
+    edges_settings.graph_max_retries = 2
+    edges_settings.grader_threshold = 0.5
+    edges_settings.critic_threshold = 0.7
+    edges_settings.grader_batch_size = 10
+
     with (
         patch("src.graph.builder.AzureChatOpenAI", return_value=llm_mock),
         patch("src.graph.builder.retriever_node", retriever_mock),
-        patch("src.graph.edges.MAX_RETRIES", 2),
+        patch("src.graph.edges.get_settings", return_value=edges_settings),
+        patch("src.graph.nodes.grader.get_settings", return_value=edges_settings),
     ):
         compiled = await build_graph(settings=settings, retriever=MagicMock())
         terminal = await _collect_terminal_state(compiled, _initial_state())
@@ -295,10 +302,17 @@ async def test_self_rag_path_reroutes_after_critic(tmp_path: Path) -> None:
         ],
     )
 
+    edges_settings = MagicMock()
+    edges_settings.graph_max_retries = 2
+    edges_settings.grader_threshold = 0.5
+    edges_settings.critic_threshold = 0.7
+    edges_settings.grader_batch_size = 10
+
     with (
         patch("src.graph.builder.AzureChatOpenAI", return_value=llm_mock),
         patch("src.graph.builder.retriever_node", retriever_mock),
-        patch("src.graph.edges.MAX_RETRIES", 2),
+        patch("src.graph.edges.get_settings", return_value=edges_settings),
+        patch("src.graph.nodes.grader.get_settings", return_value=edges_settings),
     ):
         compiled = await build_graph(settings=settings, retriever=MagicMock())
         terminal = await _collect_terminal_state(compiled, _initial_state())
@@ -347,9 +361,9 @@ async def test_max_retry_guard_terminates(tmp_path: Path) -> None:
 
     # Graph terminated — answer must be set
     assert terminal["answer"] is not None
-    # Retriever not called more than MAX_RETRIES + 1 times
-    # (1 initial + at most MAX_RETRIES re-routes)
-    assert call_count[0] <= MAX_RETRIES + 1
+    # Retriever not called more than graph_max_retries + 1 times
+    # (1 initial + at most graph_max_retries=1 re-routes, the default)
+    assert call_count[0] <= 2
 
 
 # ---------------------------------------------------------------------------
