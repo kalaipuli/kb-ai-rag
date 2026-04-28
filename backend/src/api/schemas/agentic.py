@@ -17,11 +17,27 @@ class RouterStepPayload(BaseModel):
     duration_ms: int
 
 
+class RetrieverStepPayload(BaseModel):
+    """Payload emitted when the retriever node completes."""
+
+    strategy: Literal["dense", "hybrid", "web"]
+    docs_retrieved: int
+    duration_ms: int
+
+
 class GraderStepPayload(BaseModel):
     """Payload emitted when the grader node completes."""
 
     scores: list[float]
     web_fallback: bool
+    duration_ms: int
+
+
+class GeneratorStepPayload(BaseModel):
+    """Payload emitted when the generator node completes."""
+
+    docs_used: int
+    confidence: float = Field(ge=0.0, le=1.0)
     duration_ms: int
 
 
@@ -37,10 +53,17 @@ class AgentStepEvent(BaseModel):
     """SSE event emitted for each intermediate agent node completion."""
 
     type: Literal["agent_step"] = "agent_step"
-    node: Literal["router", "grader", "critic"]
+    node: Literal["router", "retriever", "grader", "generator", "critic"]
+    run: int = Field(ge=1)
     # Union resolved at runtime by mutually exclusive required fields.
     # Add Field(discriminator="...") if a future payload type shares field names.
-    payload: RouterStepPayload | GraderStepPayload | CriticStepPayload
+    payload: (
+        RouterStepPayload
+        | RetrieverStepPayload
+        | GraderStepPayload
+        | GeneratorStepPayload
+        | CriticStepPayload
+    )
 
 
 class AgentQueryRequest(BaseModel):
