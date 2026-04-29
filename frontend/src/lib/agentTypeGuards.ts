@@ -1,7 +1,9 @@
 import type {
   AgentStep,
   CriticStepPayload,
+  GeneratorStepPayload,
   GraderStepPayload,
+  RetrieverStepPayload,
   RouterStepPayload,
 } from "@/types";
 
@@ -21,4 +23,16 @@ export function isCriticPayload(
   payload: AgentStep["payload"],
 ): payload is CriticStepPayload {
   return "hallucination_risk" in payload;
+}
+
+export function isRetrieverPayload(
+  payload: AgentStep["payload"],
+): payload is RetrieverStepPayload {
+  return "docs_retrieved" in payload;
+}
+
+export function isGeneratorPayload(
+  payload: AgentStep["payload"],
+): payload is GeneratorStepPayload {
+  return "docs_used" in payload;
 }

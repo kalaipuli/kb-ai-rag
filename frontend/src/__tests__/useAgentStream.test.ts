@@ -32,6 +32,7 @@ describe("useAgentStream", () => {
       {
         type: "agent_step",
         node: "router",
+        run: 1,
         payload: {
           query_type: "factual",
           strategy: "dense",

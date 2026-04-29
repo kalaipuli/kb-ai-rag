@@ -57,7 +57,7 @@ export interface CollectionsResponse {
 
 // --- Phase 2: Agentic Pipeline SSE Types ---
 
-export type AgentStepNode = "router" | "grader" | "critic";
+export type AgentStepNode = "router" | "retriever" | "grader" | "generator" | "critic";
 
 export interface RouterStepPayload {
   query_type: "factual" | "analytical" | "multi_hop" | "ambiguous";
@@ -65,9 +65,21 @@ export interface RouterStepPayload {
   duration_ms: number;
 }
 
+export interface RetrieverStepPayload {
+  strategy: "dense" | "hybrid" | "web";
+  docs_retrieved: number;
+  duration_ms: number;
+}
+
 export interface GraderStepPayload {
   scores: number[];
   web_fallback: boolean;
+  duration_ms: number;
+}
+
+export interface GeneratorStepPayload {
+  docs_used: number;
+  confidence: number;
   duration_ms: number;
 }
 
@@ -80,14 +92,15 @@ export interface CriticStepPayload {
 export interface AgentStepEvent {
   type: "agent_step";
   node: AgentStepNode;
-  payload: RouterStepPayload | GraderStepPayload | CriticStepPayload;
+  run: number;
+  payload: RouterStepPayload | RetrieverStepPayload | GraderStepPayload | GeneratorStepPayload | CriticStepPayload;
 }
 
 export type AgentStreamEvent = StreamEvent | AgentStepEvent;
 
 export interface AgentStep {
   node: AgentStepNode;
-  payload: RouterStepPayload | GraderStepPayload | CriticStepPayload;
+  payload: RouterStepPayload | RetrieverStepPayload | GraderStepPayload | GeneratorStepPayload | CriticStepPayload;
   timestamp: string;
 }
 
