@@ -84,7 +84,7 @@ def _make_mock_graph(chunks: list[dict[str, Any]]) -> MagicMock:
 
 def _parse_events(lines: list[str]) -> list[dict[str, Any]]:
     data_lines = [ln for ln in lines if ln.startswith("data: ")]
-    return [json.loads(ln[len("data: "):]) for ln in data_lines]
+    return [json.loads(ln[len("data: ") :]) for ln in data_lines]
 
 
 # ---------------------------------------------------------------------------
@@ -158,7 +158,8 @@ class TestQueryAgenticEndpoint:
             # Generator agent_step comes after all tokens but before citations
             token_indices = [i for i, e in enumerate(events) if e["type"] == "token"]
             gen_step_index = next(
-                i for i, e in enumerate(events)
+                i
+                for i, e in enumerate(events)
                 if e["type"] == "agent_step" and e["node"] == "generator"
             )
             citations_index = next(i for i, e in enumerate(events) if e["type"] == "citations")

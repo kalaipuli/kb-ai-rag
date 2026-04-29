@@ -144,12 +144,7 @@ async def grader_node(
         "steps_taken": [step],
     }
 
-    if (
-        all_below
-        and new_retry_count >= 2
-        and web_search_enabled
-        and not web_fallback_used
-    ):
+    if all_below and new_retry_count >= 2 and web_search_enabled and not web_fallback_used:
         log.info("grader_escalating_to_web", retry_count=new_retry_count)
         result["retrieval_strategy"] = "web"
 

@@ -211,8 +211,7 @@ async def query_agentic_endpoint(
 
                         citations = state_update.get("citations", [])
                         serialised_citations = [
-                            c.model_dump() if hasattr(c, "model_dump") else c
-                            for c in citations
+                            c.model_dump() if hasattr(c, "model_dump") else c for c in citations
                         ]
                         confidence: object = state_update.get("confidence")
                         chunks_retrieved: int = _grader_doc_count
