@@ -1,10 +1,12 @@
 "use client";
 
 import type { JSX } from "react";
-import type { AgentStep, RouterStepPayload } from "@/types";
+import type { AgentStep, RouterStepPayload, RetrieverStepPayload } from "@/types";
 import {
   isCriticPayload,
+  isGeneratorPayload,
   isGraderPayload,
+  isRetrieverPayload,
   isRouterPayload,
 } from "@/lib/agentTypeGuards";
 
@@ -26,18 +28,36 @@ const STRATEGY_LABELS: Record<RouterStepPayload["strategy"], string> = {
   web: "Web search",
 };
 
+const RETRIEVER_STRATEGY_LABELS: Record<RetrieverStepPayload["strategy"], string> = {
+  hybrid: "Hybrid search",
+  dense: "Dense search",
+  web: "Web search",
+};
+
 function criticColour(risk: number): string {
   if (risk < 0.4) return "bg-green-500";
   if (risk <= 0.7) return "bg-amber-500";
   return "bg-red-500";
 }
 
-function RouterCard({ step }: { step: AgentStep }): JSX.Element | null {
+function IterationBadge({ run }: { run: number | undefined }): JSX.Element | null {
+  if (run === undefined || run <= 1) return null;
+  return (
+    <span className="ml-1 rounded-full bg-orange-100 px-1.5 py-0.5 text-orange-600">
+      #{run}
+    </span>
+  );
+}
+
+function RouterCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
   if (!isRouterPayload(step.payload)) return null;
   const { query_type, strategy, duration_ms } = step.payload;
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
-      <div className="mb-1 font-semibold text-gray-700">Router</div>
+      <div className="mb-1 flex items-center font-semibold text-gray-700">
+        Router
+        <IterationBadge run={run} />
+      </div>
       <div className="flex flex-wrap gap-2">
         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700">
           {QUERY_TYPE_LABELS[query_type]}
@@ -51,12 +71,35 @@ function RouterCard({ step }: { step: AgentStep }): JSX.Element | null {
   );
 }
 
-function GraderCard({ step }: { step: AgentStep }): JSX.Element | null {
+function RetrieverCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
+  if (!isRetrieverPayload(step.payload)) return null;
+  const { strategy, docs_retrieved, duration_ms } = step.payload;
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
+      <div className="mb-1 flex items-center font-semibold text-gray-700">
+        Retriever
+        <IterationBadge run={run} />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700">
+          {RETRIEVER_STRATEGY_LABELS[strategy]}
+        </span>
+        <span className="text-gray-500">{docs_retrieved} docs retrieved</span>
+      </div>
+      <div className="mt-1 text-gray-400">{duration_ms}ms</div>
+    </div>
+  );
+}
+
+function GraderCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
   if (!isGraderPayload(step.payload)) return null;
   const { scores, web_fallback, duration_ms } = step.payload;
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
-      <div className="mb-1 font-semibold text-gray-700">Grader</div>
+      <div className="mb-1 flex items-center font-semibold text-gray-700">
+        Grader
+        <IterationBadge run={run} />
+      </div>
       <div className="space-y-1">
         {scores.map((score, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -80,13 +123,43 @@ function GraderCard({ step }: { step: AgentStep }): JSX.Element | null {
   );
 }
 
-function CriticCard({ step }: { step: AgentStep }): JSX.Element | null {
+function GeneratorCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
+  if (!isGeneratorPayload(step.payload)) return null;
+  const { docs_used, confidence, duration_ms } = step.payload;
+  const colourClass = criticColour(1 - confidence);
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
+      <div className="mb-1 flex items-center font-semibold text-gray-700">
+        Generator
+        <IterationBadge run={run} />
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+          <div
+            className={`h-full rounded-full ${colourClass}`}
+            style={{ width: `${confidence * 100}%` }}
+          />
+        </div>
+        <span className="w-24 text-right text-gray-500">
+          {(confidence * 100).toFixed(0)}% confidence
+        </span>
+      </div>
+      <div className="mt-1 text-gray-500">{docs_used} docs</div>
+      <div className="mt-1 text-gray-400">{duration_ms}ms</div>
+    </div>
+  );
+}
+
+function CriticCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
   if (!isCriticPayload(step.payload)) return null;
   const { hallucination_risk, reruns, duration_ms } = step.payload;
   const colourClass = criticColour(hallucination_risk);
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
-      <div className="mb-1 font-semibold text-gray-700">Critic</div>
+      <div className="mb-1 flex items-center font-semibold text-gray-700">
+        Critic
+        <IterationBadge run={run} />
+      </div>
       <div className="flex items-center gap-2">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
           <div
@@ -109,37 +182,38 @@ function CriticCard({ step }: { step: AgentStep }): JSX.Element | null {
 }
 
 function LatencyBars({ steps }: { steps: AgentStep[] }): JSX.Element | null {
-  const router = steps.find((s) => s.node === "router");
-  const grader = steps.find((s) => s.node === "grader");
-  const critic = steps.find((s) => s.node === "critic");
+  const allNodesPresent = ["router", "retriever", "grader", "generator", "critic"].every(
+    (n) => steps.some((s) => s.node === n),
+  );
+  if (!allNodesPresent) return null;
 
-  if (!router || !grader || !critic) return null;
+  const runCount = new Map<string, number>();
+  const rows: Array<{ label: string; ms: number }> = steps.map((step) => {
+    runCount.set(step.node, (runCount.get(step.node) ?? 0) + 1);
+    const count = runCount.get(step.node)!;
+    const nodeLabel =
+      step.node === "router"
+        ? "Router"
+        : step.node === "retriever"
+          ? "Retriever"
+          : step.node === "grader"
+            ? "Grader"
+            : step.node === "generator"
+              ? "Generator"
+              : "Critic";
+    const label = count > 1 ? `${nodeLabel} #${count}` : nodeLabel;
+    const ms = (step.payload as { duration_ms: number }).duration_ms;
+    return { label, ms };
+  });
 
-  if (
-    !isRouterPayload(router.payload) ||
-    !isGraderPayload(grader.payload) ||
-    !isCriticPayload(critic.payload)
-  ) {
-    return null;
-  }
-
-  const routerMs = router.payload.duration_ms;
-  const graderMs = grader.payload.duration_ms;
-  const criticMs = critic.payload.duration_ms;
-  const total = routerMs + graderMs + criticMs;
-
-  const rows: Array<{ label: string; ms: number }> = [
-    { label: "Router", ms: routerMs },
-    { label: "Grader", ms: graderMs },
-    { label: "Critic", ms: criticMs },
-  ];
+  const total = rows.reduce((sum, r) => sum + r.ms, 0);
 
   return (
     <div className="mt-3 space-y-1 text-xs">
       <div className="font-semibold text-gray-600">Latency breakdown</div>
-      {rows.map(({ label, ms }) => (
-        <div key={label} className="flex items-center gap-2">
-          <span className="w-12 shrink-0 text-gray-500">{label}</span>
+      {rows.map(({ label, ms }, i) => (
+        <div key={`${label}-${i}`} className="flex items-center gap-2">
+          <span className="w-20 shrink-0 text-gray-500">{label}</span>
           <div className="flex-1 overflow-hidden rounded-full bg-gray-100">
             <div
               className="h-2 rounded-full bg-blue-400"
@@ -155,19 +229,29 @@ function LatencyBars({ steps }: { steps: AgentStep[] }): JSX.Element | null {
 }
 
 export function AgentTrace({ steps, isStreaming }: AgentTraceProps): JSX.Element {
+  const runCount = new Map<string, number>();
+
   return (
     <details open className="mt-2 text-xs">
       <summary className="cursor-pointer select-none font-semibold text-gray-500">
         Agent Trace ({steps.length} steps)
       </summary>
       <div className="mt-2 space-y-2">
+        <div className="mb-2 flex flex-wrap items-center gap-1 text-gray-400">
+          <span>Router → Retriever → Grader → Generator → Critic</span>
+          <span className="ml-1 text-gray-300">(⟲ loops on escalation)</span>
+        </div>
         {steps.map((step, i) => {
+          runCount.set(step.node, (runCount.get(step.node) ?? 0) + 1);
+          const run = runCount.get(step.node)!;
           const isLast = i === steps.length - 1;
           return (
             <div key={`${step.node}-${i}`} className="relative">
-              {step.node === "router" && <RouterCard step={step} />}
-              {step.node === "grader" && <GraderCard step={step} />}
-              {step.node === "critic" && <CriticCard step={step} />}
+              {step.node === "router" && <RouterCard step={step} run={run} />}
+              {step.node === "retriever" && <RetrieverCard step={step} run={run} />}
+              {step.node === "grader" && <GraderCard step={step} run={run} />}
+              {step.node === "generator" && <GeneratorCard step={step} run={run} />}
+              {step.node === "critic" && <CriticCard step={step} run={run} />}
               {isLast && isStreaming && (
                 <div className="absolute right-2 top-2">
                   <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />

@@ -10,8 +10,18 @@ const steps: AgentStep[] = [
     timestamp: "",
   },
   {
+    node: "retriever",
+    payload: { strategy: "dense", docs_retrieved: 5, duration_ms: 120 },
+    timestamp: "",
+  },
+  {
     node: "grader",
     payload: { scores: [0.8], web_fallback: false, duration_ms: 80 },
+    timestamp: "",
+  },
+  {
+    node: "generator",
+    payload: { docs_used: 3, confidence: 0.85, duration_ms: 200 },
     timestamp: "",
   },
   {

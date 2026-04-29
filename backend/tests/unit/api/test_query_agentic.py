@@ -36,6 +36,13 @@ def _make_astream_chunks() -> list[dict[str, Any]]:
             }
         },
         {
+            "retriever": {
+                "retrieved_docs": [_make_mock_doc(), _make_mock_doc()],
+                "web_fallback_used": False,
+                "steps_taken": ["retriever:hybrid:156ms"],
+            }
+        },
+        {
             "grader": {
                 "grader_scores": [0.8, 0.6],
                 "graded_docs": [_make_mock_doc()],
@@ -45,19 +52,19 @@ def _make_astream_chunks() -> list[dict[str, Any]]:
             }
         },
         {
-            "critic": {
-                "critic_score": 0.15,
-                "retry_count": 1,
-                "steps_taken": ["critic:score=0.150:55ms"],
-            }
-        },
-        {
             "generator": {
                 "answer": "Test answer",
                 "citations": [],
                 "confidence": 0.9,
                 "graded_docs": [],
-                "steps_taken": ["generator:docs=0:confidence=0.90:120ms"],
+                "steps_taken": ["generator:docs=1:confidence=0.90:120ms"],
+            }
+        },
+        {
+            "critic": {
+                "critic_score": 0.15,
+                "retry_count": 1,
+                "steps_taken": ["critic:score=0.150:55ms"],
             }
         },
     ]
@@ -138,12 +145,26 @@ class TestQueryAgenticEndpoint:
             assert types.index("citations") < types.index("done")
             assert types[-1] == "done"
 
-            # Verify agent_step node sequence: router → grader → critic
+            # Verify agent_step node sequence: router → retriever → grader → generator → critic
             agent_step_events = [e for e in events if e["type"] == "agent_step"]
-            assert len(agent_step_events) == 3
-            assert agent_step_events[0]["node"] == "router"
-            assert agent_step_events[1]["node"] == "grader"
-            assert agent_step_events[2]["node"] == "critic"
+            assert len(agent_step_events) == 5
+            node_sequence = [e["node"] for e in agent_step_events]
+            assert node_sequence == ["router", "retriever", "grader", "generator", "critic"]
+
+            # All first-run events must have run == 1
+            for evt in agent_step_events:
+                assert evt["run"] == 1, f"Expected run=1 for {evt['node']}, got {evt['run']}"
+
+            # Generator agent_step comes after all tokens but before citations
+            token_indices = [i for i, e in enumerate(events) if e["type"] == "token"]
+            gen_step_index = next(
+                i
+                for i, e in enumerate(events)
+                if e["type"] == "agent_step" and e["node"] == "generator"
+            )
+            citations_index = next(i for i, e in enumerate(events) if e["type"] == "citations")
+            assert all(ti < gen_step_index for ti in token_indices)
+            assert gen_step_index < citations_index
 
             # F04: chunks_retrieved comes from grader state, not generator state
             citations_event = next(e for e in events if e["type"] == "citations")
@@ -320,6 +341,170 @@ class TestQueryAgenticEndpoint:
         assert payload["query_type"] == "factual"
         assert payload["strategy"] == "hybrid"
         assert payload["duration_ms"] == 45
+
+    def test_retriever_payload_fields(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """Retriever agent_step event has strategy, docs_retrieved, and duration_ms fields."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        mock_graph = _make_mock_graph(_make_astream_chunks())
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        retriever_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "retriever"
+        )
+        payload = retriever_event["payload"]
+        assert payload["strategy"] == "hybrid"
+        assert payload["docs_retrieved"] == 2
+        assert payload["duration_ms"] == 156
+
+    def test_generator_payload_fields(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """Generator agent_step event has docs_used, confidence, and duration_ms fields."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        mock_graph = _make_mock_graph(_make_astream_chunks())
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        gen_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "generator"
+        )
+        payload = gen_event["payload"]
+        # grader has 1 graded doc (_make_astream_chunks grader chunk)
+        assert payload["docs_used"] == 1
+        assert payload["confidence"] == 0.9
+        assert payload["duration_ms"] == 120
+
+    def test_run_field_increments_on_crag_retry(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """On CRAG escalation, retriever and grader run fields increment to 2 on second visit."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        crag_chunks: list[dict[str, Any]] = [
+            {
+                "router": {
+                    "query_type": "factual",
+                    "retrieval_strategy": "hybrid",
+                    "steps_taken": ["router:factual:hybrid:45ms"],
+                }
+            },
+            {
+                "retriever": {
+                    "retrieved_docs": [_make_mock_doc()],
+                    "web_fallback_used": False,
+                    "steps_taken": ["retriever:hybrid:100ms"],
+                }
+            },
+            {
+                "grader": {
+                    "grader_scores": [0.1],
+                    "graded_docs": [],
+                    "all_below_threshold": True,
+                    "retry_count": 0,
+                    "steps_taken": ["grader:scored=1:passed=0:78ms"],
+                }
+            },
+            {
+                "retriever": {
+                    "retrieved_docs": [_make_mock_doc(), _make_mock_doc()],
+                    "web_fallback_used": True,
+                    "steps_taken": ["retriever:web:200ms"],
+                }
+            },
+            {
+                "grader": {
+                    "grader_scores": [0.9, 0.8],
+                    "graded_docs": [_make_mock_doc(), _make_mock_doc()],
+                    "all_below_threshold": False,
+                    "retry_count": 1,
+                    "steps_taken": ["grader:scored=2:passed=2:60ms"],
+                }
+            },
+            {
+                "generator": {
+                    "answer": "Answer",
+                    "citations": [],
+                    "confidence": 0.85,
+                    "steps_taken": ["generator:docs=2:confidence=0.85:300ms"],
+                }
+            },
+            {
+                "critic": {
+                    "critic_score": 0.1,
+                    "retry_count": 1,
+                    "steps_taken": ["critic:score=0.100:55ms"],
+                }
+            },
+        ]
+
+        mock_graph = _make_mock_graph(crag_chunks)
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test CRAG"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        retriever_events = [
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "retriever"
+        ]
+        grader_events = [
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "grader"
+        ]
+
+        assert len(retriever_events) == 2, "Expected 2 retriever agent_step events on CRAG retry"
+        assert retriever_events[0]["run"] == 1
+        assert retriever_events[1]["run"] == 2
+
+        assert len(grader_events) == 2, "Expected 2 grader agent_step events on CRAG retry"
+        assert grader_events[0]["run"] == 1
+        assert grader_events[1]["run"] == 2
 
     def test_initial_state_includes_retry_count_zero(
         self,

@@ -9,9 +9,21 @@ const routerStep: AgentStep = {
   timestamp: new Date().toISOString(),
 };
 
+const retrieverStep: AgentStep = {
+  node: "retriever",
+  payload: { strategy: "hybrid", docs_retrieved: 5, duration_ms: 120 },
+  timestamp: new Date().toISOString(),
+};
+
 const graderStep: AgentStep = {
   node: "grader",
   payload: { scores: [0.8, 0.6], web_fallback: false, duration_ms: 80 },
+  timestamp: new Date().toISOString(),
+};
+
+const generatorStep: AgentStep = {
+  node: "generator",
+  payload: { docs_used: 3, confidence: 0.85, duration_ms: 200 },
   timestamp: new Date().toISOString(),
 };
 
@@ -20,6 +32,8 @@ const criticStep: AgentStep = {
   payload: { hallucination_risk: 0.2, reruns: 0, duration_ms: 30 },
   timestamp: new Date().toISOString(),
 };
+
+const allFiveSteps = [routerStep, retrieverStep, graderStep, generatorStep, criticStep];
 
 describe("AgentTrace", () => {
   it("renders details element in the DOM", () => {
@@ -74,22 +88,36 @@ describe("AgentTrace", () => {
 
   it("latency bars not rendered while isStreaming is true", () => {
     render(
+      <AgentTrace steps={allFiveSteps} isStreaming={true} />,
+    );
+    expect(screen.queryByText("Latency breakdown")).not.toBeInTheDocument();
+  });
+
+  it("latency bars rendered when all 5 nodes present and isStreaming is false", () => {
+    render(
+      <AgentTrace steps={allFiveSteps} isStreaming={false} />,
+    );
+    expect(screen.getByText("Latency breakdown")).toBeInTheDocument();
+  });
+
+  it("latency bars hidden when retriever node is missing", () => {
+    render(
       <AgentTrace
-        steps={[routerStep, graderStep, criticStep]}
-        isStreaming={true}
+        steps={[routerStep, graderStep, generatorStep, criticStep]}
+        isStreaming={false}
       />,
     );
     expect(screen.queryByText("Latency breakdown")).not.toBeInTheDocument();
   });
 
-  it("latency bars rendered when isStreaming is false", () => {
+  it("latency bars hidden when generator node is missing", () => {
     render(
       <AgentTrace
-        steps={[routerStep, graderStep, criticStep]}
+        steps={[routerStep, retrieverStep, graderStep, criticStep]}
         isStreaming={false}
       />,
     );
-    expect(screen.getByText("Latency breakdown")).toBeInTheDocument();
+    expect(screen.queryByText("Latency breakdown")).not.toBeInTheDocument();
   });
 
   it("summary shows step count", () => {
@@ -97,5 +125,73 @@ describe("AgentTrace", () => {
       <AgentTrace steps={[routerStep, graderStep]} isStreaming={false} />,
     );
     expect(screen.getByText("Agent Trace (2 steps)")).toBeInTheDocument();
+  });
+
+  it("RetrieverCard renders strategy badge and docs count", () => {
+    render(<AgentTrace steps={[retrieverStep]} isStreaming={false} />);
+    expect(screen.getByText("Hybrid search")).toBeInTheDocument();
+    expect(screen.getByText("5 docs retrieved")).toBeInTheDocument();
+  });
+
+  it("GeneratorCard renders confidence bar and docs count", () => {
+    const { container } = render(
+      <AgentTrace steps={[generatorStep]} isStreaming={false} />,
+    );
+    expect(screen.getByText("85% confidence")).toBeInTheDocument();
+    expect(screen.getByText("3 docs")).toBeInTheDocument();
+    // high confidence (0.85) → inverted risk (0.15) → bg-green-500
+    expect(container.querySelector(".bg-green-500")).toBeInTheDocument();
+  });
+
+  it("topology reference text renders", () => {
+    render(<AgentTrace steps={[routerStep]} isStreaming={false} />);
+    expect(
+      screen.getByText("Router → Retriever → Grader → Generator → Critic"),
+    ).toBeInTheDocument();
+  });
+
+  it("second retriever step shows #2 iteration badge", () => {
+    const retrieverStep2: AgentStep = {
+      node: "retriever",
+      payload: { strategy: "web", docs_retrieved: 3, duration_ms: 90 },
+      timestamp: new Date().toISOString(),
+    };
+    render(
+      <AgentTrace
+        steps={[routerStep, retrieverStep, graderStep, retrieverStep2]}
+        isStreaming={false}
+      />,
+    );
+    expect(screen.getByText("#2")).toBeInTheDocument();
+  });
+
+  it("latency bars show per-run labels when a node repeats", () => {
+    const retrieverStep2: AgentStep = {
+      node: "retriever",
+      payload: { strategy: "web", docs_retrieved: 3, duration_ms: 90 },
+      timestamp: new Date().toISOString(),
+    };
+    const graderStep2: AgentStep = {
+      node: "grader",
+      payload: { scores: [0.9], web_fallback: false, duration_ms: 60 },
+      timestamp: new Date().toISOString(),
+    };
+    render(
+      <AgentTrace
+        steps={[
+          routerStep,
+          retrieverStep,
+          graderStep,
+          retrieverStep2,
+          graderStep2,
+          generatorStep,
+          criticStep,
+        ]}
+        isStreaming={false}
+      />,
+    );
+    expect(screen.getByText("Latency breakdown")).toBeInTheDocument();
+    expect(screen.getByText("Retriever #2")).toBeInTheDocument();
+    expect(screen.getByText("Grader #2")).toBeInTheDocument();
   });
 });

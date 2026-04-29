@@ -44,15 +44,20 @@ def _make_state(
     }
 
 
-def _make_retrieval_result(text: str = "chunk text", score: float = 0.9) -> MagicMock:
+def _make_retrieval_result(
+    text: str = "chunk text",
+    score: float = 0.9,
+    page_number: int = 2,
+) -> MagicMock:
     """Return a MagicMock that looks like a RetrievalResult."""
     result = MagicMock()
     result.chunk_id = "chunk-001"
     result.text = text
     result.score = score
-    meta = MagicMock()
-    meta.source_path = "docs/file.pdf"
-    result.metadata = meta
+    result.metadata = {
+        "source_path": "docs/file.pdf",
+        "page_number": page_number,
+    }
     return result
 
 
@@ -70,7 +75,9 @@ async def test_hybrid_strategy_calls_retriever_and_returns_documents() -> None:
     state = _make_state(strategy="hybrid")
     result = await retriever_node(state, retriever=mock_retriever)
 
-    mock_retriever.retrieve.assert_awaited_once_with("What is RAG?", k=None, filters=None, mode="hybrid")
+    mock_retriever.retrieve.assert_awaited_once_with(
+        "What is RAG?", k=None, filters=None, mode="hybrid"
+    )
 
     docs = result["retrieved_docs"]
     assert len(docs) == 1
@@ -78,6 +85,8 @@ async def test_hybrid_strategy_calls_retriever_and_returns_documents() -> None:
     assert docs[0].page_content == "chunk text"
     assert docs[0].metadata["chunk_id"] == "chunk-001"
     assert docs[0].metadata["score"] == 0.9
+    assert docs[0].metadata["retrieval_score"] == 0.9
+    assert docs[0].metadata["page_number"] == 2
     assert result["web_fallback_used"] is False
 
 
@@ -97,7 +106,9 @@ async def test_uses_query_rewritten_when_set() -> None:
     )
     await retriever_node(state, retriever=mock_retriever)
 
-    mock_retriever.retrieve.assert_awaited_once_with("rewritten query", k=None, filters=None, mode="hybrid")
+    mock_retriever.retrieve.assert_awaited_once_with(
+        "rewritten query", k=None, filters=None, mode="hybrid"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +213,9 @@ async def test_dense_strategy_forwards_mode_dense_to_retriever() -> None:
     state = _make_state(strategy="dense", k=3)
     result = await retriever_node(state, retriever=mock_retriever)
 
-    mock_retriever.retrieve.assert_awaited_once_with("What is RAG?", k=3, filters=None, mode="dense")
+    mock_retriever.retrieve.assert_awaited_once_with(
+        "What is RAG?", k=3, filters=None, mode="dense"
+    )
     assert len(result["retrieved_docs"]) == 1
     assert result["retrieved_docs"][0].page_content == "dense chunk"
 
@@ -221,6 +234,27 @@ async def test_hybrid_strategy_forwards_mode_hybrid_to_retriever() -> None:
     state = _make_state(strategy="hybrid", k=5)
     result = await retriever_node(state, retriever=mock_retriever)
 
-    mock_retriever.retrieve.assert_awaited_once_with("What is RAG?", k=5, filters=None, mode="hybrid")
+    mock_retriever.retrieve.assert_awaited_once_with(
+        "What is RAG?", k=5, filters=None, mode="hybrid"
+    )
     assert len(result["retrieved_docs"]) == 1
     assert result["retrieved_docs"][0].page_content == "hybrid chunk"
+
+
+# ---------------------------------------------------------------------------
+# Test 9: page_number=-1 (TXT files) is excluded from Document metadata
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_page_number_minus_one_excluded_from_document_metadata() -> None:
+    raw = _make_retrieval_result(page_number=-1)
+    mock_retriever = MagicMock()
+    mock_retriever.retrieve = AsyncMock(return_value=[raw])
+
+    state = _make_state(strategy="hybrid")
+    result = await retriever_node(state, retriever=mock_retriever)
+
+    doc = result["retrieved_docs"][0]
+    assert "page_number" not in doc.metadata
+    assert doc.metadata["retrieval_score"] == 0.9
