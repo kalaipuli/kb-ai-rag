@@ -31,16 +31,23 @@ from src.graph.state import AgentState
 from src.retrieval.retriever import HybridRetriever
 
 
-async def build_graph(settings: Settings, retriever: HybridRetriever) -> CompiledStateGraph:
+async def build_graph(
+    settings: Settings,
+    retriever: HybridRetriever,
+    llm: AzureChatOpenAI,
+    llm_4o: AzureChatOpenAI,
+) -> CompiledStateGraph:
     """Compile the agentic StateGraph and return it with an AsyncSqliteSaver checkpointer.
 
-    Must be called from an async context (FastAPI lifespan).  The retriever is
-    captured in a closure so that retriever_node does not import from retrieval/
-    directly — dependency direction is enforced here.
+    Must be called from an async context (FastAPI lifespan).  The retriever and
+    LLM clients are captured in closures so that nodes do not import from their
+    respective modules directly — dependency direction is enforced here.
 
     Args:
         settings: Application settings (provides sqlite_checkpointer_path).
         retriever: HybridRetriever singleton from app.state.
+        llm: AzureChatOpenAI (gpt-4o-mini) singleton for router/grader/critic.
+        llm_4o: AzureChatOpenAI (gpt-4o) singleton for generator.
 
     Returns:
         A compiled LangGraph StateGraph ready for astream() invocation.
@@ -50,19 +57,6 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
         the retriever node handles this gracefully by logging a warning and
         skipping web-search augmentation.
     """
-    llm = AzureChatOpenAI(
-        azure_deployment="gpt-4o-mini",
-        azure_endpoint=settings.azure_openai_endpoint,
-        api_key=settings.azure_openai_api_key.get_secret_value(),  # type: ignore[arg-type]  # AzureChatOpenAI.openai_api_key is SecretStr internally; langchain-openai stubs type the alias as SecretStr but the constructor accepts str at runtime
-        api_version=settings.azure_openai_api_version,
-    )
-
-    llm_4o = AzureChatOpenAI(
-        azure_deployment=settings.azure_chat_deployment,
-        azure_endpoint=settings.azure_openai_endpoint,
-        api_key=settings.azure_openai_api_key.get_secret_value(),  # type: ignore[arg-type]  # AzureChatOpenAI.openai_api_key is SecretStr internally; langchain-openai stubs type the alias as SecretStr but the constructor accepts str at runtime
-        api_version=settings.azure_openai_api_version,
-    )
 
     async def _router_node(state: AgentState) -> dict[str, Any]:
         return await router_node(state, llm=llm)

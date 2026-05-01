@@ -15,6 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from langchain_openai import AzureChatOpenAI
 from qdrant_client import AsyncQdrantClient
 
 from src.api.middleware.auth import api_key_middleware
@@ -56,12 +57,29 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     bm25_store = BM25Store(index_path=Path(settings.bm25_index_path))
     if Path(settings.bm25_index_path).exists():
-        bm25_store.load()
+        await bm25_store.aload()
+
+    llm_chat = AzureChatOpenAI(
+        azure_deployment="gpt-4o-mini",
+        azure_endpoint=settings.azure_openai_endpoint,
+        api_key=settings.azure_openai_api_key.get_secret_value(),  # type: ignore[arg-type]
+        api_version=settings.azure_openai_api_version,
+    )
+    llm_4o = AzureChatOpenAI(
+        azure_deployment=settings.azure_chat_deployment,
+        azure_endpoint=settings.azure_openai_endpoint,
+        api_key=settings.azure_openai_api_key.get_secret_value(),  # type: ignore[arg-type]
+        api_version=settings.azure_openai_api_version,
+    )
+    app.state.llm_chat = llm_chat
+    app.state.llm_4o = llm_4o
 
     embedder = Embedder(settings=settings)
     app.state.embedder = embedder
     retriever = HybridRetriever(settings=settings, bm25_store=bm25_store, embedder=embedder)
-    app.state.compiled_graph = await build_graph(settings=settings, retriever=retriever)
+    app.state.compiled_graph = await build_graph(
+        settings=settings, retriever=retriever, llm=llm_chat, llm_4o=llm_4o
+    )
     app.state.generation_chain = GenerationChain(settings=settings, hybrid_retriever=retriever)
     app.state.bm25_store = bm25_store
     app.state.qdrant_client = AsyncQdrantClient(url=settings.qdrant_url)

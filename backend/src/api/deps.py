@@ -7,6 +7,7 @@ in the app lifespan and exposed via these dependency functions.
 from typing import Annotated
 
 from fastapi import Depends, Request
+from langchain_openai import AzureChatOpenAI
 from langgraph.graph.state import CompiledStateGraph
 from qdrant_client import AsyncQdrantClient
 
@@ -39,3 +40,15 @@ def get_compiled_graph(request: Request) -> CompiledStateGraph:
 
 
 CompiledGraphDep = Annotated[CompiledStateGraph, Depends(get_compiled_graph)]
+
+
+def get_llm_chat(request: Request) -> AzureChatOpenAI:
+    return request.app.state.llm_chat  # type: ignore[no-any-return]
+
+
+def get_llm_4o(request: Request) -> AzureChatOpenAI:
+    return request.app.state.llm_4o  # type: ignore[no-any-return]
+
+
+LLMChatDep = Annotated[AzureChatOpenAI, Depends(get_llm_chat)]
+LLM4oDep = Annotated[AzureChatOpenAI, Depends(get_llm_4o)]

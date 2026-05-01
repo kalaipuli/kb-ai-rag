@@ -11,6 +11,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_openai import AzureChatOpenAI
 
 from src.graph.builder import build_graph
 
@@ -32,6 +33,10 @@ def _mock_settings(tmp_path: Path) -> Any:
 
 def _mock_retriever() -> MagicMock:
     return MagicMock()
+
+
+def _mock_llm() -> MagicMock:
+    return MagicMock(spec=AzureChatOpenAI)
 
 
 def _initial_state() -> dict[str, Any]:
@@ -70,7 +75,7 @@ async def test_build_graph_returns_compiled_graph(tmp_path: Path) -> None:
     settings = _mock_settings(tmp_path)
     retriever = _mock_retriever()
 
-    compiled = await build_graph(settings=settings, retriever=retriever)
+    compiled = await build_graph(settings=settings, retriever=retriever, llm=_mock_llm(), llm_4o=_mock_llm())
 
     assert compiled is not None
     assert isinstance(compiled, CompiledStateGraph)
@@ -86,7 +91,7 @@ async def test_compiled_graph_astream_completes(tmp_path: Path) -> None:
     settings = _mock_settings(tmp_path)
     retriever = _mock_retriever()
 
-    compiled = await build_graph(settings=settings, retriever=retriever)
+    compiled = await build_graph(settings=settings, retriever=retriever, llm=_mock_llm(), llm_4o=_mock_llm())
 
     config = {"configurable": {"thread_id": "test-session"}}
     updates: list[Any] = []
@@ -120,7 +125,7 @@ async def test_build_graph_uses_settings_checkpointer_path(tmp_path: Path) -> No
     retriever = _mock_retriever()
 
     with patch("src.graph.builder.aiosqlite.connect", wraps=aiosqlite.connect) as mock_connect:
-        await build_graph(settings=settings, retriever=retriever)
+        await build_graph(settings=settings, retriever=retriever, llm=_mock_llm(), llm_4o=_mock_llm())
         # Two calls: one for the TTL cleanup (async with) and one for the checkpointer
         assert mock_connect.call_count == 2
         mock_connect.assert_any_call(expected_path)
@@ -139,4 +144,4 @@ async def test_build_graph_propagates_aiosqlite_connect_error(tmp_path: Path) ->
         patch("src.graph.builder.aiosqlite.connect", side_effect=OSError("disk full")),
         pytest.raises(OSError, match="disk full"),
     ):
-        await build_graph(settings=settings, retriever=retriever)
+        await build_graph(settings=settings, retriever=retriever, llm=_mock_llm(), llm_4o=_mock_llm())
