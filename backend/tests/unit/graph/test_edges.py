@@ -5,7 +5,7 @@ All six branching paths are covered:
   route_after_critic — low-risk / high-risk+retries-left / high-risk+max-retries
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from src.graph.edges import route_after_critic, route_after_grader
 from src.graph.state import AgentState
@@ -65,8 +65,7 @@ class TestRouteAfterGrader:
         state["all_below_threshold"] = False
         state["retry_count"] = 0
 
-        with patch("src.graph.edges.get_settings", return_value=_mock_settings()):
-            assert route_after_grader(state) == "generator"
+        assert route_after_grader(state, _mock_settings()) == "generator"
 
     def test_all_below_threshold_with_retries_left_routes_to_retriever(self) -> None:
         state = _base_state()
@@ -74,8 +73,7 @@ class TestRouteAfterGrader:
         state["all_below_threshold"] = True
         state["retry_count"] = 0
 
-        with patch("src.graph.edges.get_settings", return_value=_mock_settings()):
-            assert route_after_grader(state) == "retriever"
+        assert route_after_grader(state, _mock_settings()) == "retriever"
 
     def test_all_below_threshold_at_max_retries_routes_to_generator(self) -> None:
         state = _base_state()
@@ -83,8 +81,7 @@ class TestRouteAfterGrader:
         state["all_below_threshold"] = True
         state["retry_count"] = _MAX_RETRIES
 
-        with patch("src.graph.edges.get_settings", return_value=_mock_settings()):
-            assert route_after_grader(state) == "generator"
+        assert route_after_grader(state, _mock_settings()) == "generator"
 
 
 # ---------------------------------------------------------------------------
@@ -98,29 +95,25 @@ class TestRouteAfterCritic:
         state["critic_score"] = _CRITIC_THRESHOLD - 0.1
         state["retry_count"] = 0
 
-        with patch("src.graph.edges.get_settings", return_value=_mock_settings()):
-            assert route_after_critic(state) == "end"
+        assert route_after_critic(state, _mock_settings()) == "end"
 
     def test_high_risk_score_with_retries_left_routes_to_retriever(self) -> None:
         state = _base_state()
         state["critic_score"] = _CRITIC_THRESHOLD + 0.1
         state["retry_count"] = 0
 
-        with patch("src.graph.edges.get_settings", return_value=_mock_settings()):
-            assert route_after_critic(state) == "retriever"
+        assert route_after_critic(state, _mock_settings()) == "retriever"
 
     def test_high_risk_score_at_max_retries_routes_to_end(self) -> None:
         state = _base_state()
         state["critic_score"] = _CRITIC_THRESHOLD + 0.1
         state["retry_count"] = _MAX_RETRIES
 
-        with patch("src.graph.edges.get_settings", return_value=_mock_settings()):
-            assert route_after_critic(state) == "end"
+        assert route_after_critic(state, _mock_settings()) == "end"
 
     def test_none_critic_score_treated_as_zero_routes_to_end(self) -> None:
         state = _base_state()
         state["critic_score"] = None
         state["retry_count"] = 0
 
-        with patch("src.graph.edges.get_settings", return_value=_mock_settings()):
-            assert route_after_critic(state) == "end"
+        assert route_after_critic(state, _mock_settings()) == "end"

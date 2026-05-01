@@ -18,10 +18,15 @@ from src.graph.builder import build_graph
 def _mock_settings(tmp_path: Path) -> Any:
     settings = MagicMock()
     settings.sqlite_checkpointer_path = str(tmp_path / "test_checkpointer.sqlite")
+    settings.sqlite_checkpointer_ttl_days = 7
     settings.azure_openai_endpoint = "https://fake-endpoint.openai.azure.com/"
     settings.azure_openai_api_key.get_secret_value.return_value = "fake-api-key"
     settings.azure_openai_api_version = "2024-08-01-preview"
     settings.azure_chat_deployment = "gpt-4o"
+    settings.tavily_api_key.get_secret_value.return_value = ""
+    settings.grader_threshold = 0.5
+    settings.critic_threshold = 0.7
+    settings.graph_max_retries = 2
     return settings
 
 
@@ -103,15 +108,22 @@ async def test_build_graph_uses_settings_checkpointer_path(tmp_path: Path) -> No
     expected_path = str(tmp_path / "custom_checkpointer.sqlite")
     settings = MagicMock()
     settings.sqlite_checkpointer_path = expected_path
+    settings.sqlite_checkpointer_ttl_days = 7
     settings.azure_openai_endpoint = "https://fake-endpoint.openai.azure.com/"
     settings.azure_openai_api_key.get_secret_value.return_value = "fake-api-key"
     settings.azure_openai_api_version = "2024-08-01-preview"
     settings.azure_chat_deployment = "gpt-4o"
+    settings.tavily_api_key.get_secret_value.return_value = ""
+    settings.grader_threshold = 0.5
+    settings.critic_threshold = 0.7
+    settings.graph_max_retries = 2
     retriever = _mock_retriever()
 
     with patch("src.graph.builder.aiosqlite.connect", wraps=aiosqlite.connect) as mock_connect:
         await build_graph(settings=settings, retriever=retriever)
-        mock_connect.assert_called_once_with(expected_path)
+        # Two calls: one for the TTL cleanup (async with) and one for the checkpointer
+        assert mock_connect.call_count == 2
+        mock_connect.assert_any_call(expected_path)
 
 
 # ---------------------------------------------------------------------------
