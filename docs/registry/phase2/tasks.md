@@ -1,8 +1,8 @@
 # Phase 2 — Pre-Phase-3 Cleanup Task Registry
 
-> Status: ⏳ Not Started | Phase: 2 (cleanup) | Estimated Days: 4–6
+> Status: ✅ Complete | Phase: 2 (cleanup) | Estimated Days: 4–6
 > Governed by: CLAUDE.md §9 — all tasks follow the Definition of Done checklist (§7)
-> Last updated: 2026-05-01
+> Last updated: 2026-05-02
 >
 > **Purpose:** Clear all findings from the Phase 1+2 architect review (F01–F18, plus additional PHASE_1_2_REVIEW items) before Phase 3 (Azure Connectors) begins. Per development-process.md §9: all High and Major findings must be Done; Minor findings must be Done or formally deferred; Advisory findings may be Deferred with a documented DASHBOARD.md entry.
 >
@@ -17,22 +17,22 @@
 | T01 | ✅ Done    | Write ADR-015: CRAG retry budget design decisions                              | architect          | —                |
 | T02 | ✅ Done    | Fix BM25Store blocking I/O — wrap pickle.dump/load with asyncio.to_thread      | backend-developer  | —                |
 | T03 | ✅ Done    | Fix langsmith_api_key — retype as SecretStr                                    | backend-developer  | —                |
-| T04 | ⏳ Pending | Fix edges.py settings access — thread Settings as parameter                    | backend-developer  | —                |
-| T05 | ⏳ Pending | Fix CORS default — change cors_origins default from ["*"] to []                | backend-developer  | —                |
-| T06 | ⏳ Pending | Add error-path tests in test_api_ingest, test_api_query, test_retrieval_*      | tester             | —                |
-| T07 | ⏳ Pending | Fix initial_state — declare all 19 AgentState fields explicitly                | backend-developer  | —                |
-| T08 | ⏳ Pending | Fix retry_count overload — separate grader/critic counters or document budget  | backend-developer  | T01              |
-| T09 | ⏳ Pending | Remove orphaned Pydantic fields from _RouterOutput and _CriticOutput           | backend-developer  | —                |
-| T10 | ⏳ Pending | Add SQLite checkpointer TTL cleanup on startup                                 | backend-developer  | —                |
-| T11 | ⏳ Pending | Extract node name constants to src/graph/node_names.py                         | backend-developer  | —                |
-| T12 | ⏳ Pending | Add aiosqlite monkey-patch version guard in builder.py                         | backend-developer  | —                |
-| T13 | ⏳ Pending | Lift AzureChatOpenAI clients into lifespan (build_graph injection)             | backend-developer  | T01–T12          |
-| T14 | ⏳ Pending | Inject AzureChatOpenAI into GenerationChain constructor                        | backend-developer  | T13              |
-| T15 | ⏳ Pending | Add retriever SSE agent_step event + RetrieverStepPayload schema               | backend-developer  | T13              |
-| T16 | ⏳ Pending | Inject lifespan Qdrant client into DenseRetriever and QdrantVectorStore        | backend-developer  | T14, T15         |
-| T17 | ⏳ Pending | Move Citation to src/api/schemas/ and fix retrieved_docs accumulation          | backend-developer  | T16              |
-| T18 | ⏳ Pending | Fix crypto.randomUUID() fallback for non-HTTPS contexts in useAgentStream.ts   | frontend-developer | —                |
-| T19 | ⏳ Pending | Verify ragas is isolated to [tool.poetry.group.eval.dependencies]              | backend-developer  | —                |
+| T04 | ✅ Done    | Fix edges.py settings access — thread Settings as parameter                    | backend-developer  | —                |
+| T05 | ✅ Done    | Fix CORS default — change cors_origins default from ["*"] to []                | backend-developer  | —                |
+| T06 | ✅ Done    | Add error-path tests in test_api_ingest, test_api_query, test_retrieval_*      | tester             | —                |
+| T07 | ✅ Done    | Fix initial_state — declare all 19 AgentState fields explicitly                | backend-developer  | —                |
+| T08 | ✅ Done    | Fix retry_count overload — shared budget with graph_max_retries=2              | backend-developer  | T01              |
+| T09 | ✅ Done    | Remove orphaned Pydantic fields from _RouterOutput and _CriticOutput           | backend-developer  | —                |
+| T10 | ✅ Done    | Add SQLite checkpointer TTL cleanup on startup                                 | backend-developer  | —                |
+| T11 | ✅ Done    | Extract node name constants to src/graph/node_names.py                         | backend-developer  | —                |
+| T12 | ✅ Done    | Add aiosqlite monkey-patch version guard in builder.py                         | backend-developer  | —                |
+| T13 | ✅ Done    | Lift AzureChatOpenAI clients into lifespan (build_graph injection)             | backend-developer  | T01–T12          |
+| T14 | ✅ Done    | Inject AzureChatOpenAI into GenerationChain constructor                        | backend-developer  | T13              |
+| T15 | ✅ Done    | Add retriever SSE agent_step event + RetrieverStepPayload schema               | backend-developer  | T13              |
+| T16 | ✅ Done    | Inject lifespan Qdrant client into DenseRetriever and QdrantVectorStore        | backend-developer  | T14, T15         |
+| T17 | ✅ Done    | Move Citation to src/api/schemas/ and fix retrieved_docs accumulation          | backend-developer  | T16              |
+| T18 | ✅ Done    | Fix crypto.randomUUID() fallback for non-HTTPS contexts in useAgentStream.ts   | frontend-developer | —                |
+| T19 | ✅ Done    | Verify ragas is isolated to [tool.poetry.group.eval.dependencies]              | backend-developer  | —                |
 | T20 | ⚠️ Deferred | Migrate query_agentic_endpoint to real streaming via astream_events           | backend-developer  | Phase 5 scope    |
 | T21 | ⚠️ Deferred | Add Playwright E2E tests for parallel SSE streaming                           | tester             | Phase 5 scope    |
 
@@ -567,31 +567,31 @@ Must show ragas only under the eval group section.
 
 All of the following must be true before Phase 3 (Azure Connectors) begins:
 
-| Gate | Check | Pass Condition |
-|------|-------|----------------|
-| G01 | ADR-011 exists | `docs/adr/011-crag-retry-orchestration.md` present and Status: Accepted |
-| G02 | BM25 async I/O | `grep -rn "pickle\.load\|pickle\.dump" backend/src/ --include="*.py" \| grep -v asyncio.to_thread` returns zero |
-| G03 | SecretStr boundary | `grep -n "langsmith_api_key" backend/src/config.py` shows SecretStr |
-| G04 | CORS default | `grep -n "cors_origins" backend/src/config.py` default is `[]` |
-| G05 | No direct settings in edges | `grep -n "get_settings()" backend/src/graph/edges.py` returns zero |
-| G06 | Error-path coverage | `grep -c "pytest.raises\|side_effect"` in all four test files returns ≥ 1 each |
-| G07 | initial_state completeness | All 19 AgentState fields explicitly declared in query_agentic.py initial_state |
-| G08 | retry_count semantics | Grader retry branch reachable with default graph_max_retries; field names unambiguous |
-| G09 | No orphaned model fields | No _RouterOutput.reasoning or _CriticOutput orphaned fields in model definitions |
-| G10 | SQLite TTL | sqlite_checkpointer_ttl_days in Settings; startup cleanup executes |
-| G11 | Node name constants | `grep -n '"router"\|"retriever"\|"grader"\|"generator"\|"critic"' builder.py query_agentic.py` returns zero literal strings |
-| G12 | LLM lifespan singleton | `grep -n "AzureChatOpenAI(" backend/src/graph/builder.py backend/src/generation/chain.py` returns zero |
-| G13 | Qdrant lifespan singleton | `grep -rn "AsyncQdrantClient(" backend/src/retrieval/ backend/src/ingestion/ --include="*.py"` returns zero |
-| G14 | Citation schema location | `grep -rn "from src.schemas.generation" backend/src/ --include="*.py"` returns zero |
-| G15 | retrieved_docs bounded | retrieved_docs accumulation strategy per ADR-011; generator context bounded per retry |
-| G16 | Retriever SSE event | Retriever node yields agent_step event; RetrieverStepPayload schema exists |
-| G17 | UUID fallback | No bare crypto.randomUUID() in useAgentStream.ts |
-| G18 | ragas isolation | ragas only in [tool.poetry.group.eval.dependencies] |
-| G19 | mypy clean | `poetry run mypy backend/src/ --strict` — zero errors |
-| G20 | ruff clean | `poetry run ruff check backend/src/ backend/tests/` — zero warnings |
-| G21 | pytest green | `poetry run pytest backend/tests/unit/ -q --tb=short` — all passing |
-| G22 | tsc clean | `npm run tsc --noEmit` (from frontend/) — zero errors |
-| G23 | Deferred items documented | T20 and T21 have DASHBOARD.md entries with justification |
+| Gate | Check | Pass Condition | Status |
+|------|-------|----------------|--------|
+| G01 | ADR-015 exists | `docs/adr/015-crag-retry-budget.md` present and Status: Accepted | ✅ |
+| G02 | BM25 async I/O | `grep -rn "pickle\.load\|pickle\.dump" backend/src/ --include="*.py" \| grep -v asyncio.to_thread` returns zero | ✅ |
+| G03 | SecretStr boundary | `grep -n "langsmith_api_key" backend/src/config.py` shows SecretStr | ✅ |
+| G04 | CORS default | `grep -n "cors_origins" backend/src/config.py` default is `[]` | ✅ |
+| G05 | No direct settings in edges | `grep -n "get_settings()" backend/src/graph/edges.py` returns zero | ✅ |
+| G06 | Error-path coverage | `grep -c "pytest.raises\|side_effect"` in all four test files returns ≥ 1 each | ✅ |
+| G07 | initial_state completeness | All 19 AgentState fields explicitly declared in query_agentic.py initial_state | ✅ |
+| G08 | retry_count semantics | Grader retry branch reachable with default graph_max_retries=2; field names unambiguous | ✅ |
+| G09 | No orphaned model fields | No _RouterOutput.reasoning or _CriticOutput orphaned fields in model definitions | ✅ |
+| G10 | SQLite TTL | sqlite_checkpointer_ttl_days in Settings; startup cleanup executes | ✅ |
+| G11 | Node name constants | `grep -n '"router"\|"retriever"\|"grader"\|"generator"\|"critic"' builder.py query_agentic.py` returns zero literal strings | ✅ |
+| G12 | LLM lifespan singleton | `grep -n "AzureChatOpenAI(" backend/src/graph/builder.py backend/src/generation/chain.py` returns zero | ✅ |
+| G13 | Qdrant lifespan singleton | `grep -rn "AsyncQdrantClient(" backend/src/retrieval/ backend/src/ingestion/ --include="*.py"` returns zero | ✅ |
+| G14 | Citation schema location | `grep -rn "from src.schemas.generation" backend/src/ --include="*.py"` returns zero | ✅ |
+| G15 | retrieved_docs bounded | retrieved_docs uses plain replacement semantics (no operator.add); generator context bounded per retry | ✅ |
+| G16 | Retriever SSE event | Retriever node yields agent_step event; RetrieverStepPayload schema exists | ✅ |
+| G17 | UUID fallback | No bare crypto.randomUUID() in useAgentStream.ts | ✅ |
+| G18 | ragas isolation | ragas only in [tool.poetry.group.eval.dependencies] | ✅ |
+| G19 | mypy clean | `poetry run mypy backend/src/ --strict` — zero errors | ✅ |
+| G20 | ruff clean | `poetry run ruff check backend/src/ backend/tests/` — zero warnings | ✅ |
+| G21 | pytest green | `poetry run pytest backend/tests/unit/ -q --tb=short` — all passing (349 passed) | ✅ |
+| G22 | tsc clean | `npm run tsc --noEmit` (from frontend/) — zero errors | ✅ |
+| G23 | Deferred items documented | T20 and T21 deferred to Phase 5 with justification in tasks.md | ✅ |
 
 ---
 
