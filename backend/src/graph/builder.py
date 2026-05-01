@@ -21,6 +21,7 @@ from tavily import TavilyClient
 
 from src.config import Settings
 from src.graph.edges import route_after_critic, route_after_grader
+from src.graph.node_names import CRITIC, GENERATOR, GRADER, RETRIEVER, ROUTER
 from src.graph.nodes.critic import critic_node
 from src.graph.nodes.generator import generator_node
 from src.graph.nodes.grader import grader_node
@@ -87,26 +88,26 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
 
     graph: StateGraph = StateGraph(AgentState)
 
-    graph.add_node("router", _router_node)
-    graph.add_node("retriever", _retriever_node)
-    graph.add_node("grader", _grader_node)
-    graph.add_node("generator", _generator_node)
-    graph.add_node("critic", _critic_node)
+    graph.add_node(ROUTER, _router_node)
+    graph.add_node(RETRIEVER, _retriever_node)
+    graph.add_node(GRADER, _grader_node)
+    graph.add_node(GENERATOR, _generator_node)
+    graph.add_node(CRITIC, _critic_node)
 
-    graph.set_entry_point("router")
+    graph.set_entry_point(ROUTER)
 
-    graph.add_edge("router", "retriever")
-    graph.add_edge("retriever", "grader")
+    graph.add_edge(ROUTER, RETRIEVER)
+    graph.add_edge(RETRIEVER, GRADER)
     graph.add_conditional_edges(
-        "grader",
+        GRADER,
         functools.partial(route_after_grader, settings=settings),
-        {"generator": "generator", "retriever": "retriever"},
+        {GENERATOR: GENERATOR, RETRIEVER: RETRIEVER},
     )
-    graph.add_edge("generator", "critic")
+    graph.add_edge(GENERATOR, CRITIC)
     graph.add_conditional_edges(
-        "critic",
+        CRITIC,
         functools.partial(route_after_critic, settings=settings),
-        {"end": END, "retriever": "retriever"},
+        {"end": END, RETRIEVER: RETRIEVER},
     )
 
     checkpointer_path = Path(settings.sqlite_checkpointer_path)

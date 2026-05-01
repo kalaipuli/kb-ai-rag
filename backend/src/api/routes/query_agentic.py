@@ -25,6 +25,7 @@ from src.api.schemas.agentic import (
     RetrieverStepPayload,
     RouterStepPayload,
 )
+from src.graph.node_names import CRITIC, GENERATOR, GRADER, RETRIEVER, ROUTER
 
 logger = structlog.get_logger(__name__)
 
@@ -69,9 +70,9 @@ def _build_agent_step_event(
     steps: list[str] = state_update.get("steps_taken", [])  # type: ignore[assignment]
     duration_ms = _parse_duration_ms(steps[0]) if steps else 0
 
-    if node_name == "router":
+    if node_name == ROUTER:
         return AgentStepEvent(
-            node="router",
+            node=ROUTER,
             run=run,
             payload=RouterStepPayload(
                 query_type=state_update["query_type"],  # type: ignore[arg-type]
@@ -79,11 +80,11 @@ def _build_agent_step_event(
                 duration_ms=duration_ms,
             ),
         )
-    if node_name == "retriever":
+    if node_name == RETRIEVER:
         strategy = _parse_retriever_strategy(steps[0]) if steps else "hybrid"
         retrieved: list[object] = state_update.get("retrieved_docs", [])  # type: ignore[assignment]
         return AgentStepEvent(
-            node="retriever",
+            node=RETRIEVER,
             run=run,
             payload=RetrieverStepPayload(
                 strategy=strategy,
@@ -91,9 +92,9 @@ def _build_agent_step_event(
                 duration_ms=duration_ms,
             ),
         )
-    if node_name == "grader":
+    if node_name == GRADER:
         return AgentStepEvent(
-            node="grader",
+            node=GRADER,
             run=run,
             payload=GraderStepPayload(
                 scores=state_update.get("grader_scores", []),  # type: ignore[arg-type]
@@ -101,11 +102,11 @@ def _build_agent_step_event(
                 duration_ms=duration_ms,
             ),
         )
-    if node_name == "generator":
+    if node_name == GENERATOR:
         raw_confidence: float = state_update.get("confidence") or 0.0  # type: ignore[assignment]
         confidence = max(0.0, min(1.0, float(raw_confidence)))
         return AgentStepEvent(
-            node="generator",
+            node=GENERATOR,
             run=run,
             payload=GeneratorStepPayload(
                 docs_used=docs_used,
@@ -116,7 +117,7 @@ def _build_agent_step_event(
     # critic
     critic_score: float = state_update.get("critic_score") or 0.0  # type: ignore[assignment]
     return AgentStepEvent(
-        node="critic",
+        node=CRITIC,
         run=run,
         payload=CriticStepPayload(
             hallucination_risk=critic_score,
@@ -168,11 +169,11 @@ async def query_agentic_endpoint(
                     _run_count[node_name] = _run_count.get(node_name, 0) + 1
                     run = _run_count[node_name]
 
-                    if node_name == "router":
+                    if node_name == ROUTER:
                         event = _build_agent_step_event(node_name, state_update, run=run)
                         yield f"data: {event.model_dump_json()}\n\n"
 
-                    elif node_name == "retriever":
+                    elif node_name == RETRIEVER:
                         event = _build_agent_step_event(node_name, state_update, run=run)
                         yield f"data: {event.model_dump_json()}\n\n"
                         # Update context texts after emitting event; preserve existing guard.
@@ -184,7 +185,7 @@ async def query_agentic_endpoint(
                                 if doc
                             ]
 
-                    elif node_name == "grader":
+                    elif node_name == GRADER:
                         graded = state_update.get("graded_docs", [])
                         _grader_doc_count = len(graded)
                         _context_texts = [
@@ -195,7 +196,7 @@ async def query_agentic_endpoint(
                         event = _build_agent_step_event(node_name, state_update, run=run)
                         yield f"data: {event.model_dump_json()}\n\n"
 
-                    elif node_name == "generator":
+                    elif node_name == GENERATOR:
                         answer: str = state_update.get("answer") or ""
                         for word in answer.split(" "):
                             if word:
@@ -219,7 +220,7 @@ async def query_agentic_endpoint(
                             f"data: {json.dumps({'type': 'citations', 'citations': serialised_citations, 'confidence': confidence, 'chunks_retrieved': chunks_retrieved, 'retrieved_contexts': _context_texts})}\n\n"
                         )
 
-                    elif node_name == "critic":
+                    elif node_name == CRITIC:
                         event = _build_agent_step_event(node_name, state_update, run=run)
                         yield f"data: {event.model_dump_json()}\n\n"
 
