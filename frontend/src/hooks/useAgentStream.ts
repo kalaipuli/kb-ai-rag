@@ -7,16 +7,26 @@ import { streamAgentQuery } from "@/lib/streaming";
 
 const SESSION_STORAGE_KEY = "kb_rag_session_id";
 
+const generateUUID = (): string => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return generateUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+};
+
 function getOrCreateSessionId(): string {
   try {
     const existing = sessionStorage.getItem(SESSION_STORAGE_KEY);
     if (existing) return existing;
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     sessionStorage.setItem(SESSION_STORAGE_KEY, id);
     return id;
   } catch {
     // sessionStorage not available (e.g. SSR)
-    return crypto.randomUUID();
+    return generateUUID();
   }
 }
 
@@ -113,13 +123,13 @@ export function useAgentStream(): UseAgentStreamReturn {
       if (state.isStreaming) return;
 
       const userMessage: AgentMessage = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         role: "user",
         content: query,
         timestamp: new Date().toISOString(),
       };
       const assistantMessage: AgentMessage = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         role: "assistant",
         content: "",
         timestamp: new Date().toISOString(),
