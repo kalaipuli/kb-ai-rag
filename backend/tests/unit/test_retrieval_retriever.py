@@ -98,7 +98,7 @@ class TestHybridRetriever:
             mock_reranker.rerank = MagicMock(return_value=reranked_results)
             mock_reranker_cls.return_value = mock_reranker
 
-            retriever = HybridRetriever(settings, bm25_store, embedder)
+            retriever = HybridRetriever(settings, bm25_store, embedder, qdrant_client=MagicMock())
 
             import asyncio
 
@@ -135,7 +135,7 @@ class TestHybridRetriever:
             mock_reranker.rerank = MagicMock(return_value=expected)
             mock_reranker_cls.return_value = mock_reranker
 
-            retriever = HybridRetriever(settings, bm25_store, embedder)
+            retriever = HybridRetriever(settings, bm25_store, embedder, qdrant_client=MagicMock())
 
             import asyncio
 
@@ -166,7 +166,7 @@ class TestHybridRetriever:
             mock_reranker.rerank = MagicMock(return_value=[])
             mock_reranker_cls.return_value = mock_reranker
 
-            retriever = HybridRetriever(settings, bm25_store, embedder)
+            retriever = HybridRetriever(settings, bm25_store, embedder, qdrant_client=MagicMock())
 
             import asyncio
 
@@ -199,7 +199,7 @@ class TestHybridRetriever:
             mock_reranker.rerank = MagicMock(return_value=[])
             mock_reranker_cls.return_value = mock_reranker
 
-            retriever = HybridRetriever(settings, bm25_store, embedder)
+            retriever = HybridRetriever(settings, bm25_store, embedder, qdrant_client=MagicMock())
 
             import asyncio
 
@@ -239,7 +239,7 @@ class TestHybridRetriever:
             mock_reranker.rerank = MagicMock(return_value=reranked_results)
             mock_reranker_cls.return_value = mock_reranker
 
-            retriever = HybridRetriever(settings, bm25_store, embedder)
+            retriever = HybridRetriever(settings, bm25_store, embedder, qdrant_client=MagicMock())
 
             import asyncio
 
@@ -269,7 +269,7 @@ class TestHybridRetriever:
             patch("src.retrieval.retriever.SparseRetriever"),
             patch("src.retrieval.retriever.CrossEncoderReranker"),
         ):
-            retriever = HybridRetriever(settings, bm25_store, embedder)
+            retriever = HybridRetriever(settings, bm25_store, embedder, qdrant_client=MagicMock())
 
             import asyncio
 
@@ -298,7 +298,7 @@ class TestHybridRetriever:
             mock_reranker.rerank = MagicMock(return_value=[])
             mock_reranker_cls.return_value = mock_reranker
 
-            retriever = HybridRetriever(settings, bm25_store, embedder)
+            retriever = HybridRetriever(settings, bm25_store, embedder, qdrant_client=MagicMock())
 
             import asyncio
 
@@ -306,24 +306,3 @@ class TestHybridRetriever:
 
         assert results == []
 
-    def test_close_propagates_to_dense(self) -> None:
-        settings = _make_settings()
-        embedder = _make_embedder()
-        bm25_store = _make_bm25_store()
-
-        with (
-            patch("src.retrieval.retriever.DenseRetriever") as mock_dense_cls,
-            patch("src.retrieval.retriever.SparseRetriever"),
-            patch("src.retrieval.retriever.CrossEncoderReranker"),
-        ):
-            mock_dense = MagicMock()
-            mock_dense.close = AsyncMock()
-            mock_dense_cls.return_value = mock_dense
-
-            retriever = HybridRetriever(settings, bm25_store, embedder)
-
-            import asyncio
-
-            asyncio.get_event_loop().run_until_complete(retriever.close())
-
-        mock_dense.close.assert_called_once()

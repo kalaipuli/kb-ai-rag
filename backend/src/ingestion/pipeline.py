@@ -5,6 +5,7 @@ from pathlib import Path
 
 import structlog
 from pydantic import BaseModel
+from qdrant_client import AsyncQdrantClient
 
 from src.config import Settings
 from src.exceptions import EmbeddingError, IngestionError
@@ -39,6 +40,7 @@ async def run_pipeline(
     settings: Settings,
     bm25_store: BM25Store | None = None,
     embedder: Embedder | None = None,
+    qdrant_client: AsyncQdrantClient | None = None,
 ) -> PipelineResult:
     """Run the full document ingestion pipeline, processing one file at a time.
 
@@ -70,7 +72,10 @@ async def run_pipeline(
     else:
         logger.warning("pipeline_embedder_not_injected_using_local")
         _embed_client = Embedder(settings=settings)
-    vector_store = QdrantVectorStore(settings=settings)
+    _owns_qdrant_client = qdrant_client is None
+    if qdrant_client is None:
+        qdrant_client = AsyncQdrantClient(url=settings.qdrant_url)
+    vector_store = QdrantVectorStore(settings=settings, client=qdrant_client)
 
     # Discover files before touching the network so an empty dir returns fast.
     file_paths = loader.discover_files()
@@ -88,7 +93,8 @@ async def run_pipeline(
         await vector_store.ensure_collection()
     except Exception as exc:
         logger.error("pipeline_ensure_collection_failed", error=str(exc))
-        await vector_store.close()
+        if _owns_qdrant_client:
+            await qdrant_client.close()
         return PipelineResult(
             docs_processed=0,
             chunks_created=0,
@@ -142,7 +148,8 @@ async def run_pipeline(
                 chunks=len(embedded),
             )
     finally:
-        await vector_store.close()
+        if _owns_qdrant_client:
+            await qdrant_client.close()
 
     if not all_embedded_chunks:
         logger.warning("pipeline_no_chunks_upserted")
@@ -158,7 +165,7 @@ async def run_pipeline(
         bm25_store = BM25Store(index_path=Path(settings.bm25_index_path))
     try:
         bm25_store.build(all_embedded_chunks)
-        bm25_store.save()
+        await bm25_store.asave()
     except Exception as exc:
         logger.error("pipeline_bm25_failed", error=str(exc))
         errors.append(f"BM25 stage failed: {exc}")

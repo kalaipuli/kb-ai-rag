@@ -15,9 +15,9 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_openai import AzureChatOpenAI
 from pydantic import BaseModel
 
+from src.api.schemas import Citation
 from src.generation.prompts import SYSTEM_PROMPT
 from src.graph.state import AgentState
-from src.schemas.generation import Citation
 
 log = structlog.get_logger(__name__)
 

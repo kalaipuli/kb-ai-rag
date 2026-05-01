@@ -115,7 +115,7 @@ class TestRunPipelineHappyPath:
 
             mock_bm25 = MagicMock()
             mock_bm25.build = MagicMock(side_effect=lambda _: call_order.append("bm25_build"))
-            mock_bm25.save = MagicMock(side_effect=lambda: call_order.append("bm25_save"))
+            mock_bm25.asave = AsyncMock(side_effect=lambda: call_order.append("bm25_save"))
             mock_bm25_cls.return_value = mock_bm25
 
             result = await run_pipeline(Path("/tmp/data"), settings)
@@ -174,7 +174,7 @@ class TestRunPipelineHappyPath:
 
             mock_bm25 = MagicMock()
             mock_bm25.build = MagicMock()
-            mock_bm25.save = MagicMock()
+            mock_bm25.asave = AsyncMock()
             mock_bm25_cls.return_value = mock_bm25
 
             result = await run_pipeline(Path("/tmp/data"), settings)
@@ -259,7 +259,7 @@ class TestRunPipelineEdgeCases:
 
             mock_bm25 = MagicMock()
             mock_bm25.build = MagicMock()
-            mock_bm25.save = MagicMock()
+            mock_bm25.asave = AsyncMock()
             mock_bm25_cls.return_value = mock_bm25
 
             result = await run_pipeline(Path("/tmp/data"), settings)
@@ -305,7 +305,7 @@ class TestRunPipelineEdgeCases:
 
             mock_bm25 = MagicMock()
             mock_bm25.build = MagicMock()
-            mock_bm25.save = MagicMock()
+            mock_bm25.asave = AsyncMock()
             mock_bm25_cls.return_value = mock_bm25
 
             result = await run_pipeline(Path("/tmp/data"), settings)
@@ -348,7 +348,7 @@ class TestRunPipelineEdgeCases:
 
             mock_bm25 = MagicMock()
             mock_bm25.build = MagicMock()
-            mock_bm25.save = MagicMock()
+            mock_bm25.asave = AsyncMock()
             mock_bm25_cls.return_value = mock_bm25
 
             result = await run_pipeline(Path("/tmp/data"), settings)
@@ -356,7 +356,7 @@ class TestRunPipelineEdgeCases:
         assert len(result.errors) == 1
         assert "upsert boom" in result.errors[0]
         assert mock_bm25.build.call_count == 0
-        assert mock_bm25.save.call_count == 0
+        assert mock_bm25.asave.await_count == 0
 
     async def test_already_ingested_file_is_skipped(self) -> None:
         """Files whose doc_id already exists in Qdrant must not be re-embedded or re-upserted."""
@@ -394,7 +394,7 @@ class TestRunPipelineEdgeCases:
 
             mock_bm25 = MagicMock()
             mock_bm25.build = MagicMock()
-            mock_bm25.save = MagicMock()
+            mock_bm25.asave = AsyncMock()
             mock_bm25_cls.return_value = mock_bm25
 
             result = await run_pipeline(Path("/tmp/data"), settings)
@@ -440,7 +440,7 @@ class TestRunPipelineEdgeCases:
 
             mock_bm25 = MagicMock()
             mock_bm25.build = MagicMock()
-            mock_bm25.save = MagicMock(side_effect=IngestionError("bm25 save failed"))
+            mock_bm25.asave = AsyncMock(side_effect=IngestionError("bm25 save failed"))
             mock_bm25_cls.return_value = mock_bm25
 
             result = await run_pipeline(Path("/tmp/data"), settings)

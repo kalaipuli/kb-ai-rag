@@ -74,21 +74,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     app.state.llm_chat = llm_chat
     app.state.llm_4o = llm_4o
 
+    qdrant_client = AsyncQdrantClient(url=settings.qdrant_url)
+    app.state.qdrant_client = qdrant_client
+
     embedder = Embedder(settings=settings)
     app.state.embedder = embedder
-    retriever = HybridRetriever(settings=settings, bm25_store=bm25_store, embedder=embedder)
+    retriever = HybridRetriever(
+        settings=settings, bm25_store=bm25_store, embedder=embedder, qdrant_client=qdrant_client
+    )
     app.state.compiled_graph = await build_graph(
         settings=settings, retriever=retriever, llm=llm_chat, llm_4o=llm_4o
     )
-    app.state.generation_chain = GenerationChain(settings=settings, hybrid_retriever=retriever)
+    app.state.generation_chain = GenerationChain(settings=settings, hybrid_retriever=retriever, llm=llm_4o)
     app.state.bm25_store = bm25_store
-    app.state.qdrant_client = AsyncQdrantClient(url=settings.qdrant_url)
 
     logger.info("startup", service="kb-ai-rag-backend")
     yield
 
-    await retriever.close()
-    await app.state.qdrant_client.close()
+    await qdrant_client.close()
     logger.info("shutdown", service="kb-ai-rag-backend")
 
 

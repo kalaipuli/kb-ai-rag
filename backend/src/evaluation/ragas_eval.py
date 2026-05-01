@@ -33,10 +33,10 @@ from ragas.metrics import (
     Faithfulness,
 )
 
+from src.api.schemas import Citation, GenerationResult
 from src.config import Settings
 from src.exceptions import GenerationError
 from src.generation.chain import GenerationChain
-from src.schemas.generation import Citation, GenerationResult
 
 logger = structlog.get_logger(__name__)
 

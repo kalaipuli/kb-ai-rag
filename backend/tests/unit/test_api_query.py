@@ -214,3 +214,44 @@ class TestQueryEndpoint:
             headers=authenticated_headers,
         )
         assert response.status_code == 422
+
+    def test_query_runtime_error_in_stream_closes_without_done(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """When astream_generate raises RuntimeError (not GenerationError) the stream
+        closes abruptly because the route only catches GenerationError.  The client
+        receives a 200 response header but the SSE body contains no 'done' event,
+        confirming the uncaught error terminates the generator early.
+        """
+        from src.api.deps import get_generation_chain
+        from src.api.main import app
+
+        async def _runtime_error_gen(*_: object, **__: object) -> AsyncGenerator[str, None]:
+            raise RuntimeError("graph node crashed")
+            yield  # makes this an async generator function
+
+        # side_effect on astream_generate makes the MagicMock call _runtime_error_gen
+        mock_chain = MagicMock()
+        mock_chain.astream_generate.side_effect = _runtime_error_gen
+        app.dependency_overrides[get_generation_chain] = lambda: mock_chain
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query",
+                json={"query": "What is X?"},
+                headers=authenticated_headers,
+            ) as response:
+                assert response.status_code == 200
+                lines = [line for line in response.iter_lines() if line.startswith("data: ")]
+
+            event_types = [
+                json.loads(line[len("data: ") :])["type"] for line in lines
+            ]
+            # RuntimeError is not caught by the route — stream terminates without done
+            assert "done" not in event_types
+        finally:
+            app.dependency_overrides.pop(get_generation_chain, None)

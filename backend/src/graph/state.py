@@ -12,7 +12,7 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
-from src.schemas.generation import Citation
+from src.api.schemas import Citation
 
 
 class AgentState(TypedDict):

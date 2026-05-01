@@ -3,6 +3,7 @@
 from typing import Literal
 
 import structlog
+from qdrant_client import AsyncQdrantClient
 
 from src.config import Settings
 from src.exceptions import EmbeddingError, RetrievalError
@@ -33,9 +34,10 @@ class HybridRetriever:
         settings: Settings,
         bm25_store: BM25Store,
         embedder: Embedder,
+        qdrant_client: AsyncQdrantClient,
     ) -> None:
         self._settings = settings
-        self._dense = DenseRetriever(settings)
+        self._dense = DenseRetriever(settings, client=qdrant_client)
         self._sparse = SparseRetriever(bm25_store)
         self._reranker = CrossEncoderReranker(settings.reranker_model)
         self._embedder = embedder
@@ -100,6 +102,3 @@ class HybridRetriever:
         )
         return reranked
 
-    async def close(self) -> None:
-        """Release resources held by the dense retriever."""
-        await self._dense.close()

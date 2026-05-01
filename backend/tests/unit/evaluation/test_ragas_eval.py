@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.api.schemas import Citation, GenerationResult
 from src.evaluation.ragas_eval import (
     EvaluationResult,
     RagasEvaluator,
@@ -16,7 +17,6 @@ from src.evaluation.ragas_eval import (
     save_baseline,
 )
 from src.exceptions import GenerationError
-from src.schemas.generation import Citation, GenerationResult
 
 # ---------------------------------------------------------------------------
 # Fixtures

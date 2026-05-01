@@ -98,3 +98,18 @@ class TestCrossEncoderReranker:
         assert result == []
         # predict must NOT be called when input is empty
         mock_cls.return_value.predict.assert_not_called()
+
+    def test_rerank_propagates_runtime_error_from_predict(self) -> None:
+        """When the cross-encoder model's predict raises RuntimeError the exception
+        must propagate from rerank — it must not be swallowed.
+        """
+        with patch("src.retrieval.reranker.CrossEncoder") as mock_cls:
+            mock_model = MagicMock()
+            mock_model.predict.side_effect = RuntimeError("model unavailable")
+            mock_cls.return_value = mock_model
+
+            reranker = CrossEncoderReranker("test-model")
+            results = [_make_result("A"), _make_result("B")]
+
+            with pytest.raises(RuntimeError, match="model unavailable"):
+                reranker.rerank("query", results, top_k=2)

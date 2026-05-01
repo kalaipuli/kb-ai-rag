@@ -57,33 +57,36 @@ class TestBM25StoreBuild:
 
 
 # ---------------------------------------------------------------------------
-# save + load round-trip
+# asave + aload round-trip
 # ---------------------------------------------------------------------------
 
 
 class TestBM25StoreSaveLoad:
-    def test_save_creates_file(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_asave_creates_file(self, tmp_path: Path) -> None:
         path = tmp_path / "bm25_index.pkl"
         store = BM25Store(index_path=path)
         store.build([_make_chunk("some content here", "c1")])
-        store.save()
+        await store.asave()
         assert path.exists()
 
-    def test_load_restores_chunks(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_aload_restores_chunks(self, tmp_path: Path) -> None:
         path = tmp_path / "bm25_index.pkl"
         chunk = _make_chunk("hello retrieval world", "c99")
 
         store1 = BM25Store(index_path=path)
         store1.build([chunk])
-        store1.save()
+        await store1.asave()
 
         store2 = BM25Store(index_path=path)
-        store2.load()
+        await store2.aload()
 
         assert len(store2.chunks) == 1
         assert store2.chunks[0].metadata["chunk_id"] == "c99"
 
-    def test_load_restores_functional_index(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_aload_restores_functional_index(self, tmp_path: Path) -> None:
         path = tmp_path / "bm25_index.pkl"
         chunks = [
             _make_chunk("the quick brown fox", "c1"),
@@ -92,24 +95,25 @@ class TestBM25StoreSaveLoad:
 
         store1 = BM25Store(index_path=path)
         store1.build(chunks)
-        store1.save()
+        await store1.asave()
 
         store2 = BM25Store(index_path=path)
-        store2.load()
+        await store2.aload()
 
         assert store2.index is not None
-        # BM25 score query
         scores = store2.index.get_scores("quick brown".split())
         assert len(scores) == 2
 
-    def test_load_raises_ingestion_error_when_file_missing(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_aload_raises_ingestion_error_when_file_missing(self, tmp_path: Path) -> None:
         store = BM25Store(index_path=tmp_path / "nonexistent.pkl")
         with pytest.raises(IngestionError, match="BM25 index file not found"):
-            store.load()
+            await store.aload()
 
-    def test_save_creates_parent_directories(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_asave_creates_parent_directories(self, tmp_path: Path) -> None:
         nested_path = tmp_path / "deep" / "nested" / "bm25.pkl"
         store = BM25Store(index_path=nested_path)
         store.build([_make_chunk("text content here", "c1")])
-        store.save()
+        await store.asave()
         assert nested_path.exists()

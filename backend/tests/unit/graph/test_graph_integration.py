@@ -11,14 +11,15 @@ Test cases:
 4. Max retry guard: both grader and critic would fire indefinitely → terminates after MAX_RETRIES
 
 Patch strategy:
-- `src.graph.builder.AzureChatOpenAI` — intercepts both llm and llm_4o construction;
-  a single mock instance is returned whose `with_structured_output` dispatch controls all nodes.
+- LLM mocks are injected directly into build_graph(llm=..., llm_4o=...) — no patching of
+  AzureChatOpenAI needed since the constructor no longer creates clients internally.
 - `src.graph.builder.retriever_node` — intercepts the retriever closure in build_graph()
   so each test controls retrieved_docs and call counts independently.
-- `src.graph.edges.get_settings` and `src.graph.nodes.grader.get_settings` — patched with
-  graph_max_retries=2 in re-routing tests so that grader's increment of retry_count (0→1)
-  still leaves budget for one CRAG/Self-RAG re-route (1 < 2 = True).
-  The max-retry-guard test uses graph_max_retries=1 (default).
+- `src.graph.nodes.grader.get_settings` — patched with real threshold values so that
+  score comparisons inside the grader node work correctly.
+- Edge routing uses settings passed to build_graph() via functools.partial — no patch needed.
+  Tests 2/3 use graph_max_retries=2 so grader increment (0→1) still leaves budget for one
+  CRAG/Self-RAG re-route. Tests 1/4/5 use graph_max_retries=1 (default).
 """
 
 from pathlib import Path
@@ -48,13 +49,18 @@ def _make_doc(content: str = "Some relevant content.") -> Document:
     )
 
 
-def _mock_settings(tmp_path: Path) -> Any:
+def _mock_settings(tmp_path: Path, graph_max_retries: int = 1) -> Any:
     settings = MagicMock()
     settings.sqlite_checkpointer_path = str(tmp_path / "integration_test.sqlite")
+    settings.sqlite_checkpointer_ttl_days = 7
     settings.azure_openai_endpoint = "https://fake-endpoint.openai.azure.com/"
     settings.azure_openai_api_key.get_secret_value.return_value = "fake-api-key"
     settings.azure_openai_api_version = "2024-08-01-preview"
     settings.azure_chat_deployment = "gpt-4o"
+    settings.tavily_api_key.get_secret_value.return_value = ""
+    settings.graph_max_retries = graph_max_retries
+    settings.grader_threshold = 0.5
+    settings.critic_threshold = 0.7
     return settings
 
 
@@ -191,21 +197,19 @@ async def test_happy_path_reaches_end_in_one_pass(tmp_path: Path) -> None:
     retriever_mock, call_count = _make_retriever_node_mock(doc)
 
     llm_mock = _make_llm_mock(
-        router_output=_RouterOutput(
-            query_type="factual", retrieval_strategy="hybrid", reasoning="ok"
-        ),
+        router_output=_RouterOutput(query_type="factual", retrieval_strategy="hybrid"),
         grader_outputs=[[_GradeDoc(score=0.9, reasoning="relevant")]],
         gen_output=_GeneratorOutput(answer="Paris.", confidence=0.95, reasoning="clear"),
-        critic_outputs=[
-            _CriticOutput(hallucination_risk=0.1, unsupported_claims=[], reasoning="grounded")
-        ],
+        critic_outputs=[_CriticOutput(hallucination_risk=0.1)],
     )
 
     with (
-        patch("src.graph.builder.AzureChatOpenAI", return_value=llm_mock),
         patch("src.graph.builder.retriever_node", retriever_mock),
+        patch("src.graph.nodes.grader.get_settings", return_value=settings),
     ):
-        compiled = await build_graph(settings=settings, retriever=MagicMock())
+        compiled = await build_graph(
+            settings=settings, retriever=MagicMock(), llm=llm_mock, llm_4o=llm_mock
+        )
         terminal = await _collect_terminal_state(compiled, _initial_state())
 
     assert terminal["answer"] == "Paris."
@@ -222,15 +226,13 @@ async def test_happy_path_reaches_end_in_one_pass(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_crag_path_reroutes_to_retriever(tmp_path: Path) -> None:
-    # MAX_RETRIES patched to 2 so grader increment (0→1) still leaves budget for one re-route
-    settings = _mock_settings(tmp_path)
+    # graph_max_retries=2: grader increment (0→1) still leaves budget for one CRAG re-route
+    settings = _mock_settings(tmp_path, graph_max_retries=2)
     doc = _make_doc()
     retriever_mock, call_count = _make_retriever_node_mock(doc)
 
     llm_mock = _make_llm_mock(
-        router_output=_RouterOutput(
-            query_type="factual", retrieval_strategy="hybrid", reasoning="ok"
-        ),
+        router_output=_RouterOutput(query_type="factual", retrieval_strategy="hybrid"),
         # First grader call: 1 doc, all below threshold → CRAG re-route
         # Second grader call: plain replacement — retrieved_docs has exactly 1 doc (ADR-011)
         grader_outputs=[
@@ -238,24 +240,16 @@ async def test_crag_path_reroutes_to_retriever(tmp_path: Path) -> None:
             [_GradeDoc(score=0.8, reasoning="now relevant")],
         ],
         gen_output=_GeneratorOutput(answer="Paris.", confidence=0.9, reasoning="ok"),
-        critic_outputs=[
-            _CriticOutput(hallucination_risk=0.2, unsupported_claims=[], reasoning="grounded")
-        ],
+        critic_outputs=[_CriticOutput(hallucination_risk=0.2)],
     )
 
-    edges_settings = MagicMock()
-    edges_settings.graph_max_retries = 2
-    edges_settings.grader_threshold = 0.5
-    edges_settings.critic_threshold = 0.7
-    edges_settings.grader_batch_size = 10
-
     with (
-        patch("src.graph.builder.AzureChatOpenAI", return_value=llm_mock),
         patch("src.graph.builder.retriever_node", retriever_mock),
-        patch("src.graph.edges.get_settings", return_value=edges_settings),
-        patch("src.graph.nodes.grader.get_settings", return_value=edges_settings),
+        patch("src.graph.nodes.grader.get_settings", return_value=settings),
     ):
-        compiled = await build_graph(settings=settings, retriever=MagicMock())
+        compiled = await build_graph(
+            settings=settings, retriever=MagicMock(), llm=llm_mock, llm_4o=llm_mock
+        )
         terminal = await _collect_terminal_state(compiled, _initial_state())
 
     # Retriever called twice: initial + CRAG re-route
@@ -270,15 +264,13 @@ async def test_crag_path_reroutes_to_retriever(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_self_rag_path_reroutes_after_critic(tmp_path: Path) -> None:
-    # MAX_RETRIES patched to 2 so grader increment (0→1) still leaves budget for critic re-route
-    settings = _mock_settings(tmp_path)
+    # graph_max_retries=2: grader increment (0→1) leaves budget for critic Self-RAG re-route
+    settings = _mock_settings(tmp_path, graph_max_retries=2)
     doc = _make_doc()
     retriever_mock, call_count = _make_retriever_node_mock(doc)
 
     llm_mock = _make_llm_mock(
-        router_output=_RouterOutput(
-            query_type="factual", retrieval_strategy="hybrid", reasoning="ok"
-        ),
+        router_output=_RouterOutput(query_type="factual", retrieval_strategy="hybrid"),
         # First grader call: 1 doc above threshold → generator → critic fires → re-route
         # Second grader call: plain replacement — retrieved_docs has exactly 1 doc (ADR-011)
         grader_outputs=[
@@ -288,29 +280,19 @@ async def test_self_rag_path_reroutes_after_critic(tmp_path: Path) -> None:
         gen_output=_GeneratorOutput(answer="Some answer.", confidence=0.7, reasoning="ok"),
         critic_outputs=[
             # First critic: high risk → Self-RAG re-route (retry_count=1 < MAX_RETRIES=2)
-            _CriticOutput(
-                hallucination_risk=0.85,
-                unsupported_claims=["unsupported claim"],
-                reasoning="hallucination detected",
-            ),
+            _CriticOutput(hallucination_risk=0.85),
             # Second critic: low risk → end
-            _CriticOutput(hallucination_risk=0.15, unsupported_claims=[], reasoning="grounded"),
+            _CriticOutput(hallucination_risk=0.15),
         ],
     )
 
-    edges_settings = MagicMock()
-    edges_settings.graph_max_retries = 2
-    edges_settings.grader_threshold = 0.5
-    edges_settings.critic_threshold = 0.7
-    edges_settings.grader_batch_size = 10
-
     with (
-        patch("src.graph.builder.AzureChatOpenAI", return_value=llm_mock),
         patch("src.graph.builder.retriever_node", retriever_mock),
-        patch("src.graph.edges.get_settings", return_value=edges_settings),
-        patch("src.graph.nodes.grader.get_settings", return_value=edges_settings),
+        patch("src.graph.nodes.grader.get_settings", return_value=settings),
     ):
-        compiled = await build_graph(settings=settings, retriever=MagicMock())
+        compiled = await build_graph(
+            settings=settings, retriever=MagicMock(), llm=llm_mock, llm_4o=llm_mock
+        )
         terminal = await _collect_terminal_state(compiled, _initial_state())
 
     # Retriever called at least twice: initial + Self-RAG re-route
@@ -332,27 +314,21 @@ async def test_max_retry_guard_terminates(tmp_path: Path) -> None:
     retriever_mock, call_count = _make_retriever_node_mock(doc)
 
     llm_mock = _make_llm_mock(
-        router_output=_RouterOutput(
-            query_type="factual", retrieval_strategy="hybrid", reasoning="ok"
-        ),
+        router_output=_RouterOutput(query_type="factual", retrieval_strategy="hybrid"),
         # Grader always below threshold
         grader_outputs=[[_GradeDoc(score=0.0, reasoning="irrelevant")]],
         gen_output=_GeneratorOutput(answer="Fallback answer.", confidence=0.3, reasoning="low"),
         # Critic always high risk
-        critic_outputs=[
-            _CriticOutput(
-                hallucination_risk=0.99,
-                unsupported_claims=["everything"],
-                reasoning="all hallucinated",
-            )
-        ],
+        critic_outputs=[_CriticOutput(hallucination_risk=0.99)],
     )
 
     with (
-        patch("src.graph.builder.AzureChatOpenAI", return_value=llm_mock),
         patch("src.graph.builder.retriever_node", retriever_mock),
+        patch("src.graph.nodes.grader.get_settings", return_value=settings),
     ):
-        compiled = await build_graph(settings=settings, retriever=MagicMock())
+        compiled = await build_graph(
+            settings=settings, retriever=MagicMock(), llm=llm_mock, llm_4o=llm_mock
+        )
         terminal = await _collect_terminal_state(compiled, _initial_state())
 
     # Graph terminated — answer must be set
@@ -380,9 +356,7 @@ async def test_generator_llm_failure_produces_fallback_answer(tmp_path: Path) ->
     # Router and grader succeed normally; only the generator LLM call raises.
     router_chain = MagicMock()
     router_chain.ainvoke = AsyncMock(
-        return_value=_RouterOutput(
-            query_type="factual", retrieval_strategy="hybrid", reasoning="ok"
-        )
+        return_value=_RouterOutput(query_type="factual", retrieval_strategy="hybrid")
     )
 
     grader_chain = MagicMock()
@@ -393,11 +367,7 @@ async def test_generator_llm_failure_produces_fallback_answer(tmp_path: Path) ->
     gen_chain.ainvoke = AsyncMock(side_effect=Exception("Azure throttled"))
 
     critic_chain = MagicMock()
-    critic_chain.ainvoke = AsyncMock(
-        return_value=_CriticOutput(
-            hallucination_risk=0.1, unsupported_claims=[], reasoning="grounded"
-        )
-    )
+    critic_chain.ainvoke = AsyncMock(return_value=_CriticOutput(hallucination_risk=0.1))
 
     schema_map: dict[str, MagicMock] = {
         "_RouterOutput": router_chain,
@@ -412,10 +382,12 @@ async def test_generator_llm_failure_produces_fallback_answer(tmp_path: Path) ->
     )
 
     with (
-        patch("src.graph.builder.AzureChatOpenAI", return_value=llm_mock),
         patch("src.graph.builder.retriever_node", retriever_mock),
+        patch("src.graph.nodes.grader.get_settings", return_value=settings),
     ):
-        compiled = await build_graph(settings=settings, retriever=MagicMock())
+        compiled = await build_graph(
+            settings=settings, retriever=MagicMock(), llm=llm_mock, llm_4o=llm_mock
+        )
         # Must not raise — generator error handler swallows the exception
         terminal = await _collect_terminal_state(compiled, _initial_state())
 

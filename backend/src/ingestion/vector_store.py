@@ -28,9 +28,9 @@ class QdrantVectorStore:
     and payload indexes for fast keyword/date filtering.
     """
 
-    def __init__(self, settings: Settings) -> None:
+    def __init__(self, settings: Settings, client: AsyncQdrantClient) -> None:
         self._settings = settings
-        self._client = AsyncQdrantClient(url=settings.qdrant_url)
+        self._client = client
         self._collection = settings.qdrant_collection
         self._vector_size = settings.embedding_vector_size
 
@@ -121,7 +121,3 @@ class QdrantVectorStore:
             raise IngestionError(f"Qdrant upsert failed: {exc}") from exc
 
         logger.info("upsert_complete", collection=self._collection, point_count=len(points))
-
-    async def close(self) -> None:
-        """Close the underlying async HTTP client."""
-        await self._client.close()

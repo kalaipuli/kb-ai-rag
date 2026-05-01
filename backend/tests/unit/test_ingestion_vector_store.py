@@ -1,9 +1,9 @@
 """Unit tests for QdrantVectorStore.
 
-AsyncQdrantClient is mocked — no real Qdrant connection is made.
+AsyncQdrantClient is injected as a constructor argument — no real Qdrant connection is made.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -56,20 +56,15 @@ def _make_chunk(chunk_id: str, vector: list[float]) -> ChunkedDocument:
 class TestEnsureCollection:
     async def test_creates_collection_when_absent(self) -> None:
         settings = _make_settings()
+        mock_client = MagicMock()
+        collections_response = MagicMock()
+        collections_response.collections = []
+        mock_client.get_collections = AsyncMock(return_value=collections_response)
+        mock_client.create_collection = AsyncMock()
+        mock_client.create_payload_index = AsyncMock()
 
-        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            # No existing collections
-            collections_response = MagicMock()
-            collections_response.collections = []
-            mock_client.get_collections = AsyncMock(return_value=collections_response)
-            mock_client.create_collection = AsyncMock()
-            mock_client.create_payload_index = AsyncMock()
-            mock_client.close = AsyncMock()
-            mock_cls.return_value = mock_client
-
-            store = QdrantVectorStore(settings=settings)
-            await store.ensure_collection()
+        store = QdrantVectorStore(settings=settings, client=mock_client)
+        await store.ensure_collection()
 
         mock_client.create_collection.assert_awaited_once()
         call_kwargs = mock_client.create_collection.call_args.kwargs
@@ -77,38 +72,30 @@ class TestEnsureCollection:
 
     async def test_skips_creation_when_collection_exists(self) -> None:
         settings = _make_settings()
+        mock_client = MagicMock()
+        existing_col = MagicMock()
+        existing_col.name = "test_col"
+        collections_response = MagicMock()
+        collections_response.collections = [existing_col]
+        mock_client.get_collections = AsyncMock(return_value=collections_response)
+        mock_client.create_collection = AsyncMock()
 
-        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            existing_col = MagicMock()
-            existing_col.name = "test_col"
-            collections_response = MagicMock()
-            collections_response.collections = [existing_col]
-            mock_client.get_collections = AsyncMock(return_value=collections_response)
-            mock_client.create_collection = AsyncMock()
-            mock_client.close = AsyncMock()
-            mock_cls.return_value = mock_client
-
-            store = QdrantVectorStore(settings=settings)
-            await store.ensure_collection()
+        store = QdrantVectorStore(settings=settings, client=mock_client)
+        await store.ensure_collection()
 
         mock_client.create_collection.assert_not_awaited()
 
     async def test_payload_indexes_created(self) -> None:
         settings = _make_settings()
+        mock_client = MagicMock()
+        collections_response = MagicMock()
+        collections_response.collections = []
+        mock_client.get_collections = AsyncMock(return_value=collections_response)
+        mock_client.create_collection = AsyncMock()
+        mock_client.create_payload_index = AsyncMock()
 
-        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            collections_response = MagicMock()
-            collections_response.collections = []
-            mock_client.get_collections = AsyncMock(return_value=collections_response)
-            mock_client.create_collection = AsyncMock()
-            mock_client.create_payload_index = AsyncMock()
-            mock_client.close = AsyncMock()
-            mock_cls.return_value = mock_client
-
-            store = QdrantVectorStore(settings=settings)
-            await store.ensure_collection()
+        store = QdrantVectorStore(settings=settings, client=mock_client)
+        await store.ensure_collection()
 
         assert mock_client.create_payload_index.await_count == 4
         indexed_fields = {
@@ -128,14 +115,11 @@ class TestUpsert:
         vec = [0.1, 0.2, 0.3]
         chunk = _make_chunk("chunk-uuid-1", vec)
 
-        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.upsert = AsyncMock()
-            mock_client.close = AsyncMock()
-            mock_cls.return_value = mock_client
+        mock_client = MagicMock()
+        mock_client.upsert = AsyncMock()
 
-            store = QdrantVectorStore(settings=settings)
-            await store.upsert([chunk])
+        store = QdrantVectorStore(settings=settings, client=mock_client)
+        await store.upsert([chunk])
 
         mock_client.upsert.assert_awaited_once()
         call_kwargs = mock_client.upsert.call_args.kwargs
@@ -144,7 +128,6 @@ class TestUpsert:
         assert len(points) == 1
         assert points[0].id == "chunk-uuid-1"
         assert points[0].vector == vec
-        # Full payload must be present, including full chunk text
         payload = points[0].payload
         assert payload["doc_id"] == "doc-1"
         assert payload["filename"] == "a.pdf"
@@ -154,15 +137,11 @@ class TestUpsert:
 
     async def test_upsert_no_chunks_skips_call(self) -> None:
         settings = _make_settings()
+        mock_client = MagicMock()
+        mock_client.upsert = AsyncMock()
 
-        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.upsert = AsyncMock()
-            mock_client.close = AsyncMock()
-            mock_cls.return_value = mock_client
-
-            store = QdrantVectorStore(settings=settings)
-            await store.upsert([])
+        store = QdrantVectorStore(settings=settings, client=mock_client)
+        await store.upsert([])
 
         mock_client.upsert.assert_not_awaited()
 
@@ -170,29 +149,23 @@ class TestUpsert:
         settings = _make_settings()
         chunk = _make_chunk("chunk-uuid-2", [1.0, 2.0])
 
-        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.upsert = AsyncMock(side_effect=RuntimeError("Qdrant down"))
-            mock_client.close = AsyncMock()
-            mock_cls.return_value = mock_client
+        mock_client = MagicMock()
+        mock_client.upsert = AsyncMock(side_effect=RuntimeError("Qdrant down"))
 
-            store = QdrantVectorStore(settings=settings)
-            with pytest.raises(IngestionError, match="Qdrant down"):
-                await store.upsert([chunk])
+        store = QdrantVectorStore(settings=settings, client=mock_client)
+        with pytest.raises(IngestionError, match="Qdrant down"):
+            await store.upsert([chunk])
 
     async def test_upsert_raises_if_chunk_has_no_vector(self) -> None:
         settings = _make_settings()
         chunk = _make_chunk("chunk-no-vec", [])  # empty vector
 
-        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.upsert = AsyncMock()
-            mock_client.close = AsyncMock()
-            mock_cls.return_value = mock_client
+        mock_client = MagicMock()
+        mock_client.upsert = AsyncMock()
 
-            store = QdrantVectorStore(settings=settings)
-            with pytest.raises(IngestionError, match="no vector"):
-                await store.upsert([chunk])
+        store = QdrantVectorStore(settings=settings, client=mock_client)
+        with pytest.raises(IngestionError, match="no vector"):
+            await store.upsert([chunk])
 
 
 # ---------------------------------------------------------------------------
@@ -203,16 +176,13 @@ class TestUpsert:
 class TestDocExists:
     async def test_returns_true_when_doc_found(self) -> None:
         settings = _make_settings()
+        mock_client = MagicMock()
+        count_result = MagicMock()
+        count_result.count = 3
+        mock_client.count = AsyncMock(return_value=count_result)
 
-        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            count_result = MagicMock()
-            count_result.count = 3
-            mock_client.count = AsyncMock(return_value=count_result)
-            mock_cls.return_value = mock_client
-
-            store = QdrantVectorStore(settings=settings)
-            result = await store.doc_exists("doc-abc")
+        store = QdrantVectorStore(settings=settings, client=mock_client)
+        result = await store.doc_exists("doc-abc")
 
         assert result is True
         mock_client.count.assert_awaited_once()
@@ -221,15 +191,12 @@ class TestDocExists:
 
     async def test_returns_false_when_doc_not_found(self) -> None:
         settings = _make_settings()
+        mock_client = MagicMock()
+        count_result = MagicMock()
+        count_result.count = 0
+        mock_client.count = AsyncMock(return_value=count_result)
 
-        with patch("src.ingestion.vector_store.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            count_result = MagicMock()
-            count_result.count = 0
-            mock_client.count = AsyncMock(return_value=count_result)
-            mock_cls.return_value = mock_client
-
-            store = QdrantVectorStore(settings=settings)
-            result = await store.doc_exists("doc-xyz")
+        store = QdrantVectorStore(settings=settings, client=mock_client)
+        result = await store.doc_exists("doc-xyz")
 
         assert result is False

@@ -3,21 +3,20 @@
 All request and response bodies are defined here so that route handlers stay
 thin and schema evolution is centralised in one place.
 
-``CitationItem`` and ``QueryResponse`` are backward-compatible aliases for the
-canonical types defined in ``src.schemas.generation``.
+``Citation`` and ``GenerationResult`` are the canonical types used by the
+generation layer. ``CitationItem`` and ``QueryResponse`` are route-level aliases.
 """
 
 from pydantic import BaseModel, Field
 
-from src.schemas.generation import Citation as CitationItem
-from src.schemas.generation import GenerationResult as QueryResponse
-
 __all__ = [
+    "Citation",
+    "GenerationResult",
+    "CitationItem",
+    "QueryResponse",
     "HealthResponse",
     "ErrorResponse",
     "QueryRequest",
-    "CitationItem",
-    "QueryResponse",
     "IngestRequest",
     "IngestAcceptedResponse",
     "CollectionInfo",
@@ -25,6 +24,30 @@ __all__ = [
     "EvalMetrics",
     "EvalBaselineResponse",
 ]
+
+
+class Citation(BaseModel):
+    """A single source chunk cited in a generated answer."""
+
+    chunk_id: str
+    filename: str
+    source_path: str
+    page_number: int | None = None
+    retrieval_score: float | None = None
+
+
+class GenerationResult(BaseModel):
+    """Full output of the GenerationChain for a single query."""
+
+    query: str
+    answer: str
+    citations: list[Citation]
+    confidence: float
+    retrieved_contexts: list[str] = []
+
+
+CitationItem = Citation
+QueryResponse = GenerationResult
 
 
 class HealthResponse(BaseModel):

@@ -1,6 +1,7 @@
 """Unit tests for DenseRetriever — all Qdrant I/O is mocked."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+import asyncio
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -18,6 +19,15 @@ def _make_test_settings() -> MagicMock:
     s.qdrant_url = "http://localhost:6333"
     s.qdrant_collection = "test_collection"
     return s
+
+
+def _make_mock_client(query_result: MagicMock | None = None, side_effect: Exception | None = None) -> MagicMock:
+    client = MagicMock()
+    if side_effect is not None:
+        client.query_points = AsyncMock(side_effect=side_effect)
+    else:
+        client.query_points = AsyncMock(return_value=query_result or _make_query_result([]))
+    return client
 
 
 def _make_scored_point(
@@ -64,25 +74,16 @@ def _make_query_result(points: list[MagicMock]) -> MagicMock:
 class TestDenseRetriever:
     def test_search_returns_sorted_results(self) -> None:
         settings = _make_test_settings()
-        with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.query_points = AsyncMock(
-                return_value=_make_query_result(
-                    [
-                        _make_scored_point("c1", 0.9, "First chunk"),
-                        _make_scored_point("c2", 0.7, "Second chunk"),
-                    ]
-                )
-            )
-            mock_cls.return_value = mock_client
-
-            retriever = DenseRetriever(settings)
-
-            import asyncio
-
-            results: list[RetrievalResult] = asyncio.get_event_loop().run_until_complete(
-                retriever.search([0.1] * 3072, k=5)
-            )
+        mock_client = _make_mock_client(
+            _make_query_result([
+                _make_scored_point("c1", 0.9, "First chunk"),
+                _make_scored_point("c2", 0.7, "Second chunk"),
+            ])
+        )
+        retriever = DenseRetriever(settings, client=mock_client)
+        results: list[RetrievalResult] = asyncio.get_event_loop().run_until_complete(
+            retriever.search([0.1] * 3072, k=5)
+        )
 
         assert len(results) == 2
         assert results[0].chunk_id == "c1"
@@ -92,51 +93,32 @@ class TestDenseRetriever:
 
     def test_search_empty_returns_empty_list(self) -> None:
         settings = _make_test_settings()
-        with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.query_points = AsyncMock(return_value=_make_query_result([]))
-            mock_cls.return_value = mock_client
-
-            retriever = DenseRetriever(settings)
-
-            import asyncio
-
-            results = asyncio.get_event_loop().run_until_complete(
-                retriever.search([0.0] * 3072, k=10)
-            )
+        mock_client = _make_mock_client(_make_query_result([]))
+        retriever = DenseRetriever(settings, client=mock_client)
+        results = asyncio.get_event_loop().run_until_complete(
+            retriever.search([0.0] * 3072, k=10)
+        )
 
         assert results == []
 
     def test_search_raises_retrieval_error_on_failure(self) -> None:
         settings = _make_test_settings()
-        with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.query_points = AsyncMock(side_effect=RuntimeError("connection refused"))
-            mock_cls.return_value = mock_client
+        mock_client = _make_mock_client(side_effect=RuntimeError("connection refused"))
+        retriever = DenseRetriever(settings, client=mock_client)
 
-            retriever = DenseRetriever(settings)
-
-            import asyncio
-
-            with pytest.raises(RetrievalError, match="Qdrant search failed") as exc_info:
-                asyncio.get_event_loop().run_until_complete(retriever.search([0.0] * 3072, k=5))
+        with pytest.raises(RetrievalError, match="Qdrant search failed") as exc_info:
+            asyncio.get_event_loop().run_until_complete(retriever.search([0.0] * 3072, k=5))
 
         assert exc_info.value.__cause__ is not None
         assert isinstance(exc_info.value.__cause__, RuntimeError)
 
     def test_search_raises_retrieval_error_on_connection_error(self) -> None:
         settings = _make_test_settings()
-        with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.query_points = AsyncMock(side_effect=ConnectionError("timeout"))
-            mock_cls.return_value = mock_client
+        mock_client = _make_mock_client(side_effect=ConnectionError("timeout"))
+        retriever = DenseRetriever(settings, client=mock_client)
 
-            retriever = DenseRetriever(settings)
-
-            import asyncio
-
-            with pytest.raises(RetrievalError, match="Qdrant search failed") as exc_info:
-                asyncio.get_event_loop().run_until_complete(retriever.search([0.0] * 3072, k=5))
+        with pytest.raises(RetrievalError, match="Qdrant search failed") as exc_info:
+            asyncio.get_event_loop().run_until_complete(retriever.search([0.0] * 3072, k=5))
 
         assert exc_info.value.__cause__ is not None
         assert isinstance(exc_info.value.__cause__, ConnectionError)
@@ -144,44 +126,27 @@ class TestDenseRetriever:
     def test_search_result_text_comes_from_payload_text_field(self) -> None:
         """F01: RetrievalResult.text must use the full 'text' payload key, not 'title'."""
         settings = _make_test_settings()
-        with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.query_points = AsyncMock(
-                return_value=_make_query_result(
-                    [
-                        _make_scored_point(
-                            "c1", 0.9, title="Short title", text="Full body text here"
-                        ),
-                    ]
-                )
-            )
-            mock_cls.return_value = mock_client
-
-            retriever = DenseRetriever(settings)
-
-            import asyncio
-
-            results: list[RetrievalResult] = asyncio.get_event_loop().run_until_complete(
-                retriever.search([0.1] * 3072, k=5)
-            )
+        mock_client = _make_mock_client(
+            _make_query_result([
+                _make_scored_point("c1", 0.9, title="Short title", text="Full body text here"),
+            ])
+        )
+        retriever = DenseRetriever(settings, client=mock_client)
+        results: list[RetrievalResult] = asyncio.get_event_loop().run_until_complete(
+            retriever.search([0.1] * 3072, k=5)
+        )
 
         assert results[0].text == "Full body text here"
         assert results[0].chunk_id == "c1"
 
     def test_search_passes_filters_to_client(self) -> None:
         settings = _make_test_settings()
-        with patch("src.retrieval.dense.AsyncQdrantClient") as mock_cls:
-            mock_client = MagicMock()
-            mock_client.query_points = AsyncMock(return_value=_make_query_result([]))
-            mock_cls.return_value = mock_client
+        mock_client = _make_mock_client(_make_query_result([]))
+        retriever = DenseRetriever(settings, client=mock_client)
 
-            retriever = DenseRetriever(settings)
-
-            import asyncio
-
-            asyncio.get_event_loop().run_until_complete(
-                retriever.search([0.0] * 3072, k=5, filters={"file_type": "pdf"})
-            )
+        asyncio.get_event_loop().run_until_complete(
+            retriever.search([0.0] * 3072, k=5, filters={"file_type": "pdf"})
+        )
 
         call_kwargs = mock_client.query_points.call_args.kwargs
         assert call_kwargs["query_filter"] is not None

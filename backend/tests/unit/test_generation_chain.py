@@ -4,9 +4,9 @@ All external I/O (HybridRetriever, AzureChatOpenAI) is mocked so no real
 network calls are made.
 
 The LCEL pipeline ``QA_PROMPT | llm | StrOutputParser()`` is exercised by
-patching ``AzureChatOpenAI`` with a ``RunnableLambda`` that returns an
-``AIMessage``.  ``RunnableLambda`` implements ``__or__`` correctly so the full
-``|`` composition works end-to-end without hitting Azure.
+injecting a ``RunnableLambda`` that returns an ``AIMessage``.
+``RunnableLambda`` implements ``__or__`` correctly so the full ``|``
+composition works end-to-end without hitting Azure.
 """
 
 import json
@@ -18,11 +18,11 @@ from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableLambda
 from pydantic import SecretStr
 
+from src.api.schemas import GenerationResult
 from src.exceptions import GenerationError
 from src.generation.chain import GenerationChain, KBRetriever
 from src.ingestion.models import ChunkMetadata
 from src.retrieval.models import RetrievalResult
-from src.schemas.generation import GenerationResult
 
 pytestmark = pytest.mark.asyncio
 
@@ -151,17 +151,16 @@ def _source_doc(
 
 
 class TestGenerationChain:
-    async def test_generation_chain_returns_result(self, mocker: MagicMock) -> None:
+    async def test_generation_chain_returns_result(self) -> None:
         """GenerationChain.generate returns a valid GenerationResult with correct fields."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([_make_retrieval_result("c1", score=2.5)])
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_llm_runnable("Paris is the capital."),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable("Paris is the capital."),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
         result = await gen_chain.generate("What is the capital of France?")
 
         assert isinstance(result, GenerationResult)
@@ -170,10 +169,9 @@ class TestGenerationChain:
         assert result.citations[0].filename == "geo.pdf"
         assert 0.0 <= result.confidence <= 1.0
 
-    async def test_generation_chain_deduplicates_citations(self, mocker: MagicMock) -> None:
+    async def test_generation_chain_deduplicates_citations(self) -> None:
         """Same chunk_id appearing twice in retrieved docs yields only one citation."""
         settings = _make_settings()
-        # Two results with identical chunk_id — only one citation expected.
         hybrid = _make_hybrid_retriever(
             [
                 _make_retrieval_result("c1", score=1.0),
@@ -181,51 +179,46 @@ class TestGenerationChain:
             ]
         )
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_llm_runnable("Deduplicated."),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable("Deduplicated."),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
         result = await gen_chain.generate("question")
 
         assert len(result.citations) == 1
         assert result.citations[0].chunk_id == "c1"
 
-    async def test_generation_chain_no_docs_confidence_zero(self, mocker: MagicMock) -> None:
+    async def test_generation_chain_no_docs_confidence_zero(self) -> None:
         """When retrieval returns no docs, confidence must be exactly 0.0."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([])
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_llm_runnable("No docs."),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable("No docs."),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
         result = await gen_chain.generate("any question")
 
         assert result.confidence == 0.0
 
-    async def test_generation_chain_propagates_error(self, mocker: MagicMock) -> None:
+    async def test_generation_chain_propagates_error(self) -> None:
         """If retrieval raises, GenerationError is raised with the original message."""
         settings = _make_settings()
         hybrid = MagicMock()
         hybrid.retrieve = AsyncMock(side_effect=Exception("retrieval exploded"))
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_llm_runnable(),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable(),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
 
         with pytest.raises(GenerationError, match="retrieval exploded"):
             await gen_chain.generate("broken question")
 
-    async def test_generation_chain_multiple_citations_order_preserved(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_generation_chain_multiple_citations_order_preserved(self) -> None:
         """Citations are returned in retrieval order (first occurrence of each chunk_id)."""
         settings = _make_settings()
         # c2 first, then c1, then c2 again — expected order: c2, c1
@@ -237,35 +230,33 @@ class TestGenerationChain:
             ]
         )
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_llm_runnable("Multi."),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable("Multi."),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
         result = await gen_chain.generate("question")
 
         assert len(result.citations) == 2
         assert result.citations[0].chunk_id == "c2"
         assert result.citations[1].chunk_id == "c1"
 
-    async def test_generation_chain_confidence_in_unit_interval(self, mocker: MagicMock) -> None:
+    async def test_generation_chain_confidence_in_unit_interval(self) -> None:
         """Confidence is clamped to [0.0, 1.0] regardless of raw cross-encoder scores."""
         settings = _make_settings()
         # Extremely high score — sigmoid output approaches 1.0 but must not exceed it.
         hybrid = _make_hybrid_retriever([_make_retrieval_result("c1", score=1000.0)])
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_llm_runnable("High confidence."),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable("High confidence."),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
         result = await gen_chain.generate("question")
 
         assert 0.0 <= result.confidence <= 1.0
 
-    async def test_generation_chain_page_number_none_for_sentinel(self, mocker: MagicMock) -> None:
+    async def test_generation_chain_page_number_none_for_sentinel(self) -> None:
         """page_number -1 sentinel from ChunkMetadata maps to None in Citation."""
         settings = _make_settings()
         # Build a result whose page_number is -1 (TXT source, no pages)
@@ -280,39 +271,34 @@ class TestGenerationChain:
         )
         hybrid = _make_hybrid_retriever([result_no_page])
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_llm_runnable("Answer."),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable("Answer."),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
         result = await gen_chain.generate("question")
 
         assert len(result.citations) == 1
         assert result.citations[0].page_number is None
 
-    async def test_generation_chain_llm_error_raises_generation_error(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_generation_chain_llm_error_raises_generation_error(self) -> None:
         """If the LCEL chain ainvoke raises, GenerationError wraps the exception."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([_make_retrieval_result("c1", score=1.0)])
 
-        # Use a RunnableLambda that raises rather than returning a response.
         async def _failing_llm(input_data: object) -> AIMessage:
             raise RuntimeError("LLM failed")
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=RunnableLambda(_failing_llm),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=RunnableLambda(_failing_llm),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
 
         with pytest.raises(GenerationError, match="LLM failed"):
             await gen_chain.generate("question")
 
-    async def test_generation_chain_negative_score_confidence_low(self, mocker: MagicMock) -> None:
+    async def test_generation_chain_negative_score_confidence_low(self) -> None:
         """Strongly negative cross-encoder score yields confidence in [0.0, 1.0) and below 0.1.
 
         The ms-marco-MiniLM-L-6-v2 cross-encoder returns raw logits that are
@@ -323,12 +309,11 @@ class TestGenerationChain:
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([_make_retrieval_result("c1", score=-5.0)])
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_llm_runnable("Low confidence answer."),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable("Low confidence answer."),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
         result = await gen_chain.generate("irrelevant question")
 
         assert 0.0 <= result.confidence < 0.1
@@ -355,19 +340,16 @@ def _make_streaming_runnable(tokens: list[str]) -> RunnableLambda:  # type: igno
 
 
 class TestGenerationChainStream:
-    async def test_astream_generate_yields_token_then_citations_then_done(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_astream_generate_yields_token_then_citations_then_done(self) -> None:
         """astream_generate yields token events, one citations event, one done event."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([_make_retrieval_result("c1", score=2.5)])
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_streaming_runnable(["Hello", " world"]),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_streaming_runnable(["Hello", " world"]),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
 
         events: list[str] = []
         async for event in gen_chain.astream_generate("What is the capital?"):
@@ -382,17 +364,16 @@ class TestGenerationChainStream:
         assert len(done_events) == 1
         assert events[-1].strip() == 'data: {"type": "done"}'
 
-    async def test_astream_generate_citations_event_has_confidence(self, mocker: MagicMock) -> None:
+    async def test_astream_generate_citations_event_has_confidence(self) -> None:
         """The citations SSE event must include a numeric confidence field."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([_make_retrieval_result("c1", score=2.5)])
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_streaming_runnable(["answer"]),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_streaming_runnable(["answer"]),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
 
         events: list[str] = []
         async for event in gen_chain.astream_generate("question"):
@@ -404,34 +385,32 @@ class TestGenerationChainStream:
         assert isinstance(payload["confidence"], float)
         assert 0.0 <= payload["confidence"] <= 1.0
 
-    async def test_astream_generate_error_raises_generation_error(self, mocker: MagicMock) -> None:
+    async def test_astream_generate_error_raises_generation_error(self) -> None:
         """If retrieval fails, astream_generate raises GenerationError."""
         settings = _make_settings()
         hybrid = MagicMock()
         hybrid.retrieve = AsyncMock(side_effect=Exception("retrieval failed"))
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_llm_runnable(),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable(),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
 
         with pytest.raises(GenerationError, match="retrieval failed"):
             async for _ in gen_chain.astream_generate("question"):
                 pass
 
-    async def test_astream_generate_no_docs_confidence_zero(self, mocker: MagicMock) -> None:
+    async def test_astream_generate_no_docs_confidence_zero(self) -> None:
         """When retrieval returns no docs, the citations event has confidence 0.0."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([])
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_streaming_runnable(["no context answer"]),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_streaming_runnable(["no context answer"]),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
 
         events: list[str] = []
         async for event in gen_chain.astream_generate("question"):
@@ -442,9 +421,7 @@ class TestGenerationChainStream:
         assert payload["confidence"] == 0.0
         assert payload["citations"] == []
 
-    async def test_astream_generate_citations_event_has_chunks_retrieved(
-        self, mocker: MagicMock
-    ) -> None:
+    async def test_astream_generate_citations_event_has_chunks_retrieved(self) -> None:
         """The citations SSE event must include chunks_retrieved equal to the doc count."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever(
@@ -455,12 +432,11 @@ class TestGenerationChainStream:
             ]
         )
 
-        mocker.patch(
-            "src.generation.chain.AzureChatOpenAI",
-            return_value=_make_streaming_runnable(["answer"]),
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_streaming_runnable(["answer"]),  # type: ignore[arg-type]
         )
-
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
 
         events: list[str] = []
         async for event in gen_chain.astream_generate("question"):
@@ -478,12 +454,15 @@ class TestGenerationChainStream:
 
 
 class TestBuildCitations:
-    async def test_retrieval_score_populated_when_score_present(self, mocker: MagicMock) -> None:
+    async def test_retrieval_score_populated_when_score_present(self) -> None:
         """Citation has retrieval_score when doc.metadata['score'] is present."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([])
-        mocker.patch("src.generation.chain.AzureChatOpenAI", return_value=_make_llm_runnable())
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable(),  # type: ignore[arg-type]
+        )
 
         doc = _source_doc(chunk_id="c1", score=1.75)
         citations, _ = gen_chain._build_citations([doc])
@@ -491,12 +470,15 @@ class TestBuildCitations:
         assert len(citations) == 1
         assert citations[0].retrieval_score == pytest.approx(1.75)
 
-    async def test_retrieval_score_is_none_when_score_absent(self, mocker: MagicMock) -> None:
+    async def test_retrieval_score_is_none_when_score_absent(self) -> None:
         """Citation has retrieval_score=None when score key is absent from metadata."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([])
-        mocker.patch("src.generation.chain.AzureChatOpenAI", return_value=_make_llm_runnable())
-        gen_chain = GenerationChain(settings=settings, hybrid_retriever=hybrid)
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable(),  # type: ignore[arg-type]
+        )
 
         doc = Document(
             page_content="No score here.",

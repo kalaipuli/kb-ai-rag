@@ -20,8 +20,8 @@ class DenseRetriever:
     must-clauses.
     """
 
-    def __init__(self, settings: Settings) -> None:
-        self._client = AsyncQdrantClient(url=settings.qdrant_url)
+    def __init__(self, settings: Settings, client: AsyncQdrantClient) -> None:
+        self._client = client
         self._collection = settings.qdrant_collection
 
     async def search(
@@ -89,7 +89,3 @@ class DenseRetriever:
             k=k,
         )
         return results
-
-    async def close(self) -> None:
-        """Close the underlying async HTTP client."""
-        await self._client.close()

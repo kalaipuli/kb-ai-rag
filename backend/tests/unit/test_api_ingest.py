@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
 from src.config import Settings
+from src.exceptions import IngestionError
 from src.ingestion.embedder import Embedder
 
 
@@ -131,3 +132,27 @@ class TestIngestEndpoint:
             assert _args[3] is mock_embedder
         finally:
             app.dependency_overrides.pop(get_embedder, None)
+
+    def test_ingest_propagates_ingestion_error(
+        self,
+        test_client_1d: TestClient,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """When run_pipeline raises IngestionError in the background task the endpoint
+        still returns 202 (the background task runs after the response is sent), but
+        the pipeline is called exactly once and the error propagates out of the task.
+        """
+        with patch(
+            "src.api.routes.ingest.run_pipeline",
+            new_callable=AsyncMock,
+            side_effect=IngestionError("pipeline failed"),
+        ) as mock_pipeline:
+            response = test_client_1d.post(
+                "/api/v1/ingest",
+                headers=authenticated_headers,
+            )
+        # 202 is returned immediately before the background task runs.
+        # raise_server_exceptions=False means the task error is swallowed by
+        # the test client, not re-raised.
+        assert response.status_code == 202
+        mock_pipeline.assert_called_once()

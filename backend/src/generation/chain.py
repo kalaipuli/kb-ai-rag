@@ -21,11 +21,11 @@ from langchain_core.retrievers import BaseRetriever
 from langchain_openai import AzureChatOpenAI
 from pydantic import PrivateAttr
 
+from src.api.schemas import Citation, GenerationResult
 from src.config import Settings
 from src.exceptions import GenerationError
 from src.generation.prompts import QA_PROMPT
 from src.retrieval.retriever import HybridRetriever
-from src.schemas.generation import Citation, GenerationResult
 
 logger = structlog.get_logger(__name__)
 
@@ -110,16 +110,11 @@ class GenerationChain:
         self,
         settings: Settings,
         hybrid_retriever: HybridRetriever,
+        llm: AzureChatOpenAI,
     ) -> None:
         self._settings = settings
         self._hybrid = hybrid_retriever
-        self._llm = AzureChatOpenAI(
-            azure_endpoint=settings.azure_openai_endpoint,
-            api_key=settings.azure_openai_api_key.get_secret_value(),  # type: ignore[arg-type]
-            azure_deployment=settings.azure_chat_deployment,
-            api_version=settings.azure_openai_api_version,
-            temperature=0,
-        )
+        self._llm = llm
 
     def _build_citations(self, docs: list[Document]) -> tuple[list[Citation], float]:
         """Build deduplicated citations and compute sigmoid confidence.

@@ -103,3 +103,12 @@ class TestRRF:
 
     def test_two_empty_inner_lists_returns_empty(self) -> None:
         assert reciprocal_rank_fusion([[], []], k=60) == []
+
+    def test_rrf_raises_when_inner_list_element_is_not_retrieval_result(self) -> None:
+        """reciprocal_rank_fusion raises (TypeError or AttributeError) when an inner
+        list contains an object that does not have a chunk_id attribute, confirming
+        the function does not silently accept arbitrary input types.
+        """
+        bad_input: list[list[object]] = [["not-a-result"]]  # type: ignore[list-item]
+        with pytest.raises((TypeError, AttributeError)):
+            reciprocal_rank_fusion(bad_input, k=60)  # type: ignore[arg-type]

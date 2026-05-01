@@ -1,5 +1,6 @@
 """BM25 sparse index: build, persist, and load for hybrid retrieval."""
 
+import asyncio
 import pickle
 from pathlib import Path
 from typing import cast
@@ -47,21 +48,16 @@ class BM25Store:
 
         logger.info("bm25_build_complete", chunk_count=len(chunks))
 
-    def save(self) -> None:
-        """Pickle the BM25 index and chunk list to ``index_path``."""
+    async def asave(self) -> None:
+        """Pickle the BM25 index and chunk list to ``index_path`` (async-safe)."""
         self._index_path.parent.mkdir(parents=True, exist_ok=True)
-
-        payload = {
-            "index": self._index,
-            "chunks": self._chunks,
-        }
-        with self._index_path.open("wb") as fh:
-            pickle.dump(payload, fh, protocol=pickle.HIGHEST_PROTOCOL)
-
+        payload: dict[str, object] = {"index": self._index, "chunks": self._chunks}
+        path = self._index_path
+        await asyncio.to_thread(lambda: path.write_bytes(pickle.dumps(payload, protocol=pickle.HIGHEST_PROTOCOL)))  # noqa: S301 — trusted local file
         logger.info("bm25_saved", path=str(self._index_path))
 
-    def load(self) -> None:
-        """Load the pickled BM25 index and chunk list from ``index_path``.
+    async def aload(self) -> None:
+        """Load the pickled BM25 index and chunk list from ``index_path`` (async-safe).
 
         Raises ``IngestionError`` if the file does not exist.
         """
@@ -70,13 +66,10 @@ class BM25Store:
                 f"BM25 index file not found at {self._index_path}. "
                 "Run the ingestion pipeline first."
             )
-
-        with self._index_path.open("rb") as fh:
-            payload: dict[str, object] = pickle.load(fh)  # noqa: S301 — trusted local file
-
+        path = self._index_path
+        payload: dict[str, object] = await asyncio.to_thread(lambda: pickle.loads(path.read_bytes()))  # noqa: S301 — trusted local file
         self._index = cast(BM25Okapi, payload["index"])
         self._chunks = cast(list[ChunkedDocument], payload["chunks"])
-
         logger.info(
             "bm25_loaded",
             path=str(self._index_path),
