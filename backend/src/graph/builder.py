@@ -112,6 +112,17 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
 
     checkpointer_path = Path(settings.sqlite_checkpointer_path)
     checkpointer_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        async with aiosqlite.connect(str(checkpointer_path)) as _db:
+            await _db.execute(
+                "DELETE FROM checkpoints WHERE thread_ts < datetime('now', ? || ' days')",
+                (f"-{settings.sqlite_checkpointer_ttl_days}",),
+            )
+            await _db.commit()
+    except Exception:
+        pass  # table may not exist on first startup; cleanup is best-effort
+
     conn = aiosqlite.connect(str(checkpointer_path))
     if not hasattr(conn, "is_alive"):
         conn.is_alive = conn._thread.is_alive  # type: ignore[attr-defined]  # aiosqlite 0.22 removed is_alive(); langgraph-checkpoint-sqlite 2.0.11 calls it in setup() — remove when langgraph-checkpoint-sqlite >= 2.0.12

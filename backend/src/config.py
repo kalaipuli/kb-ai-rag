@@ -64,6 +64,7 @@ class Settings(BaseSettings):
 
     # LangGraph SqliteSaver checkpointer (Phase 2+; single-worker only — see ADR-004)
     sqlite_checkpointer_path: str = "data/checkpointer.sqlite"
+    sqlite_checkpointer_ttl_days: int = 7
 
     # Graph node tuning
     grader_batch_size: int = 10
