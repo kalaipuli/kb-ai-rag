@@ -8,6 +8,7 @@ Governed by: ADR-004 (amended) — LangGraph version lock, AsyncSqliteSaver
 import path, stream_mode decision, and single-worker constraint.
 """
 
+import functools
 from pathlib import Path
 from typing import Any
 
@@ -98,13 +99,13 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
     graph.add_edge("retriever", "grader")
     graph.add_conditional_edges(
         "grader",
-        route_after_grader,
+        functools.partial(route_after_grader, settings=settings),
         {"generator": "generator", "retriever": "retriever"},
     )
     graph.add_edge("generator", "critic")
     graph.add_conditional_edges(
         "critic",
-        route_after_critic,
+        functools.partial(route_after_critic, settings=settings),
         {"end": END, "retriever": "retriever"},
     )
 
