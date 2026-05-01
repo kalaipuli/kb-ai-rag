@@ -146,11 +146,32 @@ async def query_agentic_endpoint(
     )
 
     initial_state: dict[str, object] = {
+        # Input fields
         "session_id": session_id,
         "query": body.query,
         "filters": body.filters,
         "k": body.k,
+        # Router outputs
+        "query_type": "factual",
+        "retrieval_strategy": "hybrid",
+        "query_rewritten": None,
+        # Retriever outputs
+        "retrieved_docs": [],
+        "web_fallback_used": False,
+        # Grader outputs
+        "grader_scores": [],
+        "graded_docs": [],
+        "all_below_threshold": False,
         "retry_count": 0,
+        # Generator outputs
+        "answer": None,
+        "citations": [],
+        "confidence": None,
+        # Critic outputs
+        "critic_score": None,
+        # Conversation / observability
+        "messages": [],
+        "steps_taken": [],
     }
     config: RunnableConfig = {"configurable": {"thread_id": session_id}}
 
