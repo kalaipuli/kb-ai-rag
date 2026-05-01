@@ -29,6 +29,7 @@ tenacity = "^9.0"
 httpx = {extras = ["asyncio"], version = "^0.27"}
 tiktoken = "^0.8"
 nltk = "^3.9"
+# Remove conn.is_alive monkey-patch in builder.py when upgrading past 2.0.12 (bug fixed upstream)
 langgraph-checkpoint-sqlite = ">=2.0.11,<2.1.0"
 
 [tool.poetry.group.eval.dependencies]

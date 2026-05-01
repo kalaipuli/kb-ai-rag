@@ -124,8 +124,14 @@ async def build_graph(settings: Settings, retriever: HybridRetriever) -> Compile
         pass  # table may not exist on first startup; cleanup is best-effort
 
     conn = aiosqlite.connect(str(checkpointer_path))
+    import importlib.metadata  # noqa: PLC0415  # local import to keep version check near the patch it guards
+
+    _ckpt_ver = importlib.metadata.version("langgraph-checkpoint-sqlite")
+    assert _ckpt_ver < "2.0.12", (
+        f"Remove conn.is_alive monkey-patch: fixed upstream in langgraph-checkpoint-sqlite>=2.0.12 (installed: {_ckpt_ver})"
+    )
     if not hasattr(conn, "is_alive"):
-        conn.is_alive = conn._thread.is_alive  # type: ignore[attr-defined]  # aiosqlite 0.22 removed is_alive(); langgraph-checkpoint-sqlite 2.0.11 calls it in setup() — remove when langgraph-checkpoint-sqlite >= 2.0.12
+        conn.is_alive = conn._thread.is_alive  # type: ignore[attr-defined]  # aiosqlite 0.22 removed is_alive(); langgraph-checkpoint-sqlite 2.0.11 calls it in setup()
     checkpointer = AsyncSqliteSaver(conn)
 
     return graph.compile(checkpointer=checkpointer)
