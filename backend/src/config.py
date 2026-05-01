@@ -69,7 +69,7 @@ class Settings(BaseSettings):
     grader_batch_size: int = 10
     grader_threshold: float = 0.5
     critic_threshold: float = 0.7
-    graph_max_retries: int = 1
+    graph_max_retries: int = 2
 
 
 @lru_cache
