@@ -28,7 +28,7 @@ class Settings(BaseSettings):
 
     # Service authentication
     api_key: SecretStr
-    cors_origins: list[str] = ["*"]
+    cors_origins: list[str] = []
 
     # Document ingestion
     data_dir: str = "data"
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     rrf_k: int = 60
 
     # LangSmith tracing (optional; leave blank to disable)
-    langsmith_api_key: str = ""
+    langsmith_api_key: SecretStr = SecretStr("")
     langchain_tracing_v2: bool = False
 
     # Tavily web-search fallback (Phase 2+; leave blank until then)
