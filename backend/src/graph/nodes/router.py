@@ -15,7 +15,6 @@ log = structlog.get_logger(__name__)
 class _RouterOutput(BaseModel):
     query_type: Literal["factual", "analytical", "multi_hop", "ambiguous"]
     retrieval_strategy: Literal["dense", "hybrid"]
-    reasoning: str
 
 
 class _RewriteOutput(BaseModel):
@@ -33,7 +32,7 @@ _ROUTER_SYSTEM_PROMPT = (
     "You are a query classification expert. Classify the user query into one of: "
     "factual, analytical, multi_hop, ambiguous. "
     "Also select the retrieval strategy: use 'hybrid' for factual/analytical/multi_hop, "
-    "'dense' for ambiguous. Provide brief reasoning."
+    "'dense' for ambiguous."
 )
 
 _HYDE_SYSTEM_PROMPT = (

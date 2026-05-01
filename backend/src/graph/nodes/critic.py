@@ -23,14 +23,12 @@ _CRITIC_SYSTEM_PROMPT = (
     "Assign a hallucination_risk score from 0.0 (fully grounded, no hallucination) "
     "to 1.0 (answer contains claims not supported by any document).\n\n"
     "List any specific claims in the answer that are not supported by the context "
-    "documents in unsupported_claims. Provide brief reasoning."
+    "documents in the context."
 )
 
 
 class _CriticOutput(BaseModel):
     hallucination_risk: float  # 0.0 <= value <= 1.0
-    unsupported_claims: list[str]  # for LangSmith trace; not stored in state
-    reasoning: str  # LangSmith trace only; not stored in state
 
 
 async def critic_node(
@@ -91,7 +89,6 @@ async def critic_node(
     log.info(
         "critic_complete",
         critic_score=critic_score,
-        unsupported_claims=len(result.unsupported_claims),
         duration_ms=duration_ms,
     )
 
