@@ -39,7 +39,7 @@ def test_default_values() -> None:
     assert s.data_dir == "data"
     assert s.chunk_size == 1000
     assert s.chunk_overlap == 200
-    assert s.langsmith_api_key == ""
+    assert s.langsmith_api_key.get_secret_value() == ""
     assert s.langchain_tracing_v2 is False
     assert s.tavily_api_key.get_secret_value() == ""
     assert s.chunk_strategy == "recursive_character"
@@ -68,9 +68,9 @@ def test_get_settings_returns_settings_instance() -> None:
     get_settings.cache_clear()
 
 
-def test_cors_origins_default_is_wildcard() -> None:
+def test_cors_origins_default_is_empty_list() -> None:
     s = _minimal_settings()
-    assert s.cors_origins == ["*"]
+    assert s.cors_origins == []
 
 
 def test_missing_required_field_raises(monkeypatch: pytest.MonkeyPatch) -> None:
