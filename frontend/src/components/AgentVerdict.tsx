@@ -14,6 +14,8 @@ type VerdictWinner = "agentic" | "static" | "tie";
 interface Verdict {
   winner: VerdictWinner;
   reason: string;
+  agentConf: number;
+  staticConf: number;
 }
 
 function computeVerdict(
@@ -34,40 +36,42 @@ function computeVerdict(
   const criticStep = agentSteps.find((s) => s.node === "critic");
   const graderStep = agentSteps.find((s) => s.node === "grader");
 
-  const criticRisk =
+  const criticScore =
     criticStep && isCriticPayload(criticStep.payload)
       ? criticStep.payload.critic_score
       : 0;
-  const webFallback =
+  const webFallbackUsed =
     graderStep && isGraderPayload(graderStep.payload)
       ? graderStep.payload.web_fallback_used
       : false;
 
-  if (criticRisk > 0.7) {
-    return { winner: "static", reason: "Agentic pipeline flagged high hallucination risk" };
+  if (criticScore > 0.7) {
+    return { winner: "static", reason: "Agentic pipeline flagged high hallucination risk", agentConf, staticConf };
   }
-  if (webFallback) {
+  if (webFallbackUsed) {
     return {
       winner: "agentic",
       reason: "Agentic pipeline used web search for missing knowledge",
+      agentConf,
+      staticConf,
     };
   }
   if (agentConf > staticConf + 0.1) {
-    return { winner: "agentic", reason: "Higher confidence answer via agentic reasoning" };
+    return { winner: "agentic", reason: "Higher confidence answer via agentic reasoning", agentConf, staticConf };
   }
-  return { winner: "tie", reason: "Both pipelines produced comparable answers" };
+  return { winner: "tie", reason: "Both pipelines produced comparable answers", agentConf, staticConf };
 }
 
-const BADGE_CLASSES: Record<VerdictWinner, string> = {
-  agentic: "bg-green-100 text-green-800",
-  static: "bg-blue-100 text-blue-800",
-  tie: "bg-gray-100 text-gray-700",
+const BORDER_COLORS: Record<VerdictWinner, string> = {
+  agentic: 'var(--agentic)',
+  static: 'var(--static-chain)',
+  tie: 'var(--border-default)',
 };
 
-const BADGE_LABELS: Record<VerdictWinner, string> = {
-  agentic: "Agentic Pipeline wins",
-  static: "Static Chain wins",
-  tie: "Tie",
+const WINNER_LABELS: Record<VerdictWinner, string> = {
+  agentic: '🔮 Agentic Pipeline wins',
+  static: '⚡ Static Chain wins',
+  tie: '≈ Comparable Results',
 };
 
 export function AgentVerdict({
@@ -80,15 +84,35 @@ export function AgentVerdict({
   if (!hasStaticAssistant || !hasAgentAssistant) return null;
 
   const verdict = computeVerdict(staticMessages, agentMessages);
+  const delta = Math.abs(verdict.agentConf - verdict.staticConf);
 
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-gray-100 bg-gray-50 px-4 py-2 text-sm">
-      <span
-        className={`rounded-full px-3 py-0.5 text-xs font-semibold ${BADGE_CLASSES[verdict.winner]}`}
-      >
-        {BADGE_LABELS[verdict.winner]}
+    <div
+      className="flex items-center gap-4 px-4 py-3 animate-slide-down"
+      style={{
+        background: 'var(--surface-raised)',
+        borderLeft: `4px solid ${BORDER_COLORS[verdict.winner]}`,
+        borderBottom: '1px solid var(--border-subtle)',
+      }}
+    >
+      <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+        {WINNER_LABELS[verdict.winner]}
       </span>
-      <span className="text-gray-600">{verdict.reason}</span>
+      {delta > 0 && (
+        <span
+          className="text-xs px-2 py-0.5 rounded"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            background: 'var(--surface-overlay)',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          +{(delta * 100).toFixed(0)}% confidence
+        </span>
+      )}
+      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+        {verdict.reason}
+      </span>
     </div>
   );
 }
