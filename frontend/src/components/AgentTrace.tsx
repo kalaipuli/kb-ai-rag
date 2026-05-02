@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { JSX } from "react";
 import type { AgentStep, RouterStepPayload, RetrieverStepPayload } from "@/types";
 import {
@@ -34,154 +35,169 @@ const RETRIEVER_STRATEGY_LABELS: Record<RetrieverStepPayload["strategy"], string
   web: "Web search",
 };
 
-function criticColour(risk: number): string {
-  if (risk < 0.4) return "bg-green-500";
-  if (risk <= 0.7) return "bg-amber-500";
-  return "bg-red-500";
+function criticRiskColor(score: number): string {
+  if (score < 0.4) return 'var(--status-success)';
+  if (score <= 0.7) return 'var(--status-warning)';
+  return 'var(--status-danger)';
+}
+
+function CardWrapper({ children, index }: { children: React.ReactNode; index: number }): JSX.Element {
+  return (
+    <div
+      className="rounded-lg p-3 text-xs animate-fade-in"
+      style={{
+        background: 'var(--surface-overlay)',
+        borderLeft: '4px solid var(--agentic)',
+        animationDelay: `${index * 80}ms`,
+        animationFillMode: 'both',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function NodeLabel({ children }: { children: React.ReactNode }): JSX.Element {
+  return (
+    <div className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>
+      {children}
+    </div>
+  );
 }
 
 function IterationBadge({ run }: { run: number | undefined }): JSX.Element | null {
   if (run === undefined || run <= 1) return null;
   return (
-    <span className="ml-1 rounded-full bg-orange-100 px-1.5 py-0.5 text-orange-600">
+    <span
+      className="ml-1 rounded-full px-1.5 py-0.5 text-xs"
+      style={{ background: 'var(--status-warning)', color: 'white' }}
+    >
       #{run}
     </span>
   );
 }
 
-function RouterCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
+function RouterCard({ step, run, index }: { step: AgentStep; run?: number; index: number }): JSX.Element | null {
   if (!isRouterPayload(step.payload)) return null;
   const { query_type, strategy, duration_ms } = step.payload;
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
-      <div className="mb-1 flex items-center font-semibold text-gray-700">
-        Router
-        <IterationBadge run={run} />
-      </div>
+    <CardWrapper index={index}>
+      <NodeLabel>Router <IterationBadge run={run} /></NodeLabel>
       <div className="flex flex-wrap gap-2">
-        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700">
+        <span className="rounded-full px-2 py-0.5" style={{ background: 'var(--accent-muted)', color: 'var(--accent-primary)' }}>
           {QUERY_TYPE_LABELS[query_type]}
         </span>
-        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-700">
+        <span className="rounded-full px-2 py-0.5" style={{ background: 'var(--surface-raised)', color: 'var(--text-secondary)' }}>
           {STRATEGY_LABELS[strategy]}
         </span>
       </div>
-      <div className="mt-1 text-gray-400">{duration_ms}ms</div>
-    </div>
+      <div className="mt-1" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{duration_ms}ms</div>
+    </CardWrapper>
   );
 }
 
-function RetrieverCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
+function RetrieverCard({ step, run, index }: { step: AgentStep; run?: number; index: number }): JSX.Element | null {
   if (!isRetrieverPayload(step.payload)) return null;
   const { strategy, docs_retrieved, duration_ms } = step.payload;
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
-      <div className="mb-1 flex items-center font-semibold text-gray-700">
-        Retriever
-        <IterationBadge run={run} />
-      </div>
+    <CardWrapper index={index}>
+      <NodeLabel>Retriever <IterationBadge run={run} /></NodeLabel>
       <div className="flex flex-wrap gap-2">
-        <span className="rounded-full bg-green-100 px-2 py-0.5 text-green-700">
+        <span className="rounded-full px-2 py-0.5" style={{ background: 'var(--surface-raised)', color: 'var(--text-secondary)' }}>
           {RETRIEVER_STRATEGY_LABELS[strategy]}
         </span>
-        <span className="text-gray-500">{docs_retrieved} docs retrieved</span>
+        <span style={{ color: 'var(--text-muted)' }}>{docs_retrieved} docs retrieved</span>
       </div>
-      <div className="mt-1 text-gray-400">{duration_ms}ms</div>
-    </div>
+      <div className="mt-1" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{duration_ms}ms</div>
+    </CardWrapper>
   );
 }
 
-function GraderCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
+function GraderCard({ step, run, index }: { step: AgentStep; run?: number; index: number }): JSX.Element | null {
   if (!isGraderPayload(step.payload)) return null;
   const { scores, web_fallback_used, duration_ms } = step.payload;
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
-      <div className="mb-1 flex items-center font-semibold text-gray-700">
-        Grader
-        <IterationBadge run={run} />
-      </div>
+    <CardWrapper index={index}>
+      <NodeLabel>Grader <IterationBadge run={run} /></NodeLabel>
       <div className="space-y-1">
         {scores.map((score, i) => (
           <div key={i} className="flex items-center gap-2">
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
               <div
-                className="h-full rounded-full bg-blue-400"
-                style={{ width: `${Math.min(score * 100, 100)}%` }}
+                className="h-full rounded-full"
+                style={{ width: `${Math.min(score * 100, 100)}%`, background: 'var(--agentic)' }}
               />
             </div>
-            <span className="w-8 text-right text-gray-500">{score != null ? (score * 100).toFixed(0) : "—"}%</span>
+            <span className="w-8 text-right" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+              {score != null ? (score * 100).toFixed(0) : "—"}%
+            </span>
           </div>
         ))}
       </div>
       {web_fallback_used && (
-        <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">
+        <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs" style={{ background: 'var(--status-warning)', color: 'white' }}>
           Web fallback
         </span>
       )}
-      <div className="mt-1 text-gray-400">{duration_ms}ms</div>
-    </div>
+      <div className="mt-1" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{duration_ms}ms</div>
+    </CardWrapper>
   );
 }
 
-function GeneratorCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
+function GeneratorCard({ step, run, index }: { step: AgentStep; run?: number; index: number }): JSX.Element | null {
   if (!isGeneratorPayload(step.payload)) return null;
   const { docs_used, confidence, duration_ms } = step.payload;
-  const colourClass = criticColour(1 - confidence);
+  const fillColor = criticRiskColor(1 - confidence);
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
-      <div className="mb-1 flex items-center font-semibold text-gray-700">
-        Generator
-        <IterationBadge run={run} />
-      </div>
+    <CardWrapper index={index}>
+      <NodeLabel>Generator <IterationBadge run={run} /></NodeLabel>
       <div className="flex items-center gap-2">
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
           <div
-            className={`h-full rounded-full ${colourClass}`}
-            style={{ width: `${confidence * 100}%` }}
+            className="h-full rounded-full"
+            style={{ width: `${confidence * 100}%`, backgroundColor: fillColor }}
           />
         </div>
-        <span className="w-24 text-right text-gray-500">
+        <span className="w-24 text-right" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
           {(confidence * 100).toFixed(0)}% confidence
         </span>
       </div>
-      <div className="mt-1 text-gray-500">{docs_used} docs</div>
-      <div className="mt-1 text-gray-400">{duration_ms}ms</div>
-    </div>
+      <div className="mt-1" style={{ color: 'var(--text-muted)' }}>{docs_used} docs</div>
+      <div className="mt-0.5" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{duration_ms}ms</div>
+    </CardWrapper>
   );
 }
 
-function CriticCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
+function CriticCard({ step, run, index }: { step: AgentStep; run?: number; index: number }): JSX.Element | null {
   if (!isCriticPayload(step.payload)) return null;
   const { critic_score, reruns, duration_ms } = step.payload;
-  const colourClass = criticColour(critic_score);
+  const riskColor = criticRiskColor(critic_score);
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
-      <div className="mb-1 flex items-center font-semibold text-gray-700">
-        Critic
-        <IterationBadge run={run} />
-      </div>
+    <CardWrapper index={index}>
+      <NodeLabel>Critic <IterationBadge run={run} /></NodeLabel>
       <div className="flex items-center gap-2">
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
           <div
-            className={`h-full rounded-full ${colourClass}`}
-            style={{ width: `${Math.min(critic_score * 100, 100)}%` }}
+            className="h-full rounded-full"
+            style={{ width: `${Math.min(critic_score * 100, 100)}%`, backgroundColor: riskColor }}
           />
         </div>
-        <span className="w-12 text-right text-gray-500">
+        <span className="w-12 text-right" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
           {critic_score != null ? (critic_score * 100).toFixed(0) : "—"}% risk
         </span>
       </div>
       {reruns > 0 && (
-        <div className="mt-1 text-gray-500">
+        <div className="mt-1" style={{ color: 'var(--text-muted)' }}>
           {reruns} rerun{reruns !== 1 ? "s" : ""}
         </div>
       )}
-      <div className="mt-1 text-gray-400">{duration_ms}ms</div>
-    </div>
+      <div className="mt-1" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{duration_ms}ms</div>
+    </CardWrapper>
   );
 }
 
-function LatencyBars({ steps }: { steps: AgentStep[] }): JSX.Element | null {
+function LatencyBars({ steps, isStreaming }: { steps: AgentStep[]; isStreaming: boolean }): JSX.Element | null {
+  if (isStreaming) return null;
   const allNodesPresent = ["router", "retriever", "grader", "generator", "critic"].every(
     (n) => steps.some((s) => s.node === n),
   );
@@ -192,15 +208,11 @@ function LatencyBars({ steps }: { steps: AgentStep[] }): JSX.Element | null {
     runCount.set(step.node, (runCount.get(step.node) ?? 0) + 1);
     const count = runCount.get(step.node)!;
     const nodeLabel =
-      step.node === "router"
-        ? "Router"
-        : step.node === "retriever"
-          ? "Retriever"
-          : step.node === "grader"
-            ? "Grader"
-            : step.node === "generator"
-              ? "Generator"
-              : "Critic";
+      step.node === "router" ? "Router"
+      : step.node === "retriever" ? "Retriever"
+      : step.node === "grader" ? "Grader"
+      : step.node === "generator" ? "Generator"
+      : "Critic";
     const label = count > 1 ? `${nodeLabel} #${count}` : nodeLabel;
     const ms = (step.payload as { duration_ms: number }).duration_ms;
     return { label, ms };
@@ -210,58 +222,71 @@ function LatencyBars({ steps }: { steps: AgentStep[] }): JSX.Element | null {
 
   return (
     <div className="mt-3 space-y-1 text-xs">
-      <div className="font-semibold text-gray-600">Latency breakdown</div>
+      <div className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Latency breakdown</div>
       {rows.map(({ label, ms }, i) => (
         <div key={`${label}-${i}`} className="flex items-center gap-2">
-          <span className="w-20 shrink-0 text-gray-500">{label}</span>
-          <div className="flex-1 overflow-hidden rounded-full bg-gray-100">
+          <span className="w-20 shrink-0" style={{ color: 'var(--text-muted)' }}>{label}</span>
+          <div className="flex-1 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
             <div
-              className="h-2 rounded-full bg-blue-400"
-              style={{ width: `${total > 0 ? (ms / total) * 100 : 0}%` }}
+              className="h-2 rounded-full animate-bar-fill"
+              style={{
+                ['--bar-target-width' as string]: `${total > 0 ? (ms / total) * 100 : 0}%`,
+                background: 'var(--agentic)',
+              }}
             />
           </div>
-          <span className="w-12 text-right text-gray-500">{ms}ms</span>
+          <span className="w-12 text-right" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{ms}ms</span>
         </div>
       ))}
-      <div className="pt-1 text-right text-gray-400">Total: {total}ms</div>
+      <div className="pt-1 text-right" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Total: {total}ms</div>
     </div>
   );
 }
 
 export function AgentTrace({ steps, isStreaming }: AgentTraceProps): JSX.Element {
+  const [collapsed, setCollapsed] = useState(false);
   const runCount = new Map<string, number>();
 
   return (
-    <details open className="mt-2 text-xs">
-      <summary className="cursor-pointer select-none font-semibold text-gray-500">
-        Agent Trace ({steps.length} steps)
-      </summary>
-      <div className="mt-2 space-y-2">
-        <div className="mb-2 flex flex-wrap items-center gap-1 text-gray-400">
-          <span>Router → Retriever → Grader → Generator → Critic</span>
-          <span className="ml-1 text-gray-300">(⟲ loops on escalation)</span>
-        </div>
-        {steps.map((step, i) => {
-          runCount.set(step.node, (runCount.get(step.node) ?? 0) + 1);
-          const run = runCount.get(step.node)!;
-          const isLast = i === steps.length - 1;
-          return (
-            <div key={`${step.node}-${i}`} className="relative">
-              {step.node === "router" && <RouterCard step={step} run={run} />}
-              {step.node === "retriever" && <RetrieverCard step={step} run={run} />}
-              {step.node === "grader" && <GraderCard step={step} run={run} />}
-              {step.node === "generator" && <GeneratorCard step={step} run={run} />}
-              {step.node === "critic" && <CriticCard step={step} run={run} />}
-              {isLast && isStreaming && (
-                <div className="absolute right-2 top-2">
-                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
-                </div>
-              )}
-            </div>
-          );
-        })}
+    <div className="mt-2 text-xs">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+          Router → Retriever → Grader → Generator → Critic
+        </span>
+        <button
+          onClick={() => setCollapsed((c) => !c)}
+          className="ml-auto text-xs"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          {collapsed ? '▶ Show trace' : '▼ Hide trace'}
+        </button>
       </div>
-      {!isStreaming && <LatencyBars steps={steps} />}
-    </details>
+      {!collapsed && (
+        <div className="space-y-2">
+          {steps.map((step, i) => {
+            runCount.set(step.node, (runCount.get(step.node) ?? 0) + 1);
+            const run = runCount.get(step.node)!;
+            return (
+              <div key={`${step.node}-${i}`} className="relative">
+                {step.node === "router" && <RouterCard step={step} run={run} index={i} />}
+                {step.node === "retriever" && <RetrieverCard step={step} run={run} index={i} />}
+                {step.node === "grader" && <GraderCard step={step} run={run} index={i} />}
+                {step.node === "generator" && <GeneratorCard step={step} run={run} index={i} />}
+                {step.node === "critic" && <CriticCard step={step} run={run} index={i} />}
+                {i === steps.length - 1 && isStreaming && (
+                  <div className="absolute right-2 top-2">
+                    <span
+                      className="inline-block h-3 w-3 animate-spin rounded-full border-2"
+                      style={{ borderColor: 'var(--border-default)', borderTopColor: 'var(--agentic)' }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <LatencyBars steps={steps} isStreaming={isStreaming} />
+    </div>
   );
 }
