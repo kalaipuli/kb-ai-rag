@@ -38,11 +38,11 @@ function computeVerdict(
 
   const criticScore =
     criticStep && isCriticPayload(criticStep.payload)
-      ? criticStep.payload.critic_score
+      ? criticStep.payload.hallucination_risk
       : 0;
   const webFallbackUsed =
     graderStep && isGraderPayload(graderStep.payload)
-      ? graderStep.payload.web_fallback_used
+      ? graderStep.payload.web_fallback
       : false;
 
   if (criticScore > 0.7) {

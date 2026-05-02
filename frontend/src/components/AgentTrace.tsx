@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { JSX } from "react";
-import type { AgentStep, RouterStepPayload, RetrieverStepPayload } from "@/types";
+import type { AgentStep, AgentStepNode, RouterStepPayload, RetrieverStepPayload } from "@/types";
 import {
   isCriticPayload,
   isGeneratorPayload,
@@ -115,7 +115,7 @@ function RetrieverCard({ step, run, index }: { step: AgentStep; run?: number; in
 
 function GraderCard({ step, run, index }: { step: AgentStep; run?: number; index: number }): JSX.Element | null {
   if (!isGraderPayload(step.payload)) return null;
-  const { scores, web_fallback_used, duration_ms } = step.payload;
+  const { scores, web_fallback, duration_ms } = step.payload;
   return (
     <CardWrapper index={index}>
       <NodeLabel>Grader <IterationBadge run={run} /></NodeLabel>
@@ -134,7 +134,7 @@ function GraderCard({ step, run, index }: { step: AgentStep; run?: number; index
           </div>
         ))}
       </div>
-      {web_fallback_used && (
+      {web_fallback && (
         <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs" style={{ background: 'var(--status-warning)', color: 'white' }}>
           Web fallback
         </span>
@@ -170,8 +170,8 @@ function GeneratorCard({ step, run, index }: { step: AgentStep; run?: number; in
 
 function CriticCard({ step, run, index }: { step: AgentStep; run?: number; index: number }): JSX.Element | null {
   if (!isCriticPayload(step.payload)) return null;
-  const { critic_score, reruns, duration_ms } = step.payload;
-  const riskColor = criticRiskColor(critic_score);
+  const { hallucination_risk, reruns, duration_ms } = step.payload;
+  const riskColor = criticRiskColor(hallucination_risk);
   return (
     <CardWrapper index={index}>
       <NodeLabel>Critic <IterationBadge run={run} /></NodeLabel>
@@ -179,11 +179,11 @@ function CriticCard({ step, run, index }: { step: AgentStep; run?: number; index
         <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
           <div
             className="h-full rounded-full"
-            style={{ width: `${Math.min(critic_score * 100, 100)}%`, backgroundColor: riskColor }}
+            style={{ width: `${Math.min(hallucination_risk * 100, 100)}%`, backgroundColor: riskColor }}
           />
         </div>
         <span className="w-12 text-right" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-          {critic_score != null ? (critic_score * 100).toFixed(0) : "—"}% risk
+          {hallucination_risk != null ? (hallucination_risk * 100).toFixed(0) : "—"}% risk
         </span>
       </div>
       {reruns > 0 && (
@@ -193,6 +193,43 @@ function CriticCard({ step, run, index }: { step: AgentStep; run?: number; index
       )}
       <div className="mt-1" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{duration_ms}ms</div>
     </CardWrapper>
+  );
+}
+
+const PIPELINE_ORDER: AgentStepNode[] = ["router", "retriever", "grader", "generator", "critic"];
+const PIPELINE_LABELS: Record<AgentStepNode, string> = {
+  router: "Router",
+  retriever: "Retriever",
+  grader: "Grader",
+  generator: "Generator",
+  critic: "Critic",
+};
+
+function GhostCard({ nodeName, isPending, index }: { nodeName: string; isPending: boolean; index: number }): JSX.Element {
+  return (
+    <div
+      className="rounded-lg p-3 text-xs"
+      style={{
+        background: 'var(--surface-overlay)',
+        borderLeft: '4px solid var(--border-subtle)',
+        opacity: 0.45,
+        animationDelay: `${index * 80}ms`,
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+          {nodeName}
+        </div>
+        {isPending ? (
+          <span
+            className="inline-block h-2 w-2 animate-pulse rounded-full"
+            style={{ background: 'var(--border-default)' }}
+          />
+        ) : (
+          <span className="text-xs" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>—</span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -284,6 +321,16 @@ export function AgentTrace({ steps, isStreaming }: AgentTraceProps): JSX.Element
               </div>
             );
           })}
+          {PIPELINE_ORDER
+            .filter((n) => !steps.some((s) => s.node === n))
+            .map((n, i) => (
+              <GhostCard
+                key={n}
+                nodeName={PIPELINE_LABELS[n]}
+                isPending={isStreaming}
+                index={steps.length + i}
+              />
+            ))}
         </div>
       )}
       <LatencyBars steps={steps} isStreaming={isStreaming} />

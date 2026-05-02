@@ -17,7 +17,7 @@ const retrieverStep: AgentStep = {
 
 const graderStep: AgentStep = {
   node: "grader",
-  payload: { scores: [0.8, 0.6], web_fallback_used: false, duration_ms: 80 },
+  payload: { scores: [0.8, 0.6], web_fallback: false, duration_ms: 80 },
   timestamp: new Date().toISOString(),
 };
 
@@ -29,7 +29,7 @@ const generatorStep: AgentStep = {
 
 const criticStep: AgentStep = {
   node: "critic",
-  payload: { critic_score: 0.2, reruns: 0, duration_ms: 30 },
+  payload: { hallucination_risk: 0.2, reruns: 0, duration_ms: 30 },
   timestamp: new Date().toISOString(),
 };
 
@@ -64,7 +64,7 @@ describe("AgentTrace", () => {
   it("critic card renders percentage risk text for medium critic score", () => {
     const mediumCriticStep: AgentStep = {
       node: "critic",
-      payload: { critic_score: 0.55, reruns: 0, duration_ms: 30 },
+      payload: { hallucination_risk: 0.55, reruns: 0, duration_ms: 30 },
       timestamp: new Date().toISOString(),
     };
     render(<AgentTrace steps={[mediumCriticStep]} isStreaming={false} />);
@@ -74,7 +74,7 @@ describe("AgentTrace", () => {
   it("critic card renders percentage risk text for high critic score", () => {
     const highCriticStep: AgentStep = {
       node: "critic",
-      payload: { critic_score: 0.9, reruns: 1, duration_ms: 30 },
+      payload: { hallucination_risk: 0.9, reruns: 1, duration_ms: 30 },
       timestamp: new Date().toISOString(),
     };
     render(<AgentTrace steps={[highCriticStep]} isStreaming={false} />);
@@ -153,7 +153,7 @@ describe("AgentTrace", () => {
     };
     const graderStep2: AgentStep = {
       node: "grader",
-      payload: { scores: [0.9], web_fallback_used: false, duration_ms: 60 },
+      payload: { scores: [0.9], web_fallback: false, duration_ms: 60 },
       timestamp: new Date().toISOString(),
     };
     render(

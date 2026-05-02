@@ -73,7 +73,7 @@ export interface RetrieverStepPayload {
 
 export interface GraderStepPayload {
   scores: number[];
-  web_fallback_used: boolean;
+  web_fallback: boolean;
   duration_ms: number;
 }
 
@@ -84,7 +84,7 @@ export interface GeneratorStepPayload {
 }
 
 export interface CriticStepPayload {
-  critic_score: number;
+  hallucination_risk: number;
   reruns: number;
   duration_ms: number;
 }
