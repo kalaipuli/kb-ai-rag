@@ -80,6 +80,8 @@ async def test_all_above_threshold() -> None:
     assert len(result["graded_docs"]) == 2
     assert result["all_below_threshold"] is False
     assert result["grader_scores"] == [0.9, 0.8]
+    assert result["graded_docs"][0].metadata["grader_score"] == 0.9
+    assert result["graded_docs"][1].metadata["grader_score"] == 0.8
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +121,8 @@ async def test_mixed_scores() -> None:
     assert doc_c in result["graded_docs"]
     assert doc_b not in result["graded_docs"]
     assert result["all_below_threshold"] is False
+    assert doc_a.metadata["grader_score"] == 0.8
+    assert doc_c.metadata["grader_score"] == 0.6
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +170,7 @@ async def test_batch_failure_assigns_zero_score() -> None:
     assert result["grader_scores"] == [0.0] * 10 + [0.8]
     assert len(result["graded_docs"]) == 1
     assert result["graded_docs"][0] == doc_batch2
+    assert result["graded_docs"][0].metadata["grader_score"] == 0.8
 
 
 # ---------------------------------------------------------------------------

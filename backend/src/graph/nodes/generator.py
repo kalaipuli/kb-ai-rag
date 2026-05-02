@@ -36,7 +36,8 @@ def _build_citations(docs: list[Any]) -> list[Citation]:
         raw_path: str = meta.get("source", meta.get("source_path", "unknown"))
         filename: str = Path(raw_path).name
         page_number: int | None = meta.get("page_number")
-        retrieval_score: float | None = meta.get("retrieval_score")
+        grader_score: float | None = meta.get("grader_score")
+        retrieval_score: float | None = grader_score if grader_score is not None else (meta.get("retrieval_score") or meta.get("score"))
         citations.append(
             Citation(
                 chunk_id=chunk_id,
