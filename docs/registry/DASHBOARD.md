@@ -1,6 +1,6 @@
 # Registry Dashboard
 
-> Maintained by: project-manager agent | Last updated: 2026-04-28 (Phase 2 COMPLETE · Phase 2f RAGAS faithfulness 0.9528 · 334 backend tests · 108 frontend tests · all 15 gate criteria verified · Phase 2f architect review + 5 fixes cleared 2026-04-28)
+> Maintained by: project-manager agent | Last updated: 2026-05-02 (Phase 2g COMPLETE · dark theme redesign · CSS token system · Inter/JetBrains fonts · Topbar/MetricsBar/AboutBanner/CollectionsDrawer · 148 frontend tests · all 15 gate criteria verified)
 
 This is the single cross-phase status view. For task-level detail, open the linked feature registry (`phaseN/Nf-feature-name/tasks.md`).
 
@@ -20,6 +20,7 @@ This is the single cross-phase status view. For task-level detail, open the link
 | 2d | Agentic API Endpoint (SSE + Session) | [2d](phase2/2d-agentic-api/tasks.md) · [fixes](phase2/2d-agentic-api/fixes.md) | ✅ Complete | Passed 2026-04-27 · Architect review 2026-04-27 · All 9 fixes cleared 2026-04-27 |
 | 2e | Parallel-View Chat UI | [2e](phase2/2e-parallel-ui/tasks.md) | ✅ Complete | Passed 2026-04-27 |
 | 2f | Agentic Pipeline Evaluation (RAGAS) | [2f](phase2/2f-evaluation/tasks.md) · [fixes](phase2/2f-evaluation/fixes.md) | ✅ Complete | Passed 2026-04-28 · faithfulness 0.9528 · Architect review 2026-04-28 · All 5 fixes cleared 2026-04-28 |
+| 2g | UI/UX Redesign | [2g](phase2/2g-ui-redesign/tasks.md) | ✅ Complete | Passed 2026-05-02 · dark theme · CSS token system · 148 frontend tests · tsc/eslint/build clean |
 | 3 | Azure Connectors | — | ⏳ Not Started | — |
 | 4 | Multi-Hop Planning | — | ⏳ Not Started | — |
 | 5 | Observability & Evaluation | — | ⏳ Not Started | — |
@@ -493,3 +494,4 @@ _Phase 2 complete 2026-04-28. Phase 2f gate: faithfulness 0.9528 (gate ≥ 0.85,
 | 2d | 2026-04-27 | 316 unit tests · mypy strict 0 errors · ruff clean · tsc clean · POST /api/v1/query/agentic · Next.js proxy · Phase 1 query.py unchanged · architect review 9/9 fixes cleared 2026-04-27 |
 | 2e | 2026-04-27 | 96 frontend tests · tsc clean · eslint clean · build succeeds · parallel grid layout · SharedInput functional guard · AgentTrace human-readable labels · latency bars · AgentVerdict verdict logic |
 | 2f | 2026-04-28 | faithfulness 0.9528 ≥ 0.85 — PASS and exceeds static baseline 0.9028 |
+| 2g | 2026-05-02 | dark theme CSS token system · Inter/JetBrains Mono fonts · Topbar/MetricsBar/AboutBanner · CollectionsDrawer replaces Sidebar · AgentTrace open by default · full-width AgentVerdict banner · 148 frontend tests · tsc/eslint/build clean · G01–G14 verified |
