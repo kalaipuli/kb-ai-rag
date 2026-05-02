@@ -86,7 +86,7 @@ class KBRetriever(BaseRetriever):
                     "page_number": (
                         r.metadata["page_number"] if r.metadata["page_number"] != -1 else None
                     ),
-                    "score": r.score,
+                    "retrieval_score": float(1.0 / (1.0 + math.exp(-float(r.score)))),
                 },
             )
             for r in results
@@ -137,7 +137,6 @@ class GenerationChain:
             if cid and cid not in seen:
                 seen.add(cid)
                 raw_page = doc.metadata.get("page_number")
-                raw_score = doc.metadata.get("score")
                 citations.append(
                     Citation(
                         chunk_id=cid,
@@ -146,18 +145,15 @@ class GenerationChain:
                         page_number=(
                             int(raw_page) if raw_page is not None and int(raw_page) != -1 else None
                         ),
-                        retrieval_score=(
-                    float(1.0 / (1.0 + math.exp(-float(raw_score)))) if raw_score is not None else None
-                ),
+                        retrieval_score=doc.metadata.get("retrieval_score"),
+                        grader_score=None,
                     )
                 )
 
-        scores = [float(doc.metadata.get("score", 0.0)) for doc in docs[:3]]
-        if scores:
-            mean_score = sum(scores) / len(scores)
-            confidence = float(1.0 / (1.0 + math.exp(-mean_score)))
-        else:
-            confidence = 0.0
+        # Confidence is mean of already-sigmoidised retrieval_score values for top-3 docs.
+        # Intentional: retrieval_score is the canonical normalised signal after T06.
+        retrieval_scores = [float(doc.metadata.get("retrieval_score") or 0.0) for doc in docs[:3]]
+        confidence = sum(retrieval_scores) / len(retrieval_scores) if retrieval_scores else 0.0
         confidence = max(0.0, min(1.0, confidence))
 
         return citations, confidence

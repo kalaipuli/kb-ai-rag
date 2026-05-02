@@ -85,7 +85,7 @@ async def test_hybrid_strategy_calls_retriever_and_returns_documents() -> None:
     assert isinstance(docs[0], Document)
     assert docs[0].page_content == "chunk text"
     assert docs[0].metadata["chunk_id"] == "chunk-001"
-    assert docs[0].metadata["score"] == 0.9
+    assert "score" not in docs[0].metadata
     assert docs[0].metadata["retrieval_score"] == pytest.approx(1.0 / (1.0 + math.exp(-0.9)))
     assert docs[0].metadata["page_number"] == 2
     assert result["web_fallback_used"] is False
@@ -143,7 +143,8 @@ async def test_web_strategy_calls_tavily_and_sets_fallback_flag() -> None:
     assert docs[0].page_content == "Tavily result content"
     assert docs[0].metadata["source"] == "https://example.com/doc"
     assert docs[0].metadata["title"] == "Example"
-    assert docs[0].metadata["score"] == 0.85
+    assert "score" not in docs[0].metadata
+    assert docs[0].metadata["retrieval_score"] == 0.85
 
 
 # ---------------------------------------------------------------------------

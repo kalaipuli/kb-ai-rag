@@ -21,8 +21,10 @@ const routerPayload: RouterStepPayload = {
 };
 
 const graderPayload: GraderStepPayload = {
-  scores: [0.9, 0.7],
-  web_fallback: false,
+  scores_all: [0.9, 0.7],
+  passed_count: 2,
+  threshold: 0.5,
+  all_below_threshold: false,
   duration_ms: 34,
 };
 

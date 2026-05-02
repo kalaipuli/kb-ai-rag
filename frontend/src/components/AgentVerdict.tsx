@@ -2,7 +2,7 @@
 
 import type { JSX } from "react";
 import type { AgentMessage, Message } from "@/types";
-import { isCriticPayload, isGraderPayload } from "@/lib/agentTypeGuards";
+import { isCriticPayload, isRetrieverPayload } from "@/lib/agentTypeGuards";
 
 interface AgentVerdictProps {
   staticMessages: Message[];
@@ -34,16 +34,16 @@ function computeVerdict(
   const agentSteps = lastAgentAssistant?.agentSteps ?? [];
 
   const criticStep = agentSteps.find((s) => s.node === "critic");
-  const graderStep = agentSteps.find((s) => s.node === "grader");
 
   const criticScore =
     criticStep && isCriticPayload(criticStep.payload)
       ? criticStep.payload.hallucination_risk
       : 0;
-  const webFallbackUsed =
-    graderStep && isGraderPayload(graderStep.payload)
-      ? graderStep.payload.web_fallback
-      : false;
+
+  const retrieverWebStep = agentSteps.find(
+    (s) => s.node === "retriever" && isRetrieverPayload(s.payload) && s.payload.strategy === "web"
+  );
+  const webFallbackUsed = retrieverWebStep !== undefined;
 
   if (criticScore > 0.7) {
     return { winner: "static", reason: "Agentic pipeline flagged high hallucination risk", agentConf, staticConf };

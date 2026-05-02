@@ -25,6 +25,7 @@ from src.api.schemas.agentic import (
     RetrieverStepPayload,
     RouterStepPayload,
 )
+from src.config import get_settings
 from src.graph.node_names import CRITIC, GENERATOR, GRADER, RETRIEVER, ROUTER
 
 logger = structlog.get_logger(__name__)
@@ -93,12 +94,15 @@ def _build_agent_step_event(
             ),
         )
     if node_name == GRADER:
+        settings = get_settings()
         return AgentStepEvent(
             node=GRADER,
             run=run,
             payload=GraderStepPayload(
-                scores=state_update.get("grader_scores", []),  # type: ignore[arg-type]
-                web_fallback=state_update.get("all_below_threshold", False),  # type: ignore[arg-type]
+                scores_all=state_update.get("grader_scores", []),  # type: ignore[arg-type]
+                passed_count=len(state_update.get("graded_docs", [])),  # type: ignore[arg-type]
+                threshold=settings.grader_threshold,
+                all_below_threshold=bool(state_update.get("all_below_threshold", False)),
                 duration_ms=duration_ms,
             ),
         )

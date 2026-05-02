@@ -11,6 +11,7 @@ import time
 from typing import Any, cast
 
 import structlog
+from langchain_core.documents import Document
 from langchain_openai import AzureChatOpenAI
 from pydantic import BaseModel
 
@@ -120,8 +121,8 @@ async def grader_node(
     graded_docs = []
     for doc, score in zip(docs, scores, strict=True):
         if score >= settings.grader_threshold:
-            doc.metadata["grader_score"] = float(score)
-            graded_docs.append(doc)
+            new_meta = {**doc.metadata, "grader_score": float(score)}
+            graded_docs.append(Document(page_content=doc.page_content, metadata=new_meta))
     all_below = all(s < settings.grader_threshold for s in scores)
 
     duration_ms = round((time.monotonic() - start) * 1000)

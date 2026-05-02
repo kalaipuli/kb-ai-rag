@@ -79,4 +79,12 @@ describe("CitationList", () => {
     );
     expect(container.firstChild).toBeInTheDocument();
   });
+
+  it("renders relevance bar from retrieval_score even when grader_score is also present", () => {
+    const citation = makeCitation({ retrieval_score: 0.65, grader_score: 0.9 });
+    render(<CitationList citations={[citation]} />);
+    expect(screen.getByText("65%")).toBeInTheDocument();
+    // grader_score value (90%) should NOT appear as the bar percentage
+    expect(screen.queryByText("90%")).not.toBeInTheDocument();
+  });
 });

@@ -31,13 +31,14 @@ function makeAgentAssistant(
 
 const graderStepNoFallback: AgentStep = {
   node: "grader",
-  payload: { scores: [0.8], web_fallback: false, duration_ms: 60 },
+  payload: { scores_all: [0.8], passed_count: 1, threshold: 0.5, all_below_threshold: false, duration_ms: 60 },
   timestamp: new Date().toISOString(),
 };
 
-const graderStepWithFallback: AgentStep = {
-  node: "grader",
-  payload: { scores: [0.5], web_fallback: true, duration_ms: 60 },
+// Web fallback is now detected via retriever strategy, not grader payload
+const retrieverWebStep: AgentStep = {
+  node: "retriever",
+  payload: { strategy: "web", docs_retrieved: 3, duration_ms: 200 },
   timestamp: new Date().toISOString(),
 };
 
@@ -74,12 +75,12 @@ describe("AgentVerdict", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders agentic verdict when webFallback is true", () => {
+  it("renders agentic verdict when retriever used web strategy", () => {
     render(
       <AgentVerdict
         staticMessages={[makeStaticAssistant({ confidence: 0.7 })]}
         agentMessages={[
-          makeAgentAssistant([graderStepWithFallback, criticStepLowRisk], { confidence: 0.7 }),
+          makeAgentAssistant([retrieverWebStep, graderStepNoFallback, criticStepLowRisk], { confidence: 0.7 }),
         ]}
       />,
     );
@@ -87,6 +88,23 @@ describe("AgentVerdict", () => {
     expect(
       screen.getByText("Agentic pipeline used web search for missing knowledge"),
     ).toBeInTheDocument();
+  });
+
+  it("does not flag web fallback when retriever strategy is hybrid", () => {
+    const retrieverHybridStep: AgentStep = {
+      node: "retriever",
+      payload: { strategy: "hybrid", docs_retrieved: 5, duration_ms: 120 },
+      timestamp: new Date().toISOString(),
+    };
+    render(
+      <AgentVerdict
+        staticMessages={[makeStaticAssistant({ confidence: 0.7 })]}
+        agentMessages={[
+          makeAgentAssistant([retrieverHybridStep, graderStepNoFallback, criticStepLowRisk], { confidence: 0.7 }),
+        ]}
+      />,
+    );
+    expect(screen.queryByText("Agentic pipeline used web search for missing knowledge")).not.toBeInTheDocument();
   });
 
   it("renders static verdict when criticScore > 0.7", () => {

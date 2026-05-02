@@ -3,7 +3,8 @@ export interface Citation {
   filename: string;
   source_path: string;
   page_number: number | null;
-  retrieval_score?: number;
+  retrieval_score?: number;   // sigmoid(cross_encoder_logit) — both pipelines
+  grader_score?: number;      // LLM relevance judgment — agentic pipeline only
 }
 
 export interface Message {
@@ -72,8 +73,10 @@ export interface RetrieverStepPayload {
 }
 
 export interface GraderStepPayload {
-  scores: number[];
-  web_fallback: boolean;
+  scores_all: number[];       // one per retrieved doc
+  passed_count: number;       // docs that met threshold
+  threshold: number;          // grader_threshold value
+  all_below_threshold: boolean;
   duration_ms: number;
 }
 

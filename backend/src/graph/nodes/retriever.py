@@ -38,7 +38,6 @@ def _result_to_document(result: "RetrievalResult") -> Document:
     """Convert a RetrievalResult to a langchain_core Document."""
     metadata: dict[str, Any] = {
         "chunk_id": result.chunk_id,
-        "score": result.score,
         "retrieval_score": 1.0 / (1.0 + math.exp(-result.score)),
     }
     # ChunkMetadata is a TypedDict — access via dict key lookup.
@@ -138,7 +137,6 @@ async def retriever_node(
                         metadata={
                             "source": r["url"],
                             "title": r.get("title", ""),
-                            "score": float(r.get("score", 0.0)),
                             "retrieval_score": float(r.get("score", 0.0)),
                         },
                     )

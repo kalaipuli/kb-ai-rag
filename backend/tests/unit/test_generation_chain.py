@@ -114,7 +114,8 @@ class TestKBRetriever:
         assert docs[0].metadata["filename"] == "geo.pdf"
         assert docs[0].metadata["source_path"] == "/data/geo.pdf"
         assert docs[0].metadata["page_number"] == 1
-        assert docs[0].metadata["score"] == 1.0
+        assert "score" not in docs[0].metadata
+        assert docs[0].metadata["retrieval_score"] == pytest.approx(1.0 / (1.0 + math.exp(-1.0)))
 
     @pytest.mark.filterwarnings("ignore::pytest.PytestWarning")
     def test_kb_retriever_get_raises(self) -> None:
@@ -137,7 +138,7 @@ def _source_doc(
     filename: str = "geo.pdf",
     source_path: str = "/data/geo.pdf",
     page_number: int | None = 1,
-    score: float = 2.5,
+    retrieval_score: float = 0.924,  # sigmoid(2.5) ≈ 0.924
 ) -> Document:
     return Document(
         page_content="Paris is the capital of France.",
@@ -146,7 +147,7 @@ def _source_doc(
             "filename": filename,
             "source_path": source_path,
             "page_number": page_number,
-            "score": score,
+            "retrieval_score": retrieval_score,
         },
     )
 
@@ -455,8 +456,8 @@ class TestGenerationChainStream:
 
 
 class TestBuildCitations:
-    async def test_retrieval_score_populated_when_score_present(self) -> None:
-        """Citation has retrieval_score when doc.metadata['score'] is present."""
+    async def test_retrieval_score_populated_when_retrieval_score_present(self) -> None:
+        """Citation has retrieval_score when doc.metadata['retrieval_score'] is present."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([])
         gen_chain = GenerationChain(
@@ -465,14 +466,15 @@ class TestBuildCitations:
             llm=_make_llm_runnable(),  # type: ignore[arg-type]
         )
 
-        doc = _source_doc(chunk_id="c1", score=1.75)
+        doc = _source_doc(chunk_id="c1", retrieval_score=0.855)
         citations, _ = gen_chain._build_citations([doc])
 
         assert len(citations) == 1
-        assert citations[0].retrieval_score == pytest.approx(1.0 / (1.0 + math.exp(-1.75)))
+        assert citations[0].retrieval_score == pytest.approx(0.855)
+        assert citations[0].grader_score is None
 
     async def test_retrieval_score_is_none_when_score_absent(self) -> None:
-        """Citation has retrieval_score=None when score key is absent from metadata."""
+        """Citation has retrieval_score=None when retrieval_score key is absent from metadata."""
         settings = _make_settings()
         hybrid = _make_hybrid_retriever([])
         gen_chain = GenerationChain(
@@ -488,10 +490,30 @@ class TestBuildCitations:
                 "filename": "test.pdf",
                 "source_path": "/test.pdf",
                 "page_number": 1,
-                # no "score" key
             },
         )
         citations, _ = gen_chain._build_citations([doc])
 
         assert len(citations) == 1
         assert citations[0].retrieval_score is None
+        assert citations[0].grader_score is None
+
+    async def test_confidence_is_mean_of_retrieval_scores(self) -> None:
+        """Confidence is the mean of retrieval_score values for top-3 docs after T06."""
+        settings = _make_settings()
+        hybrid = _make_hybrid_retriever([])
+        gen_chain = GenerationChain(
+            settings=settings,
+            hybrid_retriever=hybrid,
+            llm=_make_llm_runnable(),  # type: ignore[arg-type]
+        )
+
+        docs = [
+            _source_doc("c1", retrieval_score=0.8),
+            _source_doc("c2", retrieval_score=0.6),
+            _source_doc("c3", retrieval_score=0.4),
+        ]
+        _, confidence = gen_chain._build_citations(docs)
+
+        expected = (0.8 + 0.6 + 0.4) / 3
+        assert confidence == pytest.approx(expected)

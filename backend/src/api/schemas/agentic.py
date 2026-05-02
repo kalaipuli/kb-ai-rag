@@ -28,8 +28,10 @@ class RetrieverStepPayload(BaseModel):
 class GraderStepPayload(BaseModel):
     """Payload emitted when the grader node completes."""
 
-    scores: list[float]
-    web_fallback: bool
+    scores_all: list[float]  # one score per retrieved doc (includes below-threshold docs)
+    passed_count: int  # number of docs that met the threshold
+    threshold: float  # the grader_threshold setting value used in this run
+    all_below_threshold: bool  # True when every score was below threshold (CRAG trigger signal)
     duration_ms: int
 
 

@@ -115,13 +115,13 @@ function RetrieverCard({ step, run, index }: { step: AgentStep; run?: number; in
 
 function GraderCard({ step, run, index }: { step: AgentStep; run?: number; index: number }): JSX.Element | null {
   if (!isGraderPayload(step.payload)) return null;
-  const { scores, web_fallback, duration_ms } = step.payload;
+  const { scores_all, passed_count, all_below_threshold, duration_ms } = step.payload;
   return (
     <CardWrapper index={index}>
       <NodeLabel>Grader <IterationBadge run={run} /></NodeLabel>
       <div className="space-y-1">
-        {scores.map((score, i) => (
-          <div key={i} className="flex items-center gap-2">
+        {scores_all.map((score, i) => (
+          <div key={i} className="flex items-center gap-2" style={{ opacity: i < passed_count ? 1 : 0.35 }}>
             <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--border-subtle)' }}>
               <div
                 className="h-full rounded-full"
@@ -134,9 +134,14 @@ function GraderCard({ step, run, index }: { step: AgentStep; run?: number; index
           </div>
         ))}
       </div>
-      {web_fallback && (
+      {scores_all.length > 0 && (
+        <div className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+          {passed_count} of {scores_all.length} passed
+        </div>
+      )}
+      {all_below_threshold && (
         <span className="mt-1 inline-block rounded-full px-2 py-0.5 text-xs" style={{ background: 'var(--status-warning)', color: 'white' }}>
-          Web fallback
+          All below threshold — escalation possible
         </span>
       )}
       <div className="mt-1" style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{duration_ms}ms</div>

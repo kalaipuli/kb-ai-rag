@@ -17,7 +17,7 @@ const retrieverStep: AgentStep = {
 
 const graderStep: AgentStep = {
   node: "grader",
-  payload: { scores: [0.8, 0.6], web_fallback: false, duration_ms: 80 },
+  payload: { scores_all: [0.8, 0.6], passed_count: 2, threshold: 0.5, all_below_threshold: false, duration_ms: 80 },
   timestamp: new Date().toISOString(),
 };
 
@@ -145,6 +145,26 @@ describe("AgentTrace", () => {
     expect(screen.getByText("#2")).toBeInTheDocument();
   });
 
+  it("GraderCard renders passed count summary", () => {
+    render(<AgentTrace steps={[graderStep]} isStreaming={false} />);
+    expect(screen.getByText("2 of 2 passed")).toBeInTheDocument();
+  });
+
+  it("GraderCard does not render web fallback badge", () => {
+    render(<AgentTrace steps={[graderStep]} isStreaming={false} />);
+    expect(screen.queryByText("Web fallback")).not.toBeInTheDocument();
+  });
+
+  it("GraderCard renders all_below_threshold badge when true", () => {
+    const allBelowStep: AgentStep = {
+      node: "grader",
+      payload: { scores_all: [0.2, 0.1], passed_count: 0, threshold: 0.5, all_below_threshold: true, duration_ms: 80 },
+      timestamp: new Date().toISOString(),
+    };
+    render(<AgentTrace steps={[allBelowStep]} isStreaming={false} />);
+    expect(screen.getByText("All below threshold — escalation possible")).toBeInTheDocument();
+  });
+
   it("latency bars show per-run labels when a node repeats", () => {
     const retrieverStep2: AgentStep = {
       node: "retriever",
@@ -153,7 +173,7 @@ describe("AgentTrace", () => {
     };
     const graderStep2: AgentStep = {
       node: "grader",
-      payload: { scores: [0.9], web_fallback: false, duration_ms: 60 },
+      payload: { scores_all: [0.9], passed_count: 1, threshold: 0.5, all_below_threshold: false, duration_ms: 60 },
       timestamp: new Date().toISOString(),
     };
     render(

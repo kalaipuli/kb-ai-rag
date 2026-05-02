@@ -82,6 +82,11 @@ async def test_all_above_threshold() -> None:
     assert result["grader_scores"] == [0.9, 0.8]
     assert result["graded_docs"][0].metadata["grader_score"] == 0.9
     assert result["graded_docs"][1].metadata["grader_score"] == 0.8
+    # graded_docs must be new objects — original docs must not be mutated
+    assert result["graded_docs"][0] is not docs[0]
+    assert result["graded_docs"][1] is not docs[1]
+    assert "grader_score" not in docs[0].metadata
+    assert "grader_score" not in docs[1].metadata
 
 
 # ---------------------------------------------------------------------------
@@ -117,12 +122,19 @@ async def test_mixed_scores() -> None:
     result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert len(result["graded_docs"]) == 2
-    assert doc_a in result["graded_docs"]
-    assert doc_c in result["graded_docs"]
-    assert doc_b not in result["graded_docs"]
+    # graded_docs are new objects, not the originals
+    assert doc_a not in result["graded_docs"]
+    assert doc_c not in result["graded_docs"]
     assert result["all_below_threshold"] is False
-    assert doc_a.metadata["grader_score"] == 0.8
-    assert doc_c.metadata["grader_score"] == 0.6
+    # grader_score written into new objects, not original docs
+    assert result["graded_docs"][0].page_content == doc_a.page_content
+    assert result["graded_docs"][0].metadata["grader_score"] == 0.8
+    assert result["graded_docs"][1].page_content == doc_c.page_content
+    assert result["graded_docs"][1].metadata["grader_score"] == 0.6
+    # originals unchanged
+    assert "grader_score" not in doc_a.metadata
+    assert "grader_score" not in doc_b.metadata
+    assert "grader_score" not in doc_c.metadata
 
 
 # ---------------------------------------------------------------------------
@@ -169,8 +181,10 @@ async def test_batch_failure_assigns_zero_score() -> None:
     # First 10 chunks scored 0.0 due to batch failure; last chunk scored 0.8
     assert result["grader_scores"] == [0.0] * 10 + [0.8]
     assert len(result["graded_docs"]) == 1
-    assert result["graded_docs"][0] == doc_batch2
+    assert result["graded_docs"][0] is not doc_batch2
+    assert result["graded_docs"][0].page_content == doc_batch2.page_content
     assert result["graded_docs"][0].metadata["grader_score"] == 0.8
+    assert "grader_score" not in doc_batch2.metadata
 
 
 # ---------------------------------------------------------------------------
@@ -313,3 +327,27 @@ async def test_no_escalation_when_above_threshold() -> None:
     result = await grader_node(state, llm=llm, web_search_enabled=True)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
 
     assert "retrieval_strategy" not in result
+
+
+# ---------------------------------------------------------------------------
+# Test 14: graded_docs are new objects; original retrieved_docs are not mutated
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_graded_docs_are_new_objects_not_mutated_originals() -> None:
+    """graded_docs must contain new Document objects; original retrieved_docs unchanged."""
+    docs = [_make_doc("doc A", "c1"), _make_doc("doc B", "c2")]
+    llm = _mock_llm_with_scores([0.9, 0.8])
+    state = _make_state(docs)
+
+    result = await grader_node(state, llm=llm, web_search_enabled=False)  # type: ignore[arg-type]  # MagicMock passed for AzureChatOpenAI in unit tests; real typing enforced at integration level
+
+    graded = result["graded_docs"]
+    assert len(graded) == 2
+    for original, graded_doc in zip(docs, graded, strict=True):
+        assert original is not graded_doc
+    for original in docs:
+        assert "grader_score" not in original.metadata
+    assert graded[0].metadata["grader_score"] == 0.9
+    assert graded[1].metadata["grader_score"] == 0.8

@@ -409,6 +409,45 @@ class TestQueryAgenticEndpoint:
         assert payload["confidence"] == 0.9
         assert payload["duration_ms"] == 120
 
+    def test_grader_payload_fields(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """Grader agent_step event has new schema fields; web_fallback absent."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        mock_graph = _make_mock_graph(_make_astream_chunks())
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        grader_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "grader"
+        )
+        payload = grader_event["payload"]
+        assert "scores_all" in payload
+        assert "passed_count" in payload
+        assert "threshold" in payload
+        assert "all_below_threshold" in payload
+        assert "duration_ms" in payload
+        assert "web_fallback" not in payload
+        assert payload["scores_all"] == [0.8, 0.6]
+        assert payload["passed_count"] == 1  # 1 graded_doc in mock chunk
+        assert payload["all_below_threshold"] is False
+
     def test_run_field_increments_on_crag_retry(
         self,
         test_client_1d: TestClient,

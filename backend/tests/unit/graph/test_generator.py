@@ -187,11 +187,11 @@ async def test_steps_taken_contains_generator_entry() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Test 7: grader_score in metadata takes precedence over retrieval_score
+# Test 7: grader_score and retrieval_score are independent fields
 # ---------------------------------------------------------------------------
 
 
-def test_build_citations_grader_score_takes_precedence() -> None:
+def test_build_citations_grader_score_in_separate_field() -> None:
     doc = Document(
         page_content="content",
         metadata={
@@ -203,10 +203,11 @@ def test_build_citations_grader_score_takes_precedence() -> None:
     )
     citations = _build_citations([doc])
     assert len(citations) == 1
-    assert citations[0].retrieval_score == 0.85
+    assert citations[0].retrieval_score == 0.42  # direct read, not grader override
+    assert citations[0].grader_score == 0.85
 
 
-def test_build_citations_falls_back_to_retrieval_score_when_no_grader_score() -> None:
+def test_build_citations_grader_score_none_when_absent() -> None:
     doc = Document(
         page_content="content",
         metadata={
@@ -218,18 +219,20 @@ def test_build_citations_falls_back_to_retrieval_score_when_no_grader_score() ->
     citations = _build_citations([doc])
     assert len(citations) == 1
     assert citations[0].retrieval_score == 0.63
+    assert citations[0].grader_score is None
 
 
-def test_build_citations_falls_back_to_score_for_web_docs() -> None:
-    """Web docs set 'score' but not 'retrieval_score' or 'grader_score'."""
+def test_build_citations_web_docs_use_retrieval_score() -> None:
+    """Web docs set 'retrieval_score' directly (no 'score' key after T03)."""
     doc = Document(
         page_content="web content",
         metadata={
             "chunk_id": "",
             "source": "https://example.com/page",
-            "score": 0.71,
+            "retrieval_score": 0.71,
         },
     )
     citations = _build_citations([doc])
     assert len(citations) == 1
     assert citations[0].retrieval_score == 0.71
+    assert citations[0].grader_score is None

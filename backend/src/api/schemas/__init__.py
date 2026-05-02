@@ -33,7 +33,8 @@ class Citation(BaseModel):
     filename: str
     source_path: str
     page_number: int | None = None
-    retrieval_score: float | None = None
+    retrieval_score: float | None = None  # sigmoid(cross_encoder_logit) — both pipelines
+    grader_score: float | None = None  # LLM relevance judgment — agentic pipeline only
 
 
 class GenerationResult(BaseModel):

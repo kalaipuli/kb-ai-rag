@@ -16,7 +16,7 @@ const steps: AgentStep[] = [
   },
   {
     node: "grader",
-    payload: { scores: [0.8], web_fallback: false, duration_ms: 80 },
+    payload: { scores_all: [0.8], passed_count: 1, threshold: 0.5, all_below_threshold: false, duration_ms: 80 },
     timestamp: "",
   },
   {

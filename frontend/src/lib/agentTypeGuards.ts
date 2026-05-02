@@ -16,7 +16,7 @@ export function isRouterPayload(
 export function isGraderPayload(
   payload: AgentStep["payload"],
 ): payload is GraderStepPayload {
-  return "web_fallback" in payload;
+  return "scores_all" in payload;
 }
 
 export function isCriticPayload(
