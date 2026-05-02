@@ -22,7 +22,7 @@ const routerPayload: RouterStepPayload = {
 
 const graderPayload: GraderStepPayload = {
   scores: [0.9, 0.7],
-  web_fallback: false,
+  web_fallback_used: false,
   duration_ms: 34,
 };
 
@@ -39,7 +39,7 @@ const generatorPayload: GeneratorStepPayload = {
 };
 
 const criticPayload: CriticStepPayload = {
-  hallucination_risk: 0.2,
+  critic_score: 0.2,
   reruns: 0,
   duration_ms: 56,
 };

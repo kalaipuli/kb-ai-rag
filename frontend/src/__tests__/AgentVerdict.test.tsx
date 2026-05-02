@@ -31,25 +31,25 @@ function makeAgentAssistant(
 
 const graderStepNoFallback: AgentStep = {
   node: "grader",
-  payload: { scores: [0.8], web_fallback: false, duration_ms: 60 },
+  payload: { scores: [0.8], web_fallback_used: false, duration_ms: 60 },
   timestamp: new Date().toISOString(),
 };
 
 const graderStepWithFallback: AgentStep = {
   node: "grader",
-  payload: { scores: [0.5], web_fallback: true, duration_ms: 60 },
+  payload: { scores: [0.5], web_fallback_used: true, duration_ms: 60 },
   timestamp: new Date().toISOString(),
 };
 
 const criticStepLowRisk: AgentStep = {
   node: "critic",
-  payload: { hallucination_risk: 0.2, reruns: 0, duration_ms: 30 },
+  payload: { critic_score: 0.2, reruns: 0, duration_ms: 30 },
   timestamp: new Date().toISOString(),
 };
 
 const criticStepHighRisk: AgentStep = {
   node: "critic",
-  payload: { hallucination_risk: 0.85, reruns: 1, duration_ms: 30 },
+  payload: { critic_score: 0.85, reruns: 1, duration_ms: 30 },
   timestamp: new Date().toISOString(),
 };
 

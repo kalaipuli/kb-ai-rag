@@ -9,7 +9,7 @@ const SESSION_STORAGE_KEY = "kb_rag_session_id";
 
 const generateUUID = (): string => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return generateUUID();
+    return crypto.randomUUID();
   }
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;

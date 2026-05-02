@@ -36,11 +36,11 @@ function computeVerdict(
 
   const criticRisk =
     criticStep && isCriticPayload(criticStep.payload)
-      ? criticStep.payload.hallucination_risk
+      ? criticStep.payload.critic_score
       : 0;
   const webFallback =
     graderStep && isGraderPayload(graderStep.payload)
-      ? graderStep.payload.web_fallback
+      ? graderStep.payload.web_fallback_used
       : false;
 
   if (criticRisk > 0.7) {

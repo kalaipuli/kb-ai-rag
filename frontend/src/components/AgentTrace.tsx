@@ -93,7 +93,7 @@ function RetrieverCard({ step, run }: { step: AgentStep; run?: number }): JSX.El
 
 function GraderCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
   if (!isGraderPayload(step.payload)) return null;
-  const { scores, web_fallback, duration_ms } = step.payload;
+  const { scores, web_fallback_used, duration_ms } = step.payload;
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
       <div className="mb-1 flex items-center font-semibold text-gray-700">
@@ -113,7 +113,7 @@ function GraderCard({ step, run }: { step: AgentStep; run?: number }): JSX.Eleme
           </div>
         ))}
       </div>
-      {web_fallback && (
+      {web_fallback_used && (
         <span className="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-amber-700">
           Web fallback
         </span>
@@ -152,8 +152,8 @@ function GeneratorCard({ step, run }: { step: AgentStep; run?: number }): JSX.El
 
 function CriticCard({ step, run }: { step: AgentStep; run?: number }): JSX.Element | null {
   if (!isCriticPayload(step.payload)) return null;
-  const { hallucination_risk, reruns, duration_ms } = step.payload;
-  const colourClass = criticColour(hallucination_risk);
+  const { critic_score, reruns, duration_ms } = step.payload;
+  const colourClass = criticColour(critic_score);
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 text-xs">
       <div className="mb-1 flex items-center font-semibold text-gray-700">
@@ -164,11 +164,11 @@ function CriticCard({ step, run }: { step: AgentStep; run?: number }): JSX.Eleme
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-100">
           <div
             className={`h-full rounded-full ${colourClass}`}
-            style={{ width: `${Math.min(hallucination_risk * 100, 100)}%` }}
+            style={{ width: `${Math.min(critic_score * 100, 100)}%` }}
           />
         </div>
         <span className="w-12 text-right text-gray-500">
-          {hallucination_risk != null ? (hallucination_risk * 100).toFixed(0) : "—"}% risk
+          {critic_score != null ? (critic_score * 100).toFixed(0) : "—"}% risk
         </span>
       </div>
       {reruns > 0 && (

@@ -16,7 +16,7 @@ const steps: AgentStep[] = [
   },
   {
     node: "grader",
-    payload: { scores: [0.8], web_fallback: false, duration_ms: 80 },
+    payload: { scores: [0.8], web_fallback_used: false, duration_ms: 80 },
     timestamp: "",
   },
   {
@@ -26,7 +26,7 @@ const steps: AgentStep[] = [
   },
   {
     node: "critic",
-    payload: { hallucination_risk: 0.2, reruns: 0, duration_ms: 30 },
+    payload: { critic_score: 0.2, reruns: 0, duration_ms: 30 },
     timestamp: "",
   },
 ];

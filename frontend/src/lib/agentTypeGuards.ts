@@ -16,13 +16,13 @@ export function isRouterPayload(
 export function isGraderPayload(
   payload: AgentStep["payload"],
 ): payload is GraderStepPayload {
-  return "web_fallback" in payload;
+  return "web_fallback_used" in payload;
 }
 
 export function isCriticPayload(
   payload: AgentStep["payload"],
 ): payload is CriticStepPayload {
-  return "hallucination_risk" in payload;
+  return "critic_score" in payload;
 }
 
 export function isRetrieverPayload(
