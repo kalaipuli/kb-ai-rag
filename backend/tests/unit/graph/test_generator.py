@@ -16,7 +16,7 @@ import pytest
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.graph.nodes.generator import _GeneratorOutput, generator_node
+from src.graph.nodes.generator import _build_citations, _GeneratorOutput, generator_node
 
 
 def _make_doc(content: str, chunk_id: str = "c1", source: str = "/data/doc.pdf") -> Document:
@@ -184,3 +184,52 @@ async def test_steps_taken_contains_generator_entry() -> None:
     step = result["steps_taken"][0]
     assert step.startswith("generator:")
     assert "ms" in step
+
+
+# ---------------------------------------------------------------------------
+# Test 7: grader_score in metadata takes precedence over retrieval_score
+# ---------------------------------------------------------------------------
+
+
+def test_build_citations_grader_score_takes_precedence() -> None:
+    doc = Document(
+        page_content="content",
+        metadata={
+            "chunk_id": "c1",
+            "source": "/data/doc.pdf",
+            "grader_score": 0.85,
+            "retrieval_score": 0.42,
+        },
+    )
+    citations = _build_citations([doc])
+    assert len(citations) == 1
+    assert citations[0].retrieval_score == 0.85
+
+
+def test_build_citations_falls_back_to_retrieval_score_when_no_grader_score() -> None:
+    doc = Document(
+        page_content="content",
+        metadata={
+            "chunk_id": "c2",
+            "source": "/data/doc.pdf",
+            "retrieval_score": 0.63,
+        },
+    )
+    citations = _build_citations([doc])
+    assert len(citations) == 1
+    assert citations[0].retrieval_score == 0.63
+
+
+def test_build_citations_falls_back_to_score_for_web_docs() -> None:
+    """Web docs set 'score' but not 'retrieval_score' or 'grader_score'."""
+    doc = Document(
+        page_content="web content",
+        metadata={
+            "chunk_id": "",
+            "source": "https://example.com/page",
+            "score": 0.71,
+        },
+    )
+    citations = _build_citations([doc])
+    assert len(citations) == 1
+    assert citations[0].retrieval_score == 0.71

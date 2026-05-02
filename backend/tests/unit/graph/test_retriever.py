@@ -1,5 +1,6 @@
 """Unit tests for the retriever node (T02 — Phase 2c)."""
 
+import math
 import re
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -85,7 +86,7 @@ async def test_hybrid_strategy_calls_retriever_and_returns_documents() -> None:
     assert docs[0].page_content == "chunk text"
     assert docs[0].metadata["chunk_id"] == "chunk-001"
     assert docs[0].metadata["score"] == 0.9
-    assert docs[0].metadata["retrieval_score"] == 0.9
+    assert docs[0].metadata["retrieval_score"] == pytest.approx(1.0 / (1.0 + math.exp(-0.9)))
     assert docs[0].metadata["page_number"] == 2
     assert result["web_fallback_used"] is False
 
@@ -257,4 +258,4 @@ async def test_page_number_minus_one_excluded_from_document_metadata() -> None:
 
     doc = result["retrieved_docs"][0]
     assert "page_number" not in doc.metadata
-    assert doc.metadata["retrieval_score"] == 0.9
+    assert doc.metadata["retrieval_score"] == pytest.approx(1.0 / (1.0 + math.exp(-0.9)))

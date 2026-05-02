@@ -117,9 +117,11 @@ async def grader_node(
     if failed_batches == total_batches:
         raise GraderError(f"All {total_batches} grader batch(es) failed — LLM unavailable")
 
-    graded_docs = [
-        doc for doc, score in zip(docs, scores, strict=True) if score >= settings.grader_threshold
-    ]
+    graded_docs = []
+    for doc, score in zip(docs, scores, strict=True):
+        if score >= settings.grader_threshold:
+            doc.metadata["grader_score"] = float(score)
+            graded_docs.append(doc)
     all_below = all(s < settings.grader_threshold for s in scores)
 
     duration_ms = round((time.monotonic() - start) * 1000)

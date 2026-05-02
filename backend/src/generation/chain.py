@@ -146,7 +146,9 @@ class GenerationChain:
                         page_number=(
                             int(raw_page) if raw_page is not None and int(raw_page) != -1 else None
                         ),
-                        retrieval_score=(float(raw_score) if raw_score is not None else None),
+                        retrieval_score=(
+                    float(1.0 / (1.0 + math.exp(-float(raw_score)))) if raw_score is not None else None
+                ),
                     )
                 )
 

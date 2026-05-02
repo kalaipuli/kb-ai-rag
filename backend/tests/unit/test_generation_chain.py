@@ -10,6 +10,7 @@ composition works end-to-end without hitting Azure.
 """
 
 import json
+import math
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -468,7 +469,7 @@ class TestBuildCitations:
         citations, _ = gen_chain._build_citations([doc])
 
         assert len(citations) == 1
-        assert citations[0].retrieval_score == pytest.approx(1.75)
+        assert citations[0].retrieval_score == pytest.approx(1.0 / (1.0 + math.exp(-1.75)))
 
     async def test_retrieval_score_is_none_when_score_absent(self) -> None:
         """Citation has retrieval_score=None when score key is absent from metadata."""
