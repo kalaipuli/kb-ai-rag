@@ -83,13 +83,13 @@ describe("AgentVerdict", () => {
         ]}
       />,
     );
-    expect(screen.getByText("Agentic Pipeline wins")).toBeInTheDocument();
+    expect(screen.getByText(/Agentic Pipeline wins/)).toBeInTheDocument();
     expect(
       screen.getByText("Agentic pipeline used web search for missing knowledge"),
     ).toBeInTheDocument();
   });
 
-  it("renders static verdict when criticRisk > 0.7", () => {
+  it("renders static verdict when criticScore > 0.7", () => {
     render(
       <AgentVerdict
         staticMessages={[makeStaticAssistant({ confidence: 0.6 })]}
@@ -98,13 +98,13 @@ describe("AgentVerdict", () => {
         ]}
       />,
     );
-    expect(screen.getByText("Static Chain wins")).toBeInTheDocument();
+    expect(screen.getByText(/Static Chain wins/)).toBeInTheDocument();
     expect(
       screen.getByText("Agentic pipeline flagged high hallucination risk"),
     ).toBeInTheDocument();
   });
 
-  it("renders tie verdict when confidence difference is <= 0.1", () => {
+  it("renders comparable results verdict when confidence difference is <= 0.1", () => {
     render(
       <AgentVerdict
         staticMessages={[makeStaticAssistant({ confidence: 0.75 })]}
@@ -113,7 +113,7 @@ describe("AgentVerdict", () => {
         ]}
       />,
     );
-    expect(screen.getByText("Tie")).toBeInTheDocument();
+    expect(screen.getByText(/≈ Comparable Results/)).toBeInTheDocument();
     expect(
       screen.getByText("Both pipelines produced comparable answers"),
     ).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe("AgentVerdict", () => {
         ]}
       />,
     );
-    expect(screen.getByText("Agentic Pipeline wins")).toBeInTheDocument();
+    expect(screen.getByText(/Agentic Pipeline wins/)).toBeInTheDocument();
     expect(
       screen.getByText("Higher confidence answer via agentic reasoning"),
     ).toBeInTheDocument();

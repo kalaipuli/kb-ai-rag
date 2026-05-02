@@ -136,4 +136,24 @@ describe("ChatMessage", () => {
     await userEvent.click(screen.getByText("Sources (3)"));
     expect(screen.getByText("2 distinct sources")).toBeInTheDocument();
   });
+
+  it("accepts accentColor prop without TypeScript error", () => {
+    const { container } = render(
+      <ChatMessage
+        message={makeMessage({ role: "assistant", content: "Answer" })}
+        accentColor="static"
+      />,
+    );
+    expect(container.firstChild).toBeInTheDocument();
+  });
+
+  it("accepts agentic accentColor prop", () => {
+    const { container } = render(
+      <ChatMessage
+        message={makeMessage({ role: "assistant", content: "Answer" })}
+        accentColor="agentic"
+      />,
+    );
+    expect(container.firstChild).toBeInTheDocument();
+  });
 });

@@ -58,4 +58,25 @@ describe("CitationList", () => {
     render(<CitationList citations={[makeCitation({ retrieval_score: -2.0 })]} />);
     expect(screen.getByText("0%")).toBeInTheDocument();
   });
+
+  it("renders collapsible details element open by default", () => {
+    const { container } = render(<CitationList citations={[makeCitation()]} />);
+    const details = container.querySelector("details");
+    expect(details).toBeInTheDocument();
+    expect(details).toHaveAttribute("open");
+  });
+
+  it("accepts accentColor prop without error", () => {
+    const { container } = render(
+      <CitationList citations={[makeCitation()]} accentColor="static" />,
+    );
+    expect(container.firstChild).toBeInTheDocument();
+  });
+
+  it("accepts agentic accentColor prop", () => {
+    const { container } = render(
+      <CitationList citations={[makeCitation()]} accentColor="agentic" />,
+    );
+    expect(container.firstChild).toBeInTheDocument();
+  });
 });

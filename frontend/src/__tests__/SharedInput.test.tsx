@@ -22,7 +22,7 @@ describe("SharedInput", () => {
     const textarea = screen.getByRole("textbox");
     await userEvent.type(textarea, "my question");
 
-    const button = screen.getByRole("button", { name: /send/i });
+    const button = screen.getByRole("button", { name: /processing/i });
     await userEvent.click(button);
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -50,13 +50,15 @@ describe("SharedInput", () => {
     expect(textarea.value).toBe("");
   });
 
-  it("shows both pipelines processing label when isDisabled is true", () => {
+  it("shows processing placeholder when isDisabled is true", () => {
     render(<SharedInput onSubmit={vi.fn()} isDisabled={true} />);
-    expect(screen.getByText("Both pipelines processing...")).toBeInTheDocument();
+    const textarea = screen.getByRole("textbox");
+    expect(textarea).toHaveAttribute("placeholder", "Processing both pipelines…");
   });
 
-  it("does not show processing label when isDisabled is false", () => {
+  it("shows ask placeholder when isDisabled is false", () => {
     render(<SharedInput onSubmit={vi.fn()} isDisabled={false} />);
-    expect(screen.queryByText("Both pipelines processing...")).not.toBeInTheDocument();
+    const textarea = screen.getByRole("textbox");
+    expect(textarea).toHaveAttribute("placeholder", "Ask a question for both pipelines…");
   });
 });

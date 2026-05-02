@@ -36,11 +36,12 @@ const criticStep: AgentStep = {
 const allFiveSteps = [routerStep, retrieverStep, graderStep, generatorStep, criticStep];
 
 describe("AgentTrace", () => {
-  it("renders details element in the DOM", () => {
-    const { container } = render(
-      <AgentTrace steps={[routerStep]} isStreaming={false} />,
-    );
-    expect(container.querySelector("details")).toBeInTheDocument();
+  it("renders step cards visible without user interaction (no details wrapper)", () => {
+    const { container } = render(<AgentTrace steps={[routerStep]} isStreaming={false} />);
+    // No top-level <details> wrapper — cards are visible directly
+    expect(container.querySelector("details")).not.toBeInTheDocument();
+    // Router node label is visible directly (CSS uppercase, DOM text is "Router")
+    expect(screen.getByText("Router")).toBeInTheDocument();
   });
 
   it("router card renders human-readable label not raw enum value", () => {
@@ -55,48 +56,38 @@ describe("AgentTrace", () => {
     expect(screen.queryByText("dense")).not.toBeInTheDocument();
   });
 
-  it("critic card renders bg-green-500 for low hallucination risk", () => {
-    const { container } = render(
-      <AgentTrace steps={[criticStep]} isStreaming={false} />,
-    );
-    expect(container.querySelector(".bg-green-500")).toBeInTheDocument();
+  it("critic card renders percentage risk text for low critic score", () => {
+    render(<AgentTrace steps={[criticStep]} isStreaming={false} />);
+    expect(screen.getByText(/20% risk/)).toBeInTheDocument();
   });
 
-  it("critic card renders bg-amber-500 for medium hallucination risk", () => {
+  it("critic card renders percentage risk text for medium critic score", () => {
     const mediumCriticStep: AgentStep = {
       node: "critic",
       payload: { critic_score: 0.55, reruns: 0, duration_ms: 30 },
       timestamp: new Date().toISOString(),
     };
-    const { container } = render(
-      <AgentTrace steps={[mediumCriticStep]} isStreaming={false} />,
-    );
-    expect(container.querySelector(".bg-amber-500")).toBeInTheDocument();
+    render(<AgentTrace steps={[mediumCriticStep]} isStreaming={false} />);
+    expect(screen.getByText(/55% risk/)).toBeInTheDocument();
   });
 
-  it("critic card renders bg-red-500 for high hallucination risk", () => {
+  it("critic card renders percentage risk text for high critic score", () => {
     const highCriticStep: AgentStep = {
       node: "critic",
       payload: { critic_score: 0.9, reruns: 1, duration_ms: 30 },
       timestamp: new Date().toISOString(),
     };
-    const { container } = render(
-      <AgentTrace steps={[highCriticStep]} isStreaming={false} />,
-    );
-    expect(container.querySelector(".bg-red-500")).toBeInTheDocument();
+    render(<AgentTrace steps={[highCriticStep]} isStreaming={false} />);
+    expect(screen.getByText(/90% risk/)).toBeInTheDocument();
   });
 
   it("latency bars not rendered while isStreaming is true", () => {
-    render(
-      <AgentTrace steps={allFiveSteps} isStreaming={true} />,
-    );
+    render(<AgentTrace steps={allFiveSteps} isStreaming={true} />);
     expect(screen.queryByText("Latency breakdown")).not.toBeInTheDocument();
   });
 
   it("latency bars rendered when all 5 nodes present and isStreaming is false", () => {
-    render(
-      <AgentTrace steps={allFiveSteps} isStreaming={false} />,
-    );
+    render(<AgentTrace steps={allFiveSteps} isStreaming={false} />);
     expect(screen.getByText("Latency breakdown")).toBeInTheDocument();
   });
 
@@ -120,11 +111,11 @@ describe("AgentTrace", () => {
     expect(screen.queryByText("Latency breakdown")).not.toBeInTheDocument();
   });
 
-  it("summary shows step count", () => {
-    render(
-      <AgentTrace steps={[routerStep, graderStep]} isStreaming={false} />,
-    );
-    expect(screen.getByText("Agent Trace (2 steps)")).toBeInTheDocument();
+  it("topology reference text renders", () => {
+    render(<AgentTrace steps={[routerStep]} isStreaming={false} />);
+    expect(
+      screen.getByText("Router → Retriever → Grader → Generator → Critic"),
+    ).toBeInTheDocument();
   });
 
   it("RetrieverCard renders strategy badge and docs count", () => {
@@ -134,20 +125,9 @@ describe("AgentTrace", () => {
   });
 
   it("GeneratorCard renders confidence bar and docs count", () => {
-    const { container } = render(
-      <AgentTrace steps={[generatorStep]} isStreaming={false} />,
-    );
+    render(<AgentTrace steps={[generatorStep]} isStreaming={false} />);
     expect(screen.getByText("85% confidence")).toBeInTheDocument();
     expect(screen.getByText("3 docs")).toBeInTheDocument();
-    // high confidence (0.85) → inverted risk (0.15) → bg-green-500
-    expect(container.querySelector(".bg-green-500")).toBeInTheDocument();
-  });
-
-  it("topology reference text renders", () => {
-    render(<AgentTrace steps={[routerStep]} isStreaming={false} />);
-    expect(
-      screen.getByText("Router → Retriever → Grader → Generator → Critic"),
-    ).toBeInTheDocument();
   });
 
   it("second retriever step shows #2 iteration badge", () => {
