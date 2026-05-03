@@ -70,8 +70,17 @@ def _build_agent_step_event(
     """Construct an AgentStepEvent from a node name, its state delta, and run counter."""
     steps: list[str] = state_update.get("steps_taken", [])  # type: ignore[assignment]
     duration_ms = _parse_duration_ms(steps[0]) if steps else 0
+    settings = get_settings()
 
     if node_name == ROUTER:
+        query_type: str = str(state_update.get("query_type", "factual"))
+        query_rewritten: str | None = state_update.get("query_rewritten")  # type: ignore[assignment]
+        rewrite_method: Literal["none", "hyde", "stepback"] = "none"
+        if query_rewritten is not None:
+            if query_type == "analytical":
+                rewrite_method = "hyde"
+            elif query_type == "multi_hop":
+                rewrite_method = "stepback"
         return AgentStepEvent(
             node=ROUTER,
             run=run,
@@ -79,6 +88,8 @@ def _build_agent_step_event(
                 query_type=state_update["query_type"],  # type: ignore[arg-type]
                 strategy=state_update["retrieval_strategy"],  # type: ignore[arg-type]
                 duration_ms=duration_ms,
+                query_rewritten=query_rewritten,
+                rewrite_method=rewrite_method,
             ),
         )
     if node_name == RETRIEVER:
@@ -94,7 +105,16 @@ def _build_agent_step_event(
             ),
         )
     if node_name == GRADER:
-        settings = get_settings()
+        all_below: bool = bool(state_update.get("all_below_threshold", False))
+        _raw_retry: object = state_update.get("retry_count") or 0
+        retry_count: int = int(_raw_retry)  # type: ignore[call-overload]  # object is int at runtime
+        grader_decision: Literal["proceed", "retry", "escalate_web"]
+        if state_update.get("retrieval_strategy") == "web":
+            grader_decision = "escalate_web"
+        elif all_below and retry_count < settings.graph_max_retries:
+            grader_decision = "retry"
+        else:
+            grader_decision = "proceed"
         return AgentStepEvent(
             node=GRADER,
             run=run,
@@ -102,8 +122,9 @@ def _build_agent_step_event(
                 scores_all=state_update.get("grader_scores", []),  # type: ignore[arg-type]
                 passed_count=len(state_update.get("graded_docs", [])),  # type: ignore[arg-type]
                 threshold=settings.grader_threshold,
-                all_below_threshold=bool(state_update.get("all_below_threshold", False)),
+                all_below_threshold=all_below,
                 duration_ms=duration_ms,
+                decision=grader_decision,
             ),
         )
     if node_name == GENERATOR:
@@ -120,6 +141,9 @@ def _build_agent_step_event(
         )
     # critic
     critic_score: float = state_update.get("critic_score") or 0.0  # type: ignore[assignment]
+    critic_verdict: Literal["accept", "rerun"] = (
+        "rerun" if critic_score > settings.critic_threshold else "accept"
+    )
     return AgentStepEvent(
         node=CRITIC,
         run=run,
@@ -127,6 +151,7 @@ def _build_agent_step_event(
             hallucination_risk=critic_score,
             reruns=state_update.get("retry_count", 0),  # type: ignore[arg-type]
             duration_ms=duration_ms,
+            verdict=critic_verdict,
         ),
     )
 

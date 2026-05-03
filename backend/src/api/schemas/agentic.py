@@ -15,6 +15,8 @@ class RouterStepPayload(BaseModel):
     query_type: Literal["factual", "analytical", "multi_hop", "ambiguous"]
     strategy: Literal["dense", "hybrid", "web"]
     duration_ms: int
+    query_rewritten: str | None
+    rewrite_method: Literal["none", "hyde", "stepback"]
 
 
 class RetrieverStepPayload(BaseModel):
@@ -33,6 +35,7 @@ class GraderStepPayload(BaseModel):
     threshold: float  # the grader_threshold setting value used in this run
     all_below_threshold: bool  # True when every score was below threshold (CRAG trigger signal)
     duration_ms: int
+    decision: Literal["proceed", "retry", "escalate_web"]
 
 
 class GeneratorStepPayload(BaseModel):
@@ -49,6 +52,7 @@ class CriticStepPayload(BaseModel):
     hallucination_risk: float = Field(ge=0.0, le=1.0)
     reruns: int
     duration_ms: int
+    verdict: Literal["accept", "rerun"]
 
 
 class AgentStepEvent(BaseModel):

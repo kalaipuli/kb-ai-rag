@@ -583,3 +583,362 @@ class TestQueryAgenticEndpoint:
 
         assert "retry_count" in captured_state, "retry_count must be in initial_state"
         assert captured_state["retry_count"] == 0, "retry_count must start at 0"
+
+    # -----------------------------------------------------------------------
+    # Router rewrite metadata tests
+    # -----------------------------------------------------------------------
+
+    def test_router_payload_includes_query_rewritten(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """Default mock chunks (factual, query_rewritten=None) → rewrite_method='none', query_rewritten=None."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        mock_graph = _make_mock_graph(_make_astream_chunks())
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        router_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "router"
+        )
+        payload = router_event["payload"]
+        assert payload["query_rewritten"] is None
+        assert payload["rewrite_method"] == "none"
+
+    def test_router_payload_hyde_rewrite(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """Analytical query with query_rewritten set → rewrite_method='hyde'."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        chunks = [
+            {
+                "router": {
+                    "query_type": "analytical",
+                    "retrieval_strategy": "dense",
+                    "query_rewritten": "hypothetical doc text",
+                    "steps_taken": ["router:analytical:dense:50ms"],
+                }
+            },
+            {
+                "generator": {
+                    "answer": "Answer",
+                    "citations": [],
+                    "confidence": 0.8,
+                    "steps_taken": ["generator:docs=0:confidence=0.80:100ms"],
+                }
+            },
+        ]
+        mock_graph = _make_mock_graph(chunks)
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "analytical query"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        router_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "router"
+        )
+        payload = router_event["payload"]
+        assert payload["rewrite_method"] == "hyde"
+        assert payload["query_rewritten"] == "hypothetical doc text"
+
+    def test_router_payload_stepback_rewrite(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """Multi-hop query with query_rewritten set → rewrite_method='stepback'."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        chunks = [
+            {
+                "router": {
+                    "query_type": "multi_hop",
+                    "retrieval_strategy": "hybrid",
+                    "query_rewritten": "broader concept",
+                    "steps_taken": ["router:multi_hop:hybrid:48ms"],
+                }
+            },
+            {
+                "generator": {
+                    "answer": "Answer",
+                    "citations": [],
+                    "confidence": 0.75,
+                    "steps_taken": ["generator:docs=0:confidence=0.75:110ms"],
+                }
+            },
+        ]
+        mock_graph = _make_mock_graph(chunks)
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "multi-hop query"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        router_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "router"
+        )
+        payload = router_event["payload"]
+        assert payload["rewrite_method"] == "stepback"
+        assert payload["query_rewritten"] == "broader concept"
+
+    # -----------------------------------------------------------------------
+    # Grader decision tests
+    # -----------------------------------------------------------------------
+
+    def test_grader_payload_decision_proceed(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """Default mock chunks: all_below_threshold=False → decision='proceed'."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        mock_graph = _make_mock_graph(_make_astream_chunks())
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        grader_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "grader"
+        )
+        assert grader_event["payload"]["decision"] == "proceed"
+
+    def test_grader_payload_decision_escalate_web(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """Grader chunk with retrieval_strategy='web' → decision='escalate_web'."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        chunks = [
+            {
+                "grader": {
+                    "grader_scores": [0.2],
+                    "graded_docs": [],
+                    "all_below_threshold": True,
+                    "retry_count": 1,
+                    "retrieval_strategy": "web",
+                    "steps_taken": ["grader:scored=1:passed=0:80ms"],
+                }
+            },
+            {
+                "generator": {
+                    "answer": "Answer",
+                    "citations": [],
+                    "confidence": 0.7,
+                    "steps_taken": ["generator:docs=0:confidence=0.70:100ms"],
+                }
+            },
+        ]
+        mock_graph = _make_mock_graph(chunks)
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test escalate"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        grader_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "grader"
+        )
+        assert grader_event["payload"]["decision"] == "escalate_web"
+
+    def test_grader_payload_decision_retry(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """all_below_threshold=True, retry_count=1 (< graph_max_retries=2), no web → decision='retry'."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        chunks = [
+            {
+                "grader": {
+                    "grader_scores": [0.1],
+                    "graded_docs": [],
+                    "all_below_threshold": True,
+                    "retry_count": 1,
+                    "steps_taken": ["grader:scored=1:passed=0:78ms"],
+                }
+            },
+            {
+                "generator": {
+                    "answer": "Answer",
+                    "citations": [],
+                    "confidence": 0.5,
+                    "steps_taken": ["generator:docs=0:confidence=0.50:100ms"],
+                }
+            },
+        ]
+        mock_graph = _make_mock_graph(chunks)
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test retry"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        grader_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "grader"
+        )
+        assert grader_event["payload"]["decision"] == "retry"
+
+    # -----------------------------------------------------------------------
+    # Critic verdict tests
+    # -----------------------------------------------------------------------
+
+    def test_critic_payload_verdict_accept(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """critic_score=0.15 < critic_threshold=0.7 → verdict='accept'."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        # Default mock chunks have critic_score=0.15
+        mock_graph = _make_mock_graph(_make_astream_chunks())
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        critic_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "critic"
+        )
+        assert critic_event["payload"]["verdict"] == "accept"
+
+    def test_critic_payload_verdict_rerun(
+        self,
+        test_client_1d: TestClient,
+        mock_settings: Settings,
+        authenticated_headers: dict[str, str],
+    ) -> None:
+        """critic_score=0.85 > critic_threshold=0.7 → verdict='rerun'."""
+        from src.api.deps import get_compiled_graph
+        from src.api.main import app
+
+        chunks = [
+            {
+                "router": {
+                    "query_type": "factual",
+                    "retrieval_strategy": "hybrid",
+                    "query_rewritten": None,
+                    "steps_taken": ["router:factual:hybrid:45ms"],
+                }
+            },
+            {
+                "generator": {
+                    "answer": "Answer",
+                    "citations": [],
+                    "confidence": 0.6,
+                    "steps_taken": ["generator:docs=0:confidence=0.60:100ms"],
+                }
+            },
+            {
+                "critic": {
+                    "critic_score": 0.85,
+                    "retry_count": 0,
+                    "steps_taken": ["critic:score=0.850:55ms"],
+                }
+            },
+        ]
+        mock_graph = _make_mock_graph(chunks)
+        app.dependency_overrides[get_compiled_graph] = lambda: mock_graph
+
+        try:
+            with test_client_1d.stream(
+                "POST",
+                "/api/v1/query/agentic",
+                json={"query": "test rerun"},
+                headers=authenticated_headers,
+            ) as response:
+                lines = list(response.iter_lines())
+        finally:
+            app.dependency_overrides.pop(get_compiled_graph, None)
+
+        events = _parse_events(lines)
+        critic_event = next(
+            e for e in events if e.get("type") == "agent_step" and e.get("node") == "critic"
+        )
+        assert critic_event["payload"]["verdict"] == "rerun"
